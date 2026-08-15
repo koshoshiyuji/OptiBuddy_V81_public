@@ -1,0 +1,28 @@
+{
+  "problem_class": "StoreSite",
+  "domain": "store_site",
+  "meta": {
+    "instance_name": "StoreSite シナリオ #2",
+    "note": "【設計意図】max_distance_km=0.5km（極めて短い）かつ候補地が1か所のみで、ほぼ全エリアが到達不可能になることを狙う。多数のエリアが未割当となり、unmet_penaltyによるCRITICALイシューが複数発生することを確認する。"
+  },
+  "areas": [
+    {"id": "A01", "name": "渋谷エリア",   "demand": 200, "lat": 35.658, "lng": 139.701},
+    {"id": "A02", "name": "新宿エリア",   "demand": 200, "lat": 35.690, "lng": 139.700},
+    {"id": "A03", "name": "池袋エリア",   "demand": 200, "lat": 35.729, "lng": 139.710},
+    {"id": "A04", "name": "品川エリア",   "demand": 200, "lat": 35.628, "lng": 139.739},
+    {"id": "A05", "name": "浅草エリア",   "demand": 200, "lat": 35.712, "lng": 139.796}
+  ],
+  "candidates": [
+    {"id": "C01", "name": "新宿店のみ", "fixed_cost": 300000, "capacity": 50, "lat": 35.691, "lng": 139.699}
+  ],
+  "config": {
+    "max_distance_km": 0.5,
+    "unmet_penalty": 100000,
+    "store_count_weight": 5000,
+    "utilization_penalty_weight": 3000,
+    "distance_penalty_weight": 50,
+    "utilization_threshold": 0.8,
+    "supply_cost_per_km": 200,
+    "time_limit_sec": 15
+  }
+}

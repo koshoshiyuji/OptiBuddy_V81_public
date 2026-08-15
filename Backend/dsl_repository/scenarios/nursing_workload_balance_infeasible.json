@@ -1,0 +1,24 @@
+{
+  "problem_class": "NursingWorkloadBalance",
+  "domain": "nursing_workload_balance",
+  "meta": {
+    "instance_name": "NursingWorkloadBalance シナリオ #2（解なし）",
+    "note": "【設計意図】ICU病棟の患者5名に対し、ICU所属の看護師は2名のみで、1人あたりの担当患者数上限は2名（maxPatientsPerNurse=2）。看護師はゾーン外の患者を担当できないため、ICU病棟の最大収容数は2名×2名=4名にしかならず、5人目の患者を割り当てる先が存在しない。担当患者数カーディナリティ制約（ハード制約）により解なしとなることを確認する。"
+  },
+  "nurses": [
+    {"id": "N001", "name": "田中 花子", "zone": "ICU",  "minPatientsPerNurse": 1, "maxPatientsPerNurse": 2, "maxWorkloadPerNurse": 50},
+    {"id": "N002", "name": "山田 太郎", "zone": "ICU",  "minPatientsPerNurse": 1, "maxPatientsPerNurse": 2, "maxWorkloadPerNurse": 50},
+    {"id": "N003", "name": "鈴木 美咲", "zone": "一般", "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 30}
+  ],
+  "patients": [
+    {"id": "P001", "name": "患者A", "zone": "ICU",  "acuity": 5},
+    {"id": "P002", "name": "患者B", "zone": "ICU",  "acuity": 4},
+    {"id": "P003", "name": "患者C", "zone": "ICU",  "acuity": 6},
+    {"id": "P004", "name": "患者D", "zone": "ICU",  "acuity": 3},
+    {"id": "P005", "name": "患者E", "zone": "ICU",  "acuity": 5},
+    {"id": "P006", "name": "患者F", "zone": "一般", "acuity": 4}
+  ],
+  "config": {
+    "time_limit_sec": 15
+  }
+}

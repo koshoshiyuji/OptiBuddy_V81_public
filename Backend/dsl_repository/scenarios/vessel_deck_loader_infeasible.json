@@ -1,0 +1,22 @@
+{
+  "problem_class": "VesselDeckLoader",
+  "domain": "vessel_deck_loader",
+  "meta": {
+    "instance_name": "VesselDeckLoader infeasible",
+    "note": "【設計意図】危険物コンテナ同士（C2・C4）の分離マージン制約が物理的に満たせない解なしシナリオ。甲板幅6・最大長5の制約下で、C2(length=2,width=3,hazardous)とC4(length=2,width=3,hazardous)を配置しようとすると、x方向分離にはx_C4>=3かつx_C4+2<=5が必要でx_C4=3のみ許容されるが、y方向分離にはy+3+1<=y'かつy'+3<=6が必要でy'<=3かつy'>=4となり矛盾。どちらの方向にも隙間1以上を確保できないため解なし。"
+  },
+  "deck": {
+    "width": 6,
+    "max_length": 5
+  },
+  "containers": [
+    {"id": "C1", "name": "コンテナC1", "length": 3, "width": 2, "load_order": 1, "is_hazardous": false},
+    {"id": "C2", "name": "危険物C2",   "length": 2, "width": 3, "load_order": 2, "is_hazardous": true},
+    {"id": "C3", "name": "コンテナC3", "length": 2, "width": 1, "load_order": 3, "is_hazardous": false},
+    {"id": "C4", "name": "危険物C4",   "length": 2, "width": 3, "load_order": 4, "is_hazardous": true}
+  ],
+  "config": {
+    "time_limit_sec": 30,
+    "hazard_margin": 1
+  }
+}

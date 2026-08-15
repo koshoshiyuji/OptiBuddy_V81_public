@@ -1,0 +1,116 @@
+/* 1. 全体設定：境界線が幅を押し広げるのを防ぐ（重要） */
+.task-gantt-container,
+.task-gantt-container * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 2. ルート要素 */
+.task-gantt-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #0d0f12;
+  border: 1px solid #2d2d3d;
+  border-radius: 12px;
+  color: #e2e2e9;
+  overflow: hidden; /* 内部のスクロールエリアを制御 */
+}
+
+/* 3. スクロールエリアのラッパー */
+.gantt-scroll-viewport {
+  flex: 1;
+  overflow: auto;
+  background: #16161e;
+  border: 1px solid #282a36;
+  position: relative;
+}
+
+/* 4. 目盛りエリア */
+.gantt-header-sticky {
+  display: flex;
+  height: 30px;
+  border-bottom: 1px solid #282a36;
+  background: #1a1b26;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* 5. 左側固定のリソースラベル */
+.resource-label-sticky {
+  flex-shrink: 0;
+  background: #1c1c24;
+  border-right: 1px solid #282a36;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+  position: sticky;
+  left: 0;
+  z-index: 110; /* 目盛りやバーより前面 */
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* 6. タスクバーと赤線の共通親（時間軸の0地点） */
+.gantt-time-axis-root {
+  position: relative;
+  flex-grow: 1;
+  height: 100%;
+}
+
+/* 7. タスクバー */
+.task-bar {
+  position: absolute;
+  height: 35px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 10;
+  transition: opacity 0.2s;
+}
+
+.task-bar:hover {
+  z-index: 80;
+  filter: brightness(1.2);
+}
+
+/* 8. 赤色タイムラインマーカー（修正版） */
+.timeline-marker-red {
+  position: absolute;
+  top: 0;
+  /* topからbottomまで貫通させる場合は親の目盛りエリアに配置 */
+  height: 1000px; 
+  width: 2px;
+  background-color: #ff4444;
+  pointer-events: none;
+  z-index: 150;
+  /* 線の厚みの半分だけ左にずらして中心を目盛りに合わせる */
+  transform: translateX(-1px);
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.6);
+}
+
+/* 9. 目盛りの縦線 */
+.time-tick {
+  position: absolute;
+  border-left: 1px solid #222;
+  height: 100%;
+  padding-left: 4px;
+  font-size: 9px;
+  color: #6272a4;
+}
+
+/* 凡例やスライダー等の補助スタイル */
+.gantt-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}

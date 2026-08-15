@@ -1,0 +1,144 @@
+{
+  "problem_class": "TruckDispatcher",
+  "domain": "truck_dispatcher",
+  "meta": {
+    "instance_name": "サンプル運輸 配送最適化デモ（宣伝素材用・完全架空データ）",
+    "note": "【宣伝素材用】実在の顧客名・実データは一切含まない、公開デモ専用の架空シナリオ。会社名『サンプル運輸』・顧客名はすべて仮名。地名は実在の東京都内エリアだが、住所・座標は概算値で特定の建物を指さない。8件の配送先・3台の車両（2t/4t/10t）で構成し、全件を無理なく1日で配達しきれる規模に調整済み（未割当が出ない、短時間で解ける『きれいな成功例』としてデモ用に設計）。",
+    "date": "2026-08-12"
+  },
+  "depot": {
+    "id": "depot",
+    "name": "サンプル運輸 本社倉庫",
+    "lat": 35.6762,
+    "lon": 139.7743,
+    "open_time": "08:00",
+    "close_time": "20:00"
+  },
+  "customers": [
+    {
+      "id": "c01",
+      "name": "サンプル商事 渋谷支店",
+      "lat": 35.6595,
+      "lon": 139.7005,
+      "demand_kg": 800,
+      "service_time_min": 20,
+      "tw_open": "09:00",
+      "tw_close": "12:00",
+      "restricted_vehicle_types": []
+    },
+    {
+      "id": "c02",
+      "name": "デモ物産 新宿倉庫",
+      "lat": 35.6905,
+      "lon": 139.7005,
+      "demand_kg": 2000,
+      "service_time_min": 30,
+      "tw_open": "09:00",
+      "tw_close": "13:00",
+      "restricted_vehicle_types": []
+    },
+    {
+      "id": "c03",
+      "name": "テスト工業 池袋工場",
+      "lat": 35.7295,
+      "lon": 139.7109,
+      "demand_kg": 2800,
+      "service_time_min": 40,
+      "tw_open": "10:00",
+      "tw_close": "15:00",
+      "restricted_vehicle_types": ["2t"]
+    },
+    {
+      "id": "c04",
+      "name": "架空フーズ 品川センター",
+      "lat": 35.6284,
+      "lon": 139.7387,
+      "demand_kg": 600,
+      "service_time_min": 20,
+      "tw_open": "09:00",
+      "tw_close": "18:00",
+      "restricted_vehicle_types": []
+    },
+    {
+      "id": "c05",
+      "name": "サンプルストア 浅草店",
+      "lat": 35.7120,
+      "lon": 139.7960,
+      "demand_kg": 450,
+      "service_time_min": 15,
+      "tw_open": "11:00",
+      "tw_close": "17:00",
+      "restricted_vehicle_types": []
+    },
+    {
+      "id": "c06",
+      "name": "デモ商会 上野支店",
+      "lat": 35.7141,
+      "lon": 139.7774,
+      "demand_kg": 1200,
+      "service_time_min": 25,
+      "tw_open": "09:00",
+      "tw_close": "16:00",
+      "restricted_vehicle_types": []
+    },
+    {
+      "id": "c07",
+      "name": "架空トレーディング 六本木オフィス",
+      "lat": 35.6627,
+      "lon": 139.7314,
+      "demand_kg": 300,
+      "service_time_min": 15,
+      "tw_open": "13:00",
+      "tw_close": "18:00",
+      "restricted_vehicle_types": []
+    },
+    {
+      "id": "c08",
+      "name": "サンプル電機 秋葉原店",
+      "lat": 35.6984,
+      "lon": 139.7731,
+      "demand_kg": 1600,
+      "service_time_min": 25,
+      "tw_open": "09:00",
+      "tw_close": "19:00",
+      "restricted_vehicle_types": []
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "v01",
+      "name": "2tトラック（デモ①）",
+      "type": "2t",
+      "capacity_kg": 2000,
+      "max_duty_min": 600,
+      "max_continuous_drive_min": 240,
+      "preferred_customer_ids": []
+    },
+    {
+      "id": "v02",
+      "name": "4tトラック（デモ②）",
+      "type": "4t",
+      "capacity_kg": 4000,
+      "max_duty_min": 600,
+      "max_continuous_drive_min": 240,
+      "preferred_customer_ids": []
+    },
+    {
+      "id": "v03",
+      "name": "10tトラック（デモ③）",
+      "type": "10t",
+      "capacity_kg": 8000,
+      "max_duty_min": 660,
+      "max_continuous_drive_min": 300,
+      "preferred_customer_ids": []
+    }
+  ],
+  "config": {
+    "avg_speed_kmh": 25,
+    "highway_speed_kmh": 60,
+    "highway_threshold_km": 30,
+    "objective_priority": ["minimize_vehicles", "minimize_distance", "balance_duty"],
+    "soft_tw_penalty_per_min": 100,
+    "solver_time_limit_sec": 15
+  }
+}

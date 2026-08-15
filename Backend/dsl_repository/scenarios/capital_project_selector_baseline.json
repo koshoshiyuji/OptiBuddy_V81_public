@@ -1,0 +1,24 @@
+{
+  "problem_class": "CapitalProjectSelector",
+  "domain": "capital_project_selector",
+  "meta": {
+    "instance_name": "CapitalProjectSelector シナリオ #1",
+    "note": "【設計意図】標準的な予算規模（1億円）と10件の候補案件で構成。大部分が予算内に収まるが、全件選択は不可能な設定。【検証結果】未検証。"
+  },
+  "budget": 100000000,
+  "projects": [
+    {"id": "P001", "name": "工場ライン自動化", "value": 28000000, "weight": 35000000, "category": "生産性向上", "tags": ["製造", "自動化"]},
+    {"id": "P002", "name": "倉庫管理システム刷新", "value": 15000000, "weight": 20000000, "category": "コスト削減", "tags": ["物流", "IT"]},
+    {"id": "P003", "name": "省エネ設備導入", "value": 12000000, "weight": 18000000, "category": "コスト削減", "tags": ["エネルギー"]},
+    {"id": "P004", "name": "品質検査自動化", "value": 20000000, "weight": 25000000, "category": "生産性向上", "tags": ["品質", "自動化"]},
+    {"id": "P005", "name": "ERP基幹システム更新", "value": 18000000, "weight": 30000000, "category": "IT基盤", "tags": ["IT", "基幹"]},
+    {"id": "P006", "name": "フォークリフト電動化", "value": 8000000, "weight": 10000000, "category": "コスト削減", "tags": ["物流", "環境"]},
+    {"id": "P007", "name": "空調設備更新", "value": 6000000, "weight": 8000000, "category": "環境整備", "tags": ["設備", "省エネ"]},
+    {"id": "P008", "name": "セキュリティカメラ拡充", "value": 4000000, "weight": 5000000, "category": "安全", "tags": ["セキュリティ"]},
+    {"id": "P009", "name": "社内研修設備整備", "value": 5000000, "weight": 6000000, "category": "人材育成", "tags": ["HR"]},
+    {"id": "P010", "name": "排水処理設備改良", "value": 7000000, "weight": 9000000, "category": "環境対応", "tags": ["環境", "規制対応"]}
+  ],
+  "config": {
+    "time_limit_sec": 30
+  }
+}

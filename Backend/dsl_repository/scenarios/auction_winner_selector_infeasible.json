@@ -1,0 +1,21 @@
+{
+  "problem_class": "AuctionWinnerSelector",
+  "domain": "auction_winner_selector",
+  "meta": {
+    "instance_name": "AuctionWinnerSelector シナリオ #2",
+    "note": "【設計意図・2026-08-02改訂】min_revenue（最低落札総額）を、実現可能な最大落札総額（T01+T02＝2,000,000円）よりわずかに高く設定することで、いかなる入札の組み合わせでも制約を満たせないInfeasibleを狙う。旧版はmin_revenueを50,000,000円（実現可能最大の25倍）に設定しており、Gate2チェックで規模感の乖離が指摘された（登録時は許容して登録）。実現可能最大に対して妥当な近接値（2,500,000円、実現可能最大の1.25倍）に調整し、「僅かに届かない」現実的な着地点を再探索できる緩和提案が生成されるようにした。"
+  },
+  "items": [
+    {"id": "X001", "name": "テスト機器A", "description": "小型精密機器"},
+    {"id": "X002", "name": "テスト機器B", "description": "小型精密機器"}
+  ],
+  "bids": [
+    {"id": "T01", "name": "入札者A", "price": 1000000, "item_ids": ["X001"]},
+    {"id": "T02", "name": "入札者B", "price": 1000000, "item_ids": ["X002"]},
+    {"id": "T03", "name": "入札者C", "price": 1500000, "item_ids": ["X001", "X002"]}
+  ],
+  "config": {
+    "time_limit_sec": 10,
+    "min_revenue": 2500000
+  }
+}

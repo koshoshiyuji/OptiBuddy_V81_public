@@ -1,0 +1,106 @@
+{
+  "problem_class": "MedicalAppointmentScheduler",
+  "domain": "medical_appointment_scheduler",
+  "meta": {
+    "instance_name": "外来診療予約 シナリオ #2",
+    "note": "【設計意図】資源不足による割当困難シナリオ。循環器科医師が1名しかいないのに対し、同時に医師+CT室の両方を必要とする依頼が多数。かつ全依頼が同日のみ受け入れ可能で医師の稼働スロットを超えるため、多くが未割当となる。ソルバー全体はinfeasibleにはならないが、大半が未割当CRITICALとなる想定。"
+  },
+  "config": {
+    "time_limit_sec": 15,
+    "slot_duration_min": 30
+  },
+  "resources": [
+    {
+      "id": "DR001",
+      "name": "山田医師（循環器科）",
+      "resource_type": "cardio_doctor",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"}
+      ]
+    },
+    {
+      "id": "CT001",
+      "name": "CT検査室1",
+      "resource_type": "ct_room",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"}
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "id": "REQ001",
+      "patient_id": "P001",
+      "patient_name": "患者A",
+      "resource_type_needs": [{"resource_type": "cardio_doctor", "count": 1}, {"resource_type": "ct_room", "count": 1}],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ002",
+      "patient_id": "P002",
+      "patient_name": "患者B",
+      "resource_type_needs": [{"resource_type": "cardio_doctor", "count": 1}, {"resource_type": "ct_room", "count": 1}],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ003",
+      "patient_id": "P003",
+      "patient_name": "患者C",
+      "resource_type_needs": [{"resource_type": "cardio_doctor", "count": 1}, {"resource_type": "ct_room", "count": 1}],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ004",
+      "patient_id": "P004",
+      "patient_name": "患者D",
+      "resource_type_needs": [{"resource_type": "cardio_doctor", "count": 1}],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ005",
+      "patient_id": "P005",
+      "patient_name": "患者E",
+      "resource_type_needs": [{"resource_type": "cardio_doctor", "count": 1}],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ006",
+      "patient_id": "P006",
+      "patient_name": "患者F（内科希望だが内科医なし）",
+      "resource_type_needs": [{"resource_type": "internal_doctor", "count": 1}],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    }
+  ]
+}

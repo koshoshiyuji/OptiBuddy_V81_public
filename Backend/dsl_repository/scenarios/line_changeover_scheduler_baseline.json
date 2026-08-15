@@ -1,0 +1,36 @@
+{
+  "problem_class": "LineChangeoverScheduler",
+  "domain": "line_changeover_scheduler",
+  "meta": {
+    "instance_name": "食品工場ライン切替 シナリオ #1",
+    "note": "【設計意図】標準的な7タスク・5リソース構成。前後関係が線形に連なる基本パターン。全タスクがスケジュール可能であることを確認する。"
+  },
+  "tasks": [
+    {"id": "T1", "name": "旧設備撤去",   "duration": 60,  "resource_requirements": [{"resource_id": "R_EQUIP", "amount": 2}, {"resource_id": "R_TRANSPORT", "amount": 1}]},
+    {"id": "T2", "name": "清掃",         "duration": 45,  "resource_requirements": [{"resource_id": "R_EQUIP",  "amount": 1}]},
+    {"id": "T3", "name": "新治具搬入",   "duration": 30,  "resource_requirements": [{"resource_id": "R_TRANSPORT", "amount": 1}, {"resource_id": "R_EQUIP", "amount": 1}]},
+    {"id": "T4", "name": "新治具据付",   "duration": 90,  "resource_requirements": [{"resource_id": "R_EQUIP",  "amount": 2}, {"resource_id": "R_ELEC", "amount": 1}]},
+    {"id": "T5", "name": "配線・安全確認", "duration": 40, "resource_requirements": [{"resource_id": "R_ELEC",   "amount": 2}]},
+    {"id": "T6", "name": "校正・試運転", "duration": 50,  "resource_requirements": [{"resource_id": "R_CALIB",  "amount": 1}]},
+    {"id": "T7", "name": "QA承認",       "duration": 30,  "resource_requirements": [{"resource_id": "R_QA",     "amount": 1}]}
+  ],
+  "resources": [
+    {"id": "R_EQUIP",     "name": "設備技術者",   "capacity": 3},
+    {"id": "R_ELEC",      "name": "電気技術者",   "capacity": 2},
+    {"id": "R_CALIB",     "name": "校正スタッフ", "capacity": 1},
+    {"id": "R_QA",        "name": "QA検査員",     "capacity": 1},
+    {"id": "R_TRANSPORT", "name": "搬送機材",     "capacity": 1}
+  ],
+  "precedences": [
+    {"from_task": "T1", "to_task": "T2", "min_delay": 0},
+    {"from_task": "T2", "to_task": "T3", "min_delay": 0},
+    {"from_task": "T3", "to_task": "T4", "min_delay": 0},
+    {"from_task": "T4", "to_task": "T5", "min_delay": 0},
+    {"from_task": "T5", "to_task": "T6", "min_delay": 0},
+    {"from_task": "T6", "to_task": "T7", "min_delay": 0}
+  ],
+  "config": {
+    "time_limit_sec": 30,
+    "horizon": 1000
+  }
+}

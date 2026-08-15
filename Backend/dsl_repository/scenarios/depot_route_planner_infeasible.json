@@ -1,0 +1,22 @@
+{
+  "problem_class": "DepotRoutePlanner",
+  "domain": "depot_route_planner",
+  "meta": {
+    "instance_name": "DepotRoutePlanner infeasible",
+    "note": "【設計意図】max_open_depots=0 を指定することで、どの拠点も開設できず全顧客が未割当となる解なしシナリオ。x/y平面座標・マンハッタン距離。"
+  },
+  "depots": [
+    {"id": "D1", "name": "拠点D1", "x": 0,  "y": 0, "opening_cost": 10},
+    {"id": "D2", "name": "拠点D2", "x": 20, "y": 0, "opening_cost": 12}
+  ],
+  "customers": [
+    {"id": "C1", "name": "顧客C1", "x": 1,  "y":  2},
+    {"id": "C2", "name": "顧客C2", "x": 2,  "y": -1},
+    {"id": "C3", "name": "顧客C3", "x": 19, "y":  3}
+  ],
+  "config": {
+    "max_open_depots": 0,
+    "stage1_time_limit_sec": 10,
+    "stage2_time_limit_sec": 10
+  }
+}

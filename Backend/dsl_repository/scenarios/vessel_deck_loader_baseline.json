@@ -1,0 +1,22 @@
+{
+  "problem_class": "VesselDeckLoader",
+  "domain": "vessel_deck_loader",
+  "meta": {
+    "instance_name": "VesselDeckLoader baseline",
+    "note": "【設計意図】甲板幅6・最大長30の船舶甲板に4本のコンテナを積み付ける標準シナリオ。危険物(C2, C4)が含まれ、分離マージン1が要求される。Python全探索で最適解Z=5が独立検証済み（検証済み配置例: C1=(x0,y0), C2=(x0,y2), C3=(x2,y2), C4=(x3,y0)）。"
+  },
+  "deck": {
+    "width": 6,
+    "max_length": 30
+  },
+  "containers": [
+    {"id": "C1", "name": "コンテナC1", "length": 3, "width": 2, "load_order": 1, "is_hazardous": false},
+    {"id": "C2", "name": "危険物C2",   "length": 2, "width": 3, "load_order": 2, "is_hazardous": true},
+    {"id": "C3", "name": "コンテナC3", "length": 3, "width": 3, "load_order": 3, "is_hazardous": false},
+    {"id": "C4", "name": "危険物C4",   "length": 2, "width": 2, "load_order": 4, "is_hazardous": true}
+  ],
+  "config": {
+    "time_limit_sec": 30,
+    "hazard_margin": 1
+  }
+}

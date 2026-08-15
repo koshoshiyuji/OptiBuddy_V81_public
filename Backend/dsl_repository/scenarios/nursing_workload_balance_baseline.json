@@ -1,0 +1,31 @@
+{
+  "problem_class": "NursingWorkloadBalance",
+  "domain": "nursing_workload_balance",
+  "meta": {
+    "instance_name": "NursingWorkloadBalance baseline",
+    "note": "【設計意図】2ゾーン（ICU病棟・一般病棟）に計10名の患者を配置し、各ゾーン3名の看護師に割り当てる。担当患者数1〜3名、負荷上限20。アキュイティ合計の二乗和最小化が解けることを確認する。"
+  },
+  "nurses": [
+    {"id": "N001", "name": "田中 花子", "zone": "ICU",  "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 20},
+    {"id": "N002", "name": "山田 太郎", "zone": "ICU",  "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 20},
+    {"id": "N003", "name": "鈴木 美咲", "zone": "ICU",  "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 20},
+    {"id": "N004", "name": "佐藤 健一", "zone": "一般", "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 15},
+    {"id": "N005", "name": "高橋 由美", "zone": "一般", "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 15},
+    {"id": "N006", "name": "伊藤 直樹", "zone": "一般", "minPatientsPerNurse": 1, "maxPatientsPerNurse": 3, "maxWorkloadPerNurse": 15}
+  ],
+  "patients": [
+    {"id": "P001", "name": "患者A", "zone": "ICU",  "acuity": 5},
+    {"id": "P002", "name": "患者B", "zone": "ICU",  "acuity": 7},
+    {"id": "P003", "name": "患者C", "zone": "ICU",  "acuity": 4},
+    {"id": "P004", "name": "患者D", "zone": "ICU",  "acuity": 6},
+    {"id": "P005", "name": "患者E", "zone": "ICU",  "acuity": 8},
+    {"id": "P006", "name": "患者F", "zone": "一般", "acuity": 3},
+    {"id": "P007", "name": "患者G", "zone": "一般", "acuity": 4},
+    {"id": "P008", "name": "患者H", "zone": "一般", "acuity": 5},
+    {"id": "P009", "name": "患者I", "zone": "一般", "acuity": 2},
+    {"id": "P010", "name": "患者J", "zone": "一般", "acuity": 4}
+  ],
+  "config": {
+    "time_limit_sec": 30
+  }
+}

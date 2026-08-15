@@ -1,0 +1,30 @@
+/* src/ui/VesselView.css */
+
+.vessel-root {
+  border: 1px solid #ccc;
+  padding: 8px;
+  margin-top: 12px;
+}
+
+.vessel-item {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.vessel-item:last-child {
+  border-bottom: none;
+}
+
+.vessel-item.dimmed {
+  opacity: 0.3;
+}
+
+.vessel-id {
+  font-weight: bold;
+}
+
+.vessel-pos {
+  font-size: 12px;
+  color: #555;
+}

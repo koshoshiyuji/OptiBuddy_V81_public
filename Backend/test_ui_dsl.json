@@ -1,0 +1,1184 @@
+{
+  "metadata": {
+    "solver_name": "CP Optimizer",
+    "solver_version": "22.1.1",
+    "problem_class": "RCPSP",
+    "extensions": [
+      "physical_space",
+      "phase_separation"
+    ],
+    "solved_at": "2026-06-02T11:30:15Z",
+    "total_solve_time": 18.5
+  },
+  "status": "ok",
+  "solutions": [
+    {
+      "name": "Plan A",
+      "label": "全作業時間最短",
+      "profile": {
+        "w_makespan": 1,
+        "w_penalty": 1,
+        "w_cost": 0
+      },
+      "tasks": [
+        {
+          "id": "D-C03",
+          "containerId": "C03",
+          "operation": "DISCHARGE",
+          "resource": "GC-1",
+          "order": 1,
+          "status": "scheduled",
+          "start": 0,
+          "end": 300,
+          "weight": 18000,
+          "from": {
+            "domain": "VESSEL",
+            "bay": 12,
+            "row": 1,
+            "tier": 1
+          },
+          "to": {
+            "domain": "NONE",
+            "bay": 0,
+            "row": 0,
+            "tier": 0
+          },
+          "domain": "VESSEL",
+          "yard": {
+            "bay": 2,
+            "row": 1,
+            "tier": 1
+          },
+          "ship": {
+            "bay": 12,
+            "row": 1,
+            "tier": 1
+          },
+          "ports": {
+            "pol": "CNSHA",
+            "pod": "JPYOK"
+          }
+        },
+        {
+          "id": "PL-C03",
+          "containerId": "C03",
+          "operation": "PLACE",
+          "resource": "RC-1",
+          "order": 1,
+          "status": "scheduled",
+          "start": 302,
+          "end": 482,
+          "weight": 18000,
+          "from": {
+            "domain": "NONE",
+            "bay": 0,
+            "row": 0,
+            "tier": 0
+          },
+          "to": {
+            "domain": "YARD",
+            "bay": 2,
+            "row": 1,
+            "tier": 1
+          },
+          "domain": "YARD",
+          "yard": {
+            "bay": 2,
+            "row": 1,
+            "tier": 1
+          },
+          "ship": {
+            "bay": 12,
+            "row": 1,
+            "tier": 1
+          },
+          "ports": {
+            "pol": "CNSHA",
+            "pod": "JPYOK"
+          }
+        },
+        {
+          "id": "P-C02",
+          "containerId": "C02",
+          "operation": "PICK",
+          "resource": "RC-1",
+          "order": 2,
+          "status": "scheduled",
+          "start": 482,
+          "end": 662,
+          "weight": 22000,
+          "from": {
+            "domain": "YARD",
+            "bay": 1,
+            "row": 1,
+            "tier": 2
+          },
+          "to": {
+            "domain": "NONE",
+            "bay": 0,
+            "row": 0,
+            "tier": 0
+          },
+          "domain": "YARD",
+          "yard": {
+            "bay": 1,
+            "row": 1,
+            "tier": 2
+          },
+          "ship": {
+            "bay": 10,
+            "row": 1,
+            "tier": 2
+          },
+          "ports": {
+            "pol": "JPYOK",
+            "pod": "USOAK"
+          }
+        },
+        {
+          "id": "P-C01",
+          "containerId": "C01",
+          "operation": "PICK",
+          "resource": "RC-1",
+          "order": 1,
+          "status": "scheduled",
+          "start": 672,
+          "end": 852,
+          "weight": 20000,
+          "from": {
+            "domain": "YARD",
+            "bay": 1,
+            "row": 1,
+            "tier": 1
+          },
+          "to": {
+            "domain": "NONE",
+            "bay": 0,
+            "row": 0,
+            "tier": 0
+          },
+          "domain": "YARD",
+          "yard": {
+            "bay": 1,
+            "row": 1,
+            "tier": 1
+          },
+          "ship": {
+            "bay": 10,
+            "row": 1,
+            "tier": 1
+          },
+          "ports": {
+            "pol": "JPYOK",
+            "pod": "USOAK"
+          }
+        },
+        {
+          "id": "L-C01",
+          "containerId": "C01",
+          "operation": "LOAD",
+          "resource": "GC-1",
+          "order": 1,
+          "status": "scheduled",
+          "start": 854,
+          "end": 1154,
+          "weight": 20000,
+          "from": {
+            "domain": "NONE",
+            "bay": 0,
+            "row": 0,
+            "tier": 0
+          },
+          "to": {
+            "domain": "VESSEL",
+            "bay": 10,
+            "row": 1,
+            "tier": 1
+          },
+          "domain": "VESSEL",
+          "yard": {
+            "bay": 1,
+            "row": 1,
+            "tier": 1
+          },
+          "ship": {
+            "bay": 10,
+            "row": 1,
+            "tier": 1
+          },
+          "ports": {
+            "pol": "JPYOK",
+            "pod": "USOAK"
+          }
+        },
+        {
+          "id": "L-C02",
+          "containerId": "C02",
+          "operation": "LOAD",
+          "resource": "GC-1",
+          "order": 2,
+          "status": "scheduled",
+          "start": 1155,
+          "end": 1455,
+          "weight": 22000,
+          "from": {
+            "domain": "NONE",
+            "bay": 0,
+            "row": 0,
+            "tier": 0
+          },
+          "to": {
+            "domain": "VESSEL",
+            "bay": 10,
+            "row": 1,
+            "tier": 2
+          },
+          "domain": "VESSEL",
+          "yard": {
+            "bay": 1,
+            "row": 1,
+            "tier": 2
+          },
+          "ship": {
+            "bay": 10,
+            "row": 1,
+            "tier": 2
+          },
+          "ports": {
+            "pol": "JPYOK",
+            "pod": "USOAK"
+          }
+        }
+      ],
+      "snapshots": {
+        "timePoints": [
+          0,
+          300,
+          302,
+          482,
+          662,
+          672,
+          852,
+          854,
+          1154,
+          1155,
+          1455
+        ],
+        "data": {
+          "0": {
+            "yard": {
+              "1": {
+                "1": {
+                  "1": "C01",
+                  "2": "C02"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              1
+            ]
+          },
+          "300": {
+            "yard": {
+              "1": {
+                "1": {
+                  "1": "C01",
+                  "2": "C02"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              1
+            ]
+          },
+          "302": {
+            "yard": {
+              "1": {
+                "1": {
+                  "1": "C01",
+                  "2": "C02"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              1
+            ]
+          },
+          "482": {
+            "yard": {
+              "1": {
+                "1": {
+                  "1": "C01"
+                }
+              },
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              1,
+              2
+            ]
+          },
+          "662": {
+            "yard": {
+              "1": {
+                "1": {
+                  "1": "C01"
+                }
+              },
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              1,
+              2
+            ]
+          },
+          "672": {
+            "yard": {
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              2
+            ]
+          },
+          "852": {
+            "yard": {
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              2
+            ]
+          },
+          "854": {
+            "yard": {
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {},
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              2
+            ]
+          },
+          "1154": {
+            "yard": {
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {
+              "10": {
+                "1": {
+                  "1": "C01"
+                }
+              }
+            },
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "VESSEL",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": true
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              2,
+              10
+            ]
+          },
+          "1155": {
+            "yard": {
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {
+              "10": {
+                "1": {
+                  "1": "C01"
+                }
+              }
+            },
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "VESSEL",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": true
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": false
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              2,
+              10
+            ]
+          },
+          "1455": {
+            "yard": {
+              "2": {
+                "1": {
+                  "1": "C03"
+                }
+              }
+            },
+            "ship": {
+              "10": {
+                "1": {
+                  "1": "C01",
+                  "2": "C02"
+                }
+              }
+            },
+            "containers": {
+              "C01": {
+                "containerId": "C01",
+                "weight": 20000,
+                "currentPos": "VESSEL",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": true
+              },
+              "C02": {
+                "containerId": "C02",
+                "weight": 22000,
+                "currentPos": "VESSEL",
+                "yard": {
+                  "bay": 1,
+                  "row": 1,
+                  "tier": 2
+                },
+                "ship": {
+                  "bay": 10,
+                  "row": 1,
+                  "tier": 2
+                },
+                "pod": "USOAK",
+                "pol": "JPYOK",
+                "visibleInYard": false,
+                "visibleInVessel": true
+              },
+              "C03": {
+                "containerId": "C03",
+                "weight": 18000,
+                "currentPos": "YARD",
+                "yard": {
+                  "bay": 2,
+                  "row": 1,
+                  "tier": 1
+                },
+                "ship": {
+                  "bay": 12,
+                  "row": 1,
+                  "tier": 1
+                },
+                "pod": "JPYOK",
+                "pol": "CNSHA",
+                "visibleInYard": true,
+                "visibleInVessel": false
+              }
+            },
+            "availableBays": [
+              2,
+              10
+            ]
+          }
+        }
+      },
+      "kpi": {
+        "makespan": 1455,
+        "makespanMin": 24,
+        "penalty": 0,
+        "cost": 0,
+        "objective_value": 1455,
+        "solve_time": 8.2,
+        "craneUtil": [
+          {
+            "id": "GC-1",
+            "util": 62
+          },
+          {
+            "id": "RC-1",
+            "util": 37
+          }
+        ],
+        "rehandleCount": 0,
+        "avgWaitMin": 3,
+        "resolvedCount": 0,
+        "skippedCount": 0,
+        "remainCount": 0
+      }
+    }
+  ],
+  "issues": [],
+  "config": {
+    "yardBays": [
+      1,
+      2
+    ],
+    "shipBays": [
+      10,
+      12
+    ],
+    "yard_limits": {
+      "max_bay": 5,
+      "max_row": 3,
+      "max_tier": 4
+    },
+    "vessel_limits": {
+      "max_bay": 20,
+      "max_row": 8,
+      "max_tier": 6
+    },
+    "operation_start": "08:00",
+    "operation_date": "",
+    "current_port": "JPYOK",
+    "shifts": [],
+    "breaks": [],
+    "restricted_zones": {
+      "reefer": [],
+      "imo": []
+    },
+    "resources": {
+      "yard_cranes": [
+        {
+          "id": "RC-1",
+          "capacity": 1,
+          "bay": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "ship_cranes": [
+        {
+          "id": "GC-1",
+          "capacity": 1,
+          "bay": [
+            10,
+            11,
+            12
+          ]
+        }
+      ]
+    }
+  },
+  "highlight": {
+    "kind": "none",
+    "hoverContainerId": "",
+    "selectedIssueId": "",
+    "relatedContainerIds": []
+  }
+}

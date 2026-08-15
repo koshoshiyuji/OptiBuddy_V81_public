@@ -1,0 +1,237 @@
+{
+  "domain_key": "capital_project_selector",
+  "problem_class": "CapitalProjectSelector",
+  "exported_at": "2026-08-11T19:11:59.903097+00:00",
+  "dsl_definition": {
+    "problem_class": "CapitalProjectSelector",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "budget": "int",
+      "projects": [
+        {
+          "id": "str",
+          "name": "str",
+          "value": "int",
+          "weight": "int",
+          "category": "str",
+          "tags": [
+            "str"
+          ]
+        }
+      ],
+      "config": {
+        "time_limit_sec": "int"
+      }
+    },
+    "description": "CapitalProjectSelectorの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "CapitalProjectSelector — 標準",
+      "description": "CapitalProjectSelectorの標準シナリオ",
+      "tag": "CAPITA",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "CapitalProjectSelector",
+        "domain": "capital_project_selector",
+        "meta": {
+          "instance_name": "CapitalProjectSelector シナリオ #1",
+          "note": "【設計意図】標準的な予算規模（1億円）と10件の候補案件で構成。大部分が予算内に収まるが、全件選択は不可能な設定。【検証結果】未検証。"
+        },
+        "budget": 100000000,
+        "projects": [
+          {
+            "id": "P001",
+            "name": "工場ライン自動化",
+            "value": 28000000,
+            "weight": 35000000,
+            "category": "生産性向上",
+            "tags": [
+              "製造",
+              "自動化"
+            ]
+          },
+          {
+            "id": "P002",
+            "name": "倉庫管理システム刷新",
+            "value": 15000000,
+            "weight": 20000000,
+            "category": "コスト削減",
+            "tags": [
+              "物流",
+              "IT"
+            ]
+          },
+          {
+            "id": "P003",
+            "name": "省エネ設備導入",
+            "value": 12000000,
+            "weight": 18000000,
+            "category": "コスト削減",
+            "tags": [
+              "エネルギー"
+            ]
+          },
+          {
+            "id": "P004",
+            "name": "品質検査自動化",
+            "value": 20000000,
+            "weight": 25000000,
+            "category": "生産性向上",
+            "tags": [
+              "品質",
+              "自動化"
+            ]
+          },
+          {
+            "id": "P005",
+            "name": "ERP基幹システム更新",
+            "value": 18000000,
+            "weight": 30000000,
+            "category": "IT基盤",
+            "tags": [
+              "IT",
+              "基幹"
+            ]
+          },
+          {
+            "id": "P006",
+            "name": "フォークリフト電動化",
+            "value": 8000000,
+            "weight": 10000000,
+            "category": "コスト削減",
+            "tags": [
+              "物流",
+              "環境"
+            ]
+          },
+          {
+            "id": "P007",
+            "name": "空調設備更新",
+            "value": 6000000,
+            "weight": 8000000,
+            "category": "環境整備",
+            "tags": [
+              "設備",
+              "省エネ"
+            ]
+          },
+          {
+            "id": "P008",
+            "name": "セキュリティカメラ拡充",
+            "value": 4000000,
+            "weight": 5000000,
+            "category": "安全",
+            "tags": [
+              "セキュリティ"
+            ]
+          },
+          {
+            "id": "P009",
+            "name": "社内研修設備整備",
+            "value": 5000000,
+            "weight": 6000000,
+            "category": "人材育成",
+            "tags": [
+              "HR"
+            ]
+          },
+          {
+            "id": "P010",
+            "name": "排水処理設備改良",
+            "value": 7000000,
+            "weight": 9000000,
+            "category": "環境対応",
+            "tags": [
+              "環境",
+              "規制対応"
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 30
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "CapitalProjectSelector — 解なし",
+      "description": "CapitalProjectSelectorのInfeasibleシナリオ",
+      "tag": "CAPITA",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "CapitalProjectSelector",
+        "domain": "capital_project_selector",
+        "meta": {
+          "instance_name": "CapitalProjectSelector シナリオ #2",
+          "note": "【設計意図】予算上限（100万円）を全案件の最小投資額（2,000万円）より低く設定することで、予算制約のみで解なし（いかなる案件も1件も選べない）を実現する構成。min_projectsには依存しない。【検証結果】未検証。"
+        },
+        "budget": 1000000,
+        "projects": [
+          {
+            "id": "P001",
+            "name": "工場ライン自動化",
+            "value": 28000000,
+            "weight": 35000000,
+            "category": "生産性向上",
+            "tags": [
+              "製造"
+            ]
+          },
+          {
+            "id": "P002",
+            "name": "倉庫管理システム刷新",
+            "value": 15000000,
+            "weight": 20000000,
+            "category": "コスト削減",
+            "tags": [
+              "物流"
+            ]
+          },
+          {
+            "id": "P003",
+            "name": "省エネ設備導入",
+            "value": 12000000,
+            "weight": 18000000,
+            "category": "コスト削減",
+            "tags": [
+              "エネルギー"
+            ]
+          },
+          {
+            "id": "P004",
+            "name": "品質検査自動化",
+            "value": 20000000,
+            "weight": 25000000,
+            "category": "生産性向上",
+            "tags": [
+              "品質"
+            ]
+          },
+          {
+            "id": "P005",
+            "name": "ERP基幹システム更新",
+            "value": 18000000,
+            "weight": 30000000,
+            "category": "IT基盤",
+            "tags": [
+              "IT"
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 30
+        }
+      },
+      "is_active": false
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "domain_key": "depot_route_planner",
+  "problem_class": "DepotRoutePlanner",
+  "exported_at": "2026-08-11T19:11:38.274715+00:00",
+  "dsl_definition": {
+    "problem_class": "DepotRoutePlanner",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "depots": [
+        {
+          "id": "str",
+          "name": "str",
+          "x": "int",
+          "y": "int",
+          "opening_cost": "int"
+        }
+      ],
+      "customers": [
+        {
+          "id": "str",
+          "name": "str",
+          "x": "int",
+          "y": "int"
+        }
+      ],
+      "config": {
+        "max_open_depots": "int",
+        "stage1_time_limit_sec": "int",
+        "stage2_time_limit_sec": "int"
+      }
+    },
+    "description": "DepotRoutePlannerの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "DepotRoutePlanner — 標準",
+      "description": "DepotRoutePlannerの標準シナリオ",
+      "tag": "DEPOTR",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "DepotRoutePlanner",
+        "domain": "depot_route_planner",
+        "meta": {
+          "instance_name": "DepotRoutePlanner baseline",
+          "note": "【設計意図】ヒアリング登録用シナリオ。拠点候補2件・顧客5件。x/y平面座標・マンハッタン距離。独立検証済み最適解: D1・D2とも開設、D1がC1・C2担当（巡回距離10）、D2がC3・C4・C5担当（巡回距離18）、総コスト=開設費用22+巡回距離28=50。"
+        },
+        "depots": [
+          {
+            "id": "D1",
+            "name": "拠点D1",
+            "x": 0,
+            "y": 0,
+            "opening_cost": 10
+          },
+          {
+            "id": "D2",
+            "name": "拠点D2",
+            "x": 20,
+            "y": 0,
+            "opening_cost": 12
+          }
+        ],
+        "customers": [
+          {
+            "id": "C1",
+            "name": "顧客C1",
+            "x": 1,
+            "y": 2
+          },
+          {
+            "id": "C2",
+            "name": "顧客C2",
+            "x": 2,
+            "y": -1
+          },
+          {
+            "id": "C3",
+            "name": "顧客C3",
+            "x": 19,
+            "y": 3
+          },
+          {
+            "id": "C4",
+            "name": "顧客C4",
+            "x": 21,
+            "y": -2
+          },
+          {
+            "id": "C5",
+            "name": "顧客C5",
+            "x": 23,
+            "y": 1
+          }
+        ],
+        "config": {
+          "max_open_depots": 2,
+          "stage1_time_limit_sec": 30,
+          "stage2_time_limit_sec": 20
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "DepotRoutePlanner — 解なし",
+      "description": "DepotRoutePlannerのInfeasibleシナリオ",
+      "tag": "DEPOTR",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "DepotRoutePlanner",
+        "domain": "depot_route_planner",
+        "meta": {
+          "instance_name": "DepotRoutePlanner infeasible",
+          "note": "【設計意図】max_open_depots=0 を指定することで、どの拠点も開設できず全顧客が未割当となる解なしシナリオ。x/y平面座標・マンハッタン距離。"
+        },
+        "depots": [
+          {
+            "id": "D1",
+            "name": "拠点D1",
+            "x": 0,
+            "y": 0,
+            "opening_cost": 10
+          },
+          {
+            "id": "D2",
+            "name": "拠点D2",
+            "x": 20,
+            "y": 0,
+            "opening_cost": 12
+          }
+        ],
+        "customers": [
+          {
+            "id": "C1",
+            "name": "顧客C1",
+            "x": 1,
+            "y": 2
+          },
+          {
+            "id": "C2",
+            "name": "顧客C2",
+            "x": 2,
+            "y": -1
+          },
+          {
+            "id": "C3",
+            "name": "顧客C3",
+            "x": 19,
+            "y": 3
+          }
+        ],
+        "config": {
+          "max_open_depots": 0,
+          "stage1_time_limit_sec": 10,
+          "stage2_time_limit_sec": 10
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

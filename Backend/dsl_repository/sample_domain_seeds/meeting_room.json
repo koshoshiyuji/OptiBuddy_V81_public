@@ -1,0 +1,338 @@
+{
+  "domain_key": "meeting_room",
+  "problem_class": "MeetingRoom",
+  "exported_at": "2026-07-20T12:32:38.488154+00:00",
+  "dsl_definition": {
+    "problem_class": "MeetingRoom",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "config": {
+        "dept_same_room_bonus": "float",
+        "waste_penalty_weight": "int",
+        "dept_consecutive_gap_min": "int",
+        "solve_time_sec": "int"
+      },
+      "meetings": [
+        {
+          "id": "str",
+          "name": "str",
+          "dept": "str",
+          "start_min": "int",
+          "end_min": "int",
+          "attendees": "int",
+          "required_features": [
+            "str"
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "id": "str",
+          "name": "str",
+          "capacity": "int",
+          "features": [
+            "str"
+          ],
+          "available_start_min": "int",
+          "available_end_min": "int"
+        }
+      ]
+    },
+    "description": "MeetingRoomの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "MeetingRoom — 標準",
+      "description": "MeetingRoomの標準シナリオ",
+      "tag": "MEETIN",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "MeetingRoom",
+        "domain": "meeting_room",
+        "meta": {
+          "instance_name": "MeetingRoom シナリオ #1",
+          "note": "【設計意図】10会議・5会議室の標準的な割当。同部署の近接会議（営業部・午前）を同室ボーナスが促進できるか確認。全件割当可能な条件を狙って作成。"
+        },
+        "config": {
+          "dept_same_room_bonus": 0.1,
+          "waste_penalty_weight": 1,
+          "dept_consecutive_gap_min": 60,
+          "solve_time_sec": 30
+        },
+        "meetings": [
+          {
+            "id": "M001",
+            "name": "営業部 週次MTG",
+            "dept": "営業部",
+            "start_min": 540,
+            "end_min": 600,
+            "attendees": 8,
+            "required_features": [
+              "projector"
+            ]
+          },
+          {
+            "id": "M002",
+            "name": "営業部 戦略会議",
+            "dept": "営業部",
+            "start_min": 630,
+            "end_min": 720,
+            "attendees": 6,
+            "required_features": [
+              "projector"
+            ]
+          },
+          {
+            "id": "M003",
+            "name": "開発部 スプリント計画",
+            "dept": "開発部",
+            "start_min": 540,
+            "end_min": 660,
+            "attendees": 12,
+            "required_features": [
+              "projector",
+              "whiteboard"
+            ]
+          },
+          {
+            "id": "M004",
+            "name": "開発部 コードレビュー",
+            "dept": "開発部",
+            "start_min": 780,
+            "end_min": 840,
+            "attendees": 4,
+            "required_features": []
+          },
+          {
+            "id": "M005",
+            "name": "人事部 採用検討",
+            "dept": "人事部",
+            "start_min": 600,
+            "end_min": 660,
+            "attendees": 3,
+            "required_features": []
+          },
+          {
+            "id": "M006",
+            "name": "経営会議",
+            "dept": "経営",
+            "start_min": 840,
+            "end_min": 960,
+            "attendees": 15,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          },
+          {
+            "id": "M007",
+            "name": "マーケ キャンペーン検討",
+            "dept": "マーケ",
+            "start_min": 660,
+            "end_min": 720,
+            "attendees": 5,
+            "required_features": []
+          },
+          {
+            "id": "M008",
+            "name": "1on1 A",
+            "dept": "人事部",
+            "start_min": 720,
+            "end_min": 750,
+            "attendees": 2,
+            "required_features": []
+          },
+          {
+            "id": "M009",
+            "name": "財務 月次報告",
+            "dept": "財務部",
+            "start_min": 540,
+            "end_min": 600,
+            "attendees": 6,
+            "required_features": [
+              "projector"
+            ]
+          },
+          {
+            "id": "M010",
+            "name": "全社定例",
+            "dept": null,
+            "start_min": 1020,
+            "end_min": 1080,
+            "attendees": 30,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          }
+        ],
+        "rooms": [
+          {
+            "id": "R001",
+            "name": "会議室A（大）",
+            "capacity": 30,
+            "features": [
+              "projector",
+              "video_conf",
+              "whiteboard"
+            ],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          },
+          {
+            "id": "R002",
+            "name": "会議室B（中）",
+            "capacity": 15,
+            "features": [
+              "projector",
+              "whiteboard"
+            ],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          },
+          {
+            "id": "R003",
+            "name": "会議室C（中）",
+            "capacity": 12,
+            "features": [
+              "projector"
+            ],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          },
+          {
+            "id": "R004",
+            "name": "会議室D（小）",
+            "capacity": 8,
+            "features": [
+              "projector"
+            ],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          },
+          {
+            "id": "R005",
+            "name": "会議室E（個室）",
+            "capacity": 4,
+            "features": [],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          }
+        ]
+      },
+      "is_active": true
+    },
+    {
+      "name": "MeetingRoom — 解なし",
+      "description": "MeetingRoomのInfeasibleシナリオ",
+      "tag": "MEETIN",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "MeetingRoom",
+        "domain": "meeting_room",
+        "meta": {
+          "instance_name": "MeetingRoom シナリオ #2",
+          "note": "【設計意図】全会議が同一時間帯に集中し、かつ全会議がprojector+video_confを要求するが、その設備を持つ部屋が1室しかないため、ほとんどの会議が未割当になることを狙った設計。"
+        },
+        "config": {
+          "dept_same_room_bonus": 0.1,
+          "waste_penalty_weight": 1,
+          "dept_consecutive_gap_min": 60,
+          "solve_time_sec": 20
+        },
+        "meetings": [
+          {
+            "id": "M001",
+            "name": "会議1",
+            "dept": "A部",
+            "start_min": 600,
+            "end_min": 660,
+            "attendees": 5,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          },
+          {
+            "id": "M002",
+            "name": "会議2",
+            "dept": "B部",
+            "start_min": 600,
+            "end_min": 660,
+            "attendees": 5,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          },
+          {
+            "id": "M003",
+            "name": "会議3",
+            "dept": "C部",
+            "start_min": 600,
+            "end_min": 660,
+            "attendees": 5,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          },
+          {
+            "id": "M004",
+            "name": "会議4",
+            "dept": "D部",
+            "start_min": 600,
+            "end_min": 660,
+            "attendees": 5,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          },
+          {
+            "id": "M005",
+            "name": "会議5",
+            "dept": "E部",
+            "start_min": 600,
+            "end_min": 660,
+            "attendees": 50,
+            "required_features": [
+              "projector",
+              "video_conf"
+            ]
+          }
+        ],
+        "rooms": [
+          {
+            "id": "R001",
+            "name": "会議室A（大）",
+            "capacity": 50,
+            "features": [
+              "projector",
+              "video_conf"
+            ],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          },
+          {
+            "id": "R002",
+            "name": "会議室B（小）",
+            "capacity": 8,
+            "features": [],
+            "available_start_min": 480,
+            "available_end_min": 1200
+          }
+        ]
+      },
+      "is_active": true
+    }
+  ]
+}

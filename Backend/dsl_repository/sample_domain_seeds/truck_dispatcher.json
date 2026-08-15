@@ -1,0 +1,529 @@
+{
+  "domain_key": "truck_dispatcher",
+  "problem_class": "TruckDispatcher",
+  "exported_at": "2026-08-15T00:00:00+00:00",
+  "dsl_definition": {
+    "problem_class": "TruckDispatcher",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "config": {
+        "avg_speed_kmh": "int",
+        "highway_threshold_km": "int",
+        "objective_priority": [
+          "str"
+        ],
+        "soft_tw_penalty_per_min": "int",
+        "solver_time_limit_sec": "int"
+      },
+      "customers": [
+        {
+          "demand_kg": "int",
+          "id": "str",
+          "lat": "float",
+          "lon": "float",
+          "name": "str",
+          "restricted_vehicle_types": [],
+          "service_time_min": "int",
+          "tw_close": "str",
+          "tw_open": "str"
+        }
+      ],
+      "depot": {
+        "close_time": "str",
+        "id": "str",
+        "lat": "float",
+        "lon": "float",
+        "name": "str",
+        "open_time": "str"
+      },
+      "domain": "str",
+      "meta": {
+        "date": "str",
+        "instance_name": "str",
+        "note": "str"
+      },
+      "problem_class": "str",
+      "vehicles": [
+        {
+          "capacity_kg": "int",
+          "id": "str",
+          "max_continuous_drive_min": "int",
+          "max_duty_min": "int",
+          "name": "str",
+          "preferred_customer_ids": [
+            "str"
+          ],
+          "type": "str"
+        }
+      ]
+    },
+    "description": "サンプル運輸は複数件の配送依頼を保有する車両群に割り当て、配送ルートと順序を決定する。最優先目標は使用トラック台数の削減、副次目標は各車の運行時間短縮。配送時間指定（一部ソフト制約）と積載量制限を満たしながら最適化を行う。 (標準・公開サンプル)"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "Truck Dispatcher Promo Demo — 標準",
+      "description": "【宣伝素材用】実在の顧客名・実データは一切含まない、公開デモ専用の架空シナリオ。会社名『サンプル運輸』・顧客名はすべて仮名。地名は実在の東京都内エリアだが、住所・座標は概算値で特定の建物を指さない。8件の配送先・3台の車両（2t/4t/10t）で構成し、全件を無理なく1日で配達しきれる規模に調整済み（未割当が出ない、短時間で解ける『きれいな成功例』としてデモ用に設計）。",
+      "tag": "TRUCKD",
+      "tag_color": "#f97316",
+      "dsl_json": {
+        "problem_class": "TruckDispatcher",
+        "domain": "truck_dispatcher",
+        "meta": {
+          "instance_name": "サンプル運輸 配送最適化デモ（宣伝素材用・完全架空データ）",
+          "note": "【宣伝素材用】実在の顧客名・実データは一切含まない、公開デモ専用の架空シナリオ。会社名『サンプル運輸』・顧客名はすべて仮名。地名は実在の東京都内エリアだが、住所・座標は概算値で特定の建物を指さない。8件の配送先・3台の車両（2t/4t/10t）で構成し、全件を無理なく1日で配達しきれる規模に調整済み（未割当が出ない、短時間で解ける『きれいな成功例』としてデモ用に設計）。",
+          "date": "2026-08-12"
+        },
+        "depot": {
+          "id": "depot",
+          "name": "サンプル運輸 本社倉庫",
+          "lat": 35.6762,
+          "lon": 139.7743,
+          "open_time": "08:00",
+          "close_time": "20:00"
+        },
+        "customers": [
+          {
+            "id": "c01",
+            "name": "サンプル商事 渋谷支店",
+            "lat": 35.6595,
+            "lon": 139.7005,
+            "demand_kg": 800,
+            "service_time_min": 20,
+            "tw_open": "09:00",
+            "tw_close": "12:00",
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "c02",
+            "name": "デモ物産 新宿倉庫",
+            "lat": 35.6905,
+            "lon": 139.7005,
+            "demand_kg": 2000,
+            "service_time_min": 30,
+            "tw_open": "09:00",
+            "tw_close": "13:00",
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "c03",
+            "name": "テスト工業 池袋工場",
+            "lat": 35.7295,
+            "lon": 139.7109,
+            "demand_kg": 2800,
+            "service_time_min": 40,
+            "tw_open": "10:00",
+            "tw_close": "15:00",
+            "restricted_vehicle_types": [
+              "2t"
+            ]
+          },
+          {
+            "id": "c04",
+            "name": "架空フーズ 品川センター",
+            "lat": 35.6284,
+            "lon": 139.7387,
+            "demand_kg": 600,
+            "service_time_min": 20,
+            "tw_open": "09:00",
+            "tw_close": "18:00",
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "c05",
+            "name": "サンプルストア 浅草店",
+            "lat": 35.712,
+            "lon": 139.796,
+            "demand_kg": 450,
+            "service_time_min": 15,
+            "tw_open": "11:00",
+            "tw_close": "17:00",
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "c06",
+            "name": "デモ商会 上野支店",
+            "lat": 35.7141,
+            "lon": 139.7774,
+            "demand_kg": 1200,
+            "service_time_min": 25,
+            "tw_open": "09:00",
+            "tw_close": "16:00",
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "c07",
+            "name": "架空トレーディング 六本木オフィス",
+            "lat": 35.6627,
+            "lon": 139.7314,
+            "demand_kg": 300,
+            "service_time_min": 15,
+            "tw_open": "13:00",
+            "tw_close": "18:00",
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "c08",
+            "name": "サンプル電機 秋葉原店",
+            "lat": 35.6984,
+            "lon": 139.7731,
+            "demand_kg": 1600,
+            "service_time_min": 25,
+            "tw_open": "09:00",
+            "tw_close": "19:00",
+            "restricted_vehicle_types": []
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "v01",
+            "name": "2tトラック（デモ①）",
+            "type": "2t",
+            "capacity_kg": 2000,
+            "max_duty_min": 600,
+            "max_continuous_drive_min": 240,
+            "preferred_customer_ids": []
+          },
+          {
+            "id": "v02",
+            "name": "4tトラック（デモ②）",
+            "type": "4t",
+            "capacity_kg": 4000,
+            "max_duty_min": 600,
+            "max_continuous_drive_min": 240,
+            "preferred_customer_ids": []
+          },
+          {
+            "id": "v03",
+            "name": "10tトラック（デモ③）",
+            "type": "10t",
+            "capacity_kg": 8000,
+            "max_duty_min": 660,
+            "max_continuous_drive_min": 300,
+            "preferred_customer_ids": []
+          }
+        ],
+        "config": {
+          "avg_speed_kmh": 25,
+          "highway_speed_kmh": 60,
+          "highway_threshold_km": 30,
+          "objective_priority": [
+            "minimize_vehicles",
+            "minimize_distance",
+            "balance_duty"
+          ],
+          "soft_tw_penalty_per_min": 100,
+          "solver_time_limit_sec": 15
+        }
+      }
+    },
+    {
+      "name": "Truck Dispatcher — CSPLib prob086 (CVRPLIB E-n22-k4) 検証用",
+      "description": "CSPLib prob086(CVRP)がTruckDispatcherの基底問題として対応付けられていることを利用し、TruckDispatcherソルバーの正当性チェック用に登録したベンチマークシナリオ。CVRPLIB公式(https://galgos.inf.puc-rio.br/cvrplib/en/download/instance/55)のE-n22-k4(Christofides & Eilon)をそのまま移植。既知最適値: 総距離375.0 /最小車両数4台。lat/lonはCVRPLIBの平面座標(1単位=1km)をdepot起点の等距離円筒近似で変換した擬似座標であり、実在の地理的位置とは無関係。2026-07-23の検証結果: (1)距離行列を丸め込みまで理論値通りに再現したテスト(cvrp_e_n22_k4_to_truckdispatcher.py、車両5台構成)ではCP Optimizerが総距離375.0km・車両4台で既知最適と完全一致(gap 0%)。(2)この本シナリオ(Business DSL経由、実際のHaversine変換を通した経路)ではCP Optimizerが総距離383.43km・車両4台(gap +2.25%)。台数一致は再現、距離はHaversine近似誤差により既知最適よりわずかに悪化。正当性チェックの基準としては「車両数の一致」を主指標、「既知最適との距離gapが数%以内」を副指標として使うことを推奨。",
+      "tag": "TRUCKD",
+      "tag_color": "#f97316",
+      "dsl_json": {
+        "config": {
+          "avg_speed_kmh": 60,
+          "highway_speed_kmh": 60,
+          "highway_threshold_km": 1000000,
+          "objective_priority": [
+            "minimize_vehicles",
+            "minimize_distance",
+            "balance_duty"
+          ],
+          "soft_tw_penalty_per_min": 0,
+          "solver_time_limit_sec": 30
+        },
+        "customers": [
+          {
+            "id": "en22k4_c02",
+            "name": "CVRPLIB node2",
+            "lat": 36.121408,
+            "lon": 139.83348,
+            "demand_kg": 1100,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c03",
+            "name": "CVRPLIB node3",
+            "lat": 36.094459,
+            "lon": 139.921954,
+            "demand_kg": 700,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c04",
+            "name": "CVRPLIB node4",
+            "lat": 36.031577,
+            "lon": 139.601237,
+            "demand_kg": 800,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c05",
+            "name": "CVRPLIB node5",
+            "lat": 36.013611,
+            "lon": 139.579119,
+            "demand_kg": 1400,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c06",
+            "name": "CVRPLIB node6",
+            "lat": 35.968696,
+            "lon": 139.966191,
+            "demand_kg": 2100,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c07",
+            "name": "CVRPLIB node7",
+            "lat": 35.959712,
+            "lon": 139.778184,
+            "demand_kg": 400,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c08",
+            "name": "CVRPLIB node8",
+            "lat": 35.92378,
+            "lon": 139.944072,
+            "demand_kg": 800,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c09",
+            "name": "CVRPLIB node9",
+            "lat": 35.896831,
+            "lon": 139.733947,
+            "demand_kg": 100,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c10",
+            "name": "CVRPLIB node10",
+            "lat": 35.869881,
+            "lon": 139.966191,
+            "demand_kg": 500,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c11",
+            "name": "CVRPLIB node11",
+            "lat": 35.833949,
+            "lon": 139.800303,
+            "demand_kg": 600,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c12",
+            "name": "CVRPLIB node12",
+            "lat": 35.824966,
+            "lon": 139.579119,
+            "demand_kg": 1200,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c13",
+            "name": "CVRPLIB node13",
+            "lat": 35.699202,
+            "lon": 139.888776,
+            "demand_kg": 1300,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c14",
+            "name": "CVRPLIB node14",
+            "lat": 35.672253,
+            "lon": 139.590178,
+            "demand_kg": 1300,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c15",
+            "name": "CVRPLIB node15",
+            "lat": 35.618354,
+            "lon": 139.778184,
+            "demand_kg": 300,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c16",
+            "name": "CVRPLIB node16",
+            "lat": 35.618354,
+            "lon": 139.97725,
+            "demand_kg": 900,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c17",
+            "name": "CVRPLIB node17",
+            "lat": 35.600388,
+            "lon": 139.722888,
+            "demand_kg": 2100,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c18",
+            "name": "CVRPLIB node18",
+            "lat": 35.483608,
+            "lon": 139.789243,
+            "demand_kg": 1000,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c19",
+            "name": "CVRPLIB node19",
+            "lat": 35.483608,
+            "lon": 139.97725,
+            "demand_kg": 900,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c20",
+            "name": "CVRPLIB node20",
+            "lat": 35.447675,
+            "lon": 139.590178,
+            "demand_kg": 2500,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c21",
+            "name": "CVRPLIB node21",
+            "lat": 35.411743,
+            "lon": 139.877717,
+            "demand_kg": 1800,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          },
+          {
+            "id": "en22k4_c22",
+            "name": "CVRPLIB node22",
+            "lat": 35.384793,
+            "lon": 139.70077,
+            "demand_kg": 700,
+            "tw_open": "00:00",
+            "tw_close": "23:59",
+            "service_time_min": 0,
+            "restricted_vehicle_types": []
+          }
+        ],
+        "depot": {
+          "id": "en22k4_depot",
+          "name": "CVRPLIB E-n22-k4 depot (node1)",
+          "lat": 35.681236,
+          "lon": 139.767125,
+          "open_time": "00:00",
+          "close_time": "23:59"
+        },
+        "domain": "truck_dispatcher",
+        "meta": {
+          "date": "2026-07-23",
+          "instance_name": "CSPLib prob086 correspondence benchmark: CVRPLIB E-n22-k4",
+          "note": "CSPLib prob086(CVRP)がTruckDispatcherの基底問題として対応付けられていることを利用し、TruckDispatcherソルバーの正当性チェック用に登録したベンチマークシナリオ。CVRPLIB公式(https://galgos.inf.puc-rio.br/cvrplib/en/download/instance/55)のE-n22-k4(Christofides & Eilon)をそのまま移植。既知最適値: 総距離375.0 /最小車両数4台。lat/lonはCVRPLIBの平面座標(1単位=1km)をdepot起点の等距離円筒近似で変換した擬似座標であり、実在の地理的位置とは無関係。2026-07-23の検証結果: (1)距離行列を丸め込みまで理論値通りに再現したテスト(cvrp_e_n22_k4_to_truckdispatcher.py、車両5台構成)ではCP Optimizerが総距離375.0km・車両4台で既知最適と完全一致(gap 0%)。(2)この本シナリオ(Business DSL経由、実際のHaversine変換を通した経路)ではCP Optimizerが総距離383.43km・車両4台(gap +2.25%)。台数一致は再現、距離はHaversine近似誤差により既知最適よりわずかに悪化。正当性チェックの基準としては「車両数の一致」を主指標、「既知最適との距離gapが数%以内」を副指標として使うことを推奨。",
+          "original_note": "NAME: E-n22-k4 / COMMENT: (Christofides and Eilon, Min no of trucks: 4, Optimal value: 375) / TYPE: CVRP / DIMENSION: 22 / EDGE_WEIGHT_TYPE: EUC_2D / CAPACITY: 6000"
+        },
+        "problem_class": "TruckDispatcher",
+        "vehicles": [
+          {
+            "id": "en22k4_v01",
+            "name": "CVRPLIB標準車両1(容量6000)",
+            "type": "cvrp_std",
+            "capacity_kg": 6000,
+            "max_duty_min": 100000,
+            "max_continuous_drive_min": 100000,
+            "preferred_customer_ids": []
+          },
+          {
+            "id": "en22k4_v02",
+            "name": "CVRPLIB標準車両2(容量6000)",
+            "type": "cvrp_std",
+            "capacity_kg": 6000,
+            "max_duty_min": 100000,
+            "max_continuous_drive_min": 100000,
+            "preferred_customer_ids": []
+          },
+          {
+            "id": "en22k4_v03",
+            "name": "CVRPLIB標準車両3(容量6000)",
+            "type": "cvrp_std",
+            "capacity_kg": 6000,
+            "max_duty_min": 100000,
+            "max_continuous_drive_min": 100000,
+            "preferred_customer_ids": []
+          },
+          {
+            "id": "en22k4_v04",
+            "name": "CVRPLIB標準車両4(容量6000)",
+            "type": "cvrp_std",
+            "capacity_kg": 6000,
+            "max_duty_min": 100000,
+            "max_continuous_drive_min": 100000,
+            "preferred_customer_ids": []
+          }
+        ]
+      }
+    }
+  ]
+}

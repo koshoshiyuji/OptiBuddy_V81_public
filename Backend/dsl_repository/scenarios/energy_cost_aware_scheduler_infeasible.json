@@ -1,0 +1,35 @@
+{
+  "problem_class": "EnergyCostAwareScheduler",
+  "domain": "energy_cost_aware_scheduler",
+  "meta": {
+    "instance_name": "EnergyCostAwareScheduler シナリオ #2",
+    "note": "【設計意図】全オーダーが同一の非常に狭い時間窓（120〜180分）に集中し、かつ全オーダーがL1専用ライン限定で、L1の電力容量(60kW)を大幅に超える電力需要(各30kW×6件=180kW)がある。制約充足不可能（infeasible）またはほぼ全件未完了になることを狙った構成。"
+  },
+  "orders": [
+    {"id": "X001", "name": "緊急オーダー1", "duration_min": 60, "earliest_start_min": 120, "deadline_min": 180, "power_kw": 30.0, "workers": 5, "equipment_slots": 3, "allowed_line_ids": ["L1"], "customer": "得意先Z"},
+    {"id": "X002", "name": "緊急オーダー2", "duration_min": 60, "earliest_start_min": 120, "deadline_min": 180, "power_kw": 30.0, "workers": 5, "equipment_slots": 3, "allowed_line_ids": ["L1"], "customer": "得意先Z"},
+    {"id": "X003", "name": "緊急オーダー3", "duration_min": 60, "earliest_start_min": 120, "deadline_min": 180, "power_kw": 30.0, "workers": 5, "equipment_slots": 3, "allowed_line_ids": ["L1"], "customer": "得意先Z"},
+    {"id": "X004", "name": "緊急オーダー4", "duration_min": 60, "earliest_start_min": 120, "deadline_min": 180, "power_kw": 30.0, "workers": 5, "equipment_slots": 3, "allowed_line_ids": ["L1"], "customer": "得意先Z"},
+    {"id": "X005", "name": "緊急オーダー5", "duration_min": 60, "earliest_start_min": 120, "deadline_min": 180, "power_kw": 30.0, "workers": 5, "equipment_slots": 3, "allowed_line_ids": ["L1"], "customer": "得意先Z"},
+    {"id": "X006", "name": "緊急オーダー6", "duration_min": 60, "earliest_start_min": 120, "deadline_min": 180, "power_kw": 30.0, "workers": 5, "equipment_slots": 3, "allowed_line_ids": ["L1"], "customer": "得意先Z"}
+  ],
+  "lines": [
+    {
+      "id": "L1", "name": "第1ライン（専用）",
+      "max_power_kw": 60.0, "max_workers": 8, "max_equipment_slots": 4,
+      "standby_power_kw": 5.0, "startup_cost": 500.0, "shutdown_cost": 300.0
+    }
+  ],
+  "tariffs": [
+    {"slot_start": 0,   "slot_end": 180, "price_per_kwh": 30.0},
+    {"slot_start": 180, "slot_end": 360, "price_per_kwh": 30.0},
+    {"slot_start": 360, "slot_end": 720, "price_per_kwh": 30.0},
+    {"slot_start": 720, "slot_end": 1440, "price_per_kwh": 30.0}
+  ],
+  "config": {
+    "horizon_min": 1440,
+    "time_limit_sec": 30,
+    "slot_min": 30,
+    "priority_customer_names": ["得意先Z"]
+  }
+}

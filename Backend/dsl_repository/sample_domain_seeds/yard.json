@@ -1,0 +1,967 @@
+{
+  "domain_key": "yard",
+  "problem_class": "YardPlanning",
+  "exported_at": "2026-07-20T12:32:38.242990+00:00",
+  "dsl_definition": {
+    "problem_class": "YardPlanning",
+    "version": "1.0",
+    "extensions": [
+      "physical_space",
+      "phase_separation",
+      "crane_interference",
+      "attribute_zones",
+      "shift"
+    ],
+    "schema_json": {
+      "containers": {
+        "type": "array",
+        "items": {
+          "id": {
+            "type": "string"
+          },
+          "yard": {
+            "type": "object"
+          },
+          "ship": {
+            "type": "object"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "pod": {
+            "type": "string"
+          },
+          "pol": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number"
+          },
+          "attrs": {
+            "type": "array"
+          }
+        }
+      },
+      "resources": {
+        "yard_cranes": {
+          "type": "array"
+        },
+        "ship_cranes": {
+          "type": "array"
+        },
+        "restricted_zones": {
+          "type": "object"
+        }
+      },
+      "config": {
+        "current_port": {
+          "type": "string"
+        },
+        "time_pick": {
+          "type": "number"
+        },
+        "time_load": {
+          "type": "number"
+        },
+        "time_discharge": {
+          "type": "number"
+        },
+        "time_place": {
+          "type": "number"
+        },
+        "time_move": {
+          "type": "number"
+        },
+        "time_rehandle": {
+          "type": "number"
+        },
+        "safety_gap": {
+          "type": "number"
+        },
+        "max_bays": {
+          "type": "number"
+        },
+        "max_rows": {
+          "type": "number"
+        },
+        "max_tiers": {
+          "type": "number"
+        },
+        "crane_interference": {
+          "type": "boolean"
+        },
+        "shifts": {
+          "type": "array"
+        },
+        "breaks": {
+          "type": "array"
+        }
+      }
+    },
+    "description": "Yard Planning DSL v1.0 - コンテナターミナルのヤード計画問題（V5実装ベース）"
+  },
+  "extensions": [
+    {
+      "name": "attribute_zones",
+      "category": "constraint",
+      "schema_fragment": {
+        "containers": {
+          "items": {
+            "attrs": {
+              "type": "array",
+              "items": {
+                "type": "enum",
+                "values": [
+                  "REEFER",
+                  "OOG",
+                  "IMO_CLASS_1",
+                  "IMO_CLASS_2",
+                  "..."
+                ]
+              },
+              "description": "コンテナ属性（冷凍、危険物、特殊サイズ等）"
+            }
+          }
+        },
+        "resources": {
+          "restricted_zones": {
+            "reefer": {
+              "type": "array",
+              "items": {
+                "bay": {
+                  "type": "number"
+                },
+                "row": {
+                  "type": "number"
+                },
+                "tier": {
+                  "type": "number",
+                  "optional": true
+                }
+              }
+            },
+            "imo": {
+              "type": "array",
+              "items": {
+                "bay": {
+                  "type": "number"
+                },
+                "row": {
+                  "type": "number",
+                  "optional": true
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "optional": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "solver_mapping": {
+        "constraints": [
+          "reefer_in_reefer_slots",
+          "imo_in_imo_zones",
+          "oog_exclusion_zones"
+        ],
+        "implementation": "full_yard_solver.py::apply_attribute_zone_constraints + detect_attribute_issues - 属性ベース配置制約とIssue検出"
+      },
+      "ui_mapping": null,
+      "description": "コンテナ属性（REEFER/IMO/OOG）に基づく配置制約"
+    },
+    {
+      "name": "crane_interference",
+      "category": "constraint",
+      "schema_fragment": {
+        "config": {
+          "crane_interference": {
+            "type": "boolean",
+            "default": false,
+            "description": "クレーン干渉制約を有効化"
+          },
+          "crane_safety_bays": {
+            "type": "number",
+            "minimum": 1,
+            "default": 2,
+            "description": "クレーン間の安全距離（ベイ数）"
+          }
+        }
+      },
+      "solver_mapping": {
+        "constraints": [
+          "no_overlap_adjacent_cranes"
+        ],
+        "implementation": "full_yard_solver.py::apply_crane_interference_constraints - 隣接クレーンの干渉防止"
+      },
+      "ui_mapping": null,
+      "description": "隣接クレーンの干渉防止制約"
+    },
+    {
+      "name": "phase_separation",
+      "category": "constraint",
+      "schema_fragment": {
+        "containers": {
+          "items": {
+            "operation_type": {
+              "type": "enum",
+              "values": [
+                "LOAD",
+                "DISCHARGE"
+              ],
+              "description": "コンテナの操作タイプ（POL/PODから自動判定）"
+            }
+          }
+        },
+        "config": {
+          "current_port": {
+            "type": "string",
+            "description": "現在の港コード（LOAD/DISCHARGE判定に使用）",
+            "required": true
+          }
+        }
+      },
+      "solver_mapping": {
+        "constraints": [
+          "discharge_before_load"
+        ],
+        "implementation": "full_yard_solver.py::apply_phase_separation_constraints - DISCHARGE完了後にLOAD開始を強制"
+      },
+      "ui_mapping": null,
+      "description": "DISCHARGE完了後にLOAD開始を強制する制約"
+    },
+    {
+      "name": "physical_space",
+      "category": "constraint",
+      "schema_fragment": {
+        "containers": {
+          "items": {
+            "yard": {
+              "type": "object",
+              "properties": {
+                "bay": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "row": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "tier": {
+                  "type": "number",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "bay",
+                "row",
+                "tier"
+              ]
+            },
+            "ship": {
+              "type": "object",
+              "properties": {
+                "bay": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "row": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "tier": {
+                  "type": "number",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "bay",
+                "row",
+                "tier"
+              ]
+            }
+          }
+        },
+        "config": {
+          "max_bays": {
+            "type": "number",
+            "minimum": 1
+          },
+          "max_rows": {
+            "type": "number",
+            "minimum": 1
+          },
+          "max_tiers": {
+            "type": "number",
+            "minimum": 1
+          },
+          "max_vessel_bays": {
+            "type": "number",
+            "minimum": 1
+          },
+          "max_vessel_rows": {
+            "type": "number",
+            "minimum": 1
+          },
+          "max_vessel_tiers": {
+            "type": "number",
+            "minimum": 1
+          },
+          "safety_gap": {
+            "type": "number",
+            "minimum": 0,
+            "default": 10
+          }
+        }
+      },
+      "solver_mapping": {
+        "constraints": [
+          "yard_stack_order",
+          "vessel_stack_order"
+        ],
+        "implementation": "full_yard_solver.py::build_physical_space_constraints - ヤード/船舶の積み順制約を構築"
+      },
+      "ui_mapping": {
+        "views": [
+          "YardView",
+          "VesselView"
+        ],
+        "snapshot_structure": "BayGrid[bay][row][tier]"
+      },
+      "description": "物理的な3次元空間（Bay/Row/Tier）における配置制約"
+    },
+    {
+      "name": "shift",
+      "category": "resource",
+      "schema_fragment": {
+        "config": {
+          "shifts": {
+            "type": "array",
+            "items": {
+              "id": {
+                "type": "string"
+              },
+              "start": {
+                "type": "number",
+                "description": "開始時刻（分単位）"
+              },
+              "end": {
+                "type": "number",
+                "description": "終了時刻（分単位）"
+              },
+              "cranes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "breaks": {
+            "type": "array",
+            "items": {
+              "shift": {
+                "type": "string"
+              },
+              "start": {
+                "type": "number",
+                "description": "休憩開始時刻（分単位）"
+              },
+              "duration": {
+                "type": "number",
+                "description": "休憩時間（分）"
+              }
+            }
+          }
+        }
+      },
+      "solver_mapping": {
+        "constraints": [
+          "task_within_shift_window",
+          "task_avoid_break_time"
+        ],
+        "implementation": "full_yard_solver.py::parse_shifts + apply_shift_constraints - シフト時間窓と休憩時間の制約"
+      },
+      "ui_mapping": null,
+      "description": "クレーンのシフト・休憩時間制約"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "Simple Issue",
+      "description": "2コンテナの基本ケース。ヤード・船ともに矛盾なく積み込める正常シナリオ。",
+      "tag": "BASIC",
+      "tag_color": "#00e5ff",
+      "dsl_json": {
+        "problem_class": "RCPSP",
+        "version": "1.0",
+        "extensions": [
+          "physical_space"
+        ],
+        "containers": [
+          {
+            "id": "C01",
+            "weight": 25,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 1,
+              "tier": 2
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 1
+            },
+            "order": 1
+          },
+          {
+            "id": "C02",
+            "weight": 10,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 1,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 2
+            },
+            "order": 2
+          }
+        ],
+        "resources": {
+          "yard_cranes": [
+            {
+              "id": "RC-1",
+              "bay": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "ship_cranes": [
+            {
+              "id": "GC-1",
+              "bay": [
+                10,
+                11
+              ]
+            }
+          ]
+        },
+        "config": {
+          "current_port": "JPYOK",
+          "time_pick": 180,
+          "time_load": 120,
+          "time_discharge": 120,
+          "time_place": 180,
+          "time_move": 60,
+          "time_rehandle": 300,
+          "min_transit": 2,
+          "safety_gap": 1,
+          "max_bays": 10,
+          "max_rows": 6,
+          "max_tiers": 5,
+          "max_vessel_bays": 20,
+          "max_vessel_rows": 8,
+          "max_vessel_tiers": 6,
+          "weight_bay_move": 100,
+          "weight_row_move": 10,
+          "weight_tier_factor": 5,
+          "time_limit": 20
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "Rehandling",
+      "description": "上段のC02が邪魔で先に積むべきC01が取り出せない。リハンドリングが発生するシナリオ。",
+      "tag": "REHANDLE",
+      "tag_color": "#ffea00",
+      "dsl_json": {
+        "problem_class": "RCPSP",
+        "version": "1.0",
+        "extensions": [
+          "physical_space"
+        ],
+        "containers": [
+          {
+            "id": "C01",
+            "weight": 25,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 1,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 1
+            },
+            "order": 1
+          },
+          {
+            "id": "C02",
+            "weight": 10,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 1,
+              "tier": 2
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 2
+            },
+            "order": 2
+          }
+        ],
+        "resources": {
+          "yard_cranes": [
+            {
+              "id": "RC-1",
+              "bay": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "ship_cranes": [
+            {
+              "id": "GC-1",
+              "bay": [
+                10,
+                11
+              ]
+            }
+          ]
+        },
+        "config": {
+          "current_port": "JPYOK",
+          "time_pick": 180,
+          "time_load": 120,
+          "time_discharge": 120,
+          "time_place": 180,
+          "time_move": 60,
+          "time_rehandle": 300,
+          "min_transit": 2,
+          "safety_gap": 1,
+          "max_bays": 10,
+          "max_rows": 6,
+          "max_tiers": 5,
+          "max_vessel_bays": 20,
+          "max_vessel_rows": 8,
+          "max_vessel_tiers": 6,
+          "weight_bay_move": 100,
+          "weight_row_move": 10,
+          "weight_tier_factor": 5,
+          "time_limit": 20
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "Congestion",
+      "description": "クレーン1台に対してコンテナ4本が集中し、待ち行列が発生するシナリオ。",
+      "tag": "STRESS",
+      "tag_color": "#ff6b35",
+      "dsl_json": {
+        "problem_class": "RCPSP",
+        "version": "1.0",
+        "extensions": [
+          "physical_space"
+        ],
+        "containers": [
+          {
+            "id": "C-A1",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 1,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 1
+            }
+          },
+          {
+            "id": "C-A2",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 2,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 2,
+              "tier": 1
+            }
+          },
+          {
+            "id": "C-A3",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 3,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 3,
+              "tier": 1
+            }
+          },
+          {
+            "id": "C-A4",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "USSFO",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 4,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 4,
+              "tier": 1
+            }
+          }
+        ],
+        "resources": {
+          "yard_cranes": [
+            {
+              "id": "RC-1",
+              "bay": [
+                1
+              ]
+            }
+          ],
+          "ship_cranes": [
+            {
+              "id": "GC-1",
+              "bay": [
+                10
+              ]
+            }
+          ]
+        },
+        "config": {
+          "current_port": "JPYOK",
+          "time_pick": 180,
+          "time_load": 120,
+          "time_discharge": 120,
+          "time_place": 180,
+          "time_move": 60,
+          "time_rehandle": 300,
+          "min_transit": 2,
+          "safety_gap": 1,
+          "max_bays": 10,
+          "max_rows": 6,
+          "max_tiers": 5,
+          "max_vessel_bays": 20,
+          "max_vessel_rows": 8,
+          "max_vessel_tiers": 6,
+          "weight_bay_move": 100,
+          "weight_row_move": 10,
+          "weight_tier_factor": 5,
+          "time_limit": 20
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "Infeasible Crane Reach",
+      "description": "ヤードクレーン RC-1 の担当が bay 1〜3 のみで、コンテナが bay 8 にある。GC-1 は bay 10/20 をカバー済み。RC-1 の担当ベイ拡大のみで Feasible になる。",
+      "tag": "YARD",
+      "tag_color": "#00e5ff",
+      "dsl_json": {
+        "problem_class": "RCPSP",
+        "version": "1.0",
+        "extensions": [
+          "physical_space"
+        ],
+        "description": "ヤードクレーン RC-1 の担当が bay 1〜3 のみで、コンテナが bay 8 にある。GC-1 は bay 10/20 をカバー済み。RC-1 の担当ベイ拡大のみで Feasible になる。",
+        "containers": [
+          {
+            "id": "C-X1",
+            "weight": 22,
+            "pol": "JPYOK",
+            "pod": "USLAX",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 8,
+              "row": 1,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 1
+            },
+            "order": 1
+          },
+          {
+            "id": "C-X2",
+            "weight": 18,
+            "pol": "JPYOK",
+            "pod": "USLAX",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 8,
+              "row": 2,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 2,
+              "tier": 1
+            },
+            "order": 2
+          },
+          {
+            "id": "C-X3",
+            "weight": 15,
+            "pol": "JPYOK",
+            "pod": "USLAX",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 8,
+              "row": 3,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 3,
+              "tier": 1
+            },
+            "order": 3
+          }
+        ],
+        "resources": {
+          "yard_cranes": [
+            {
+              "id": "RC-1",
+              "bay": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "ship_cranes": [
+            {
+              "id": "GC-1",
+              "bay": [
+                10,
+                20
+              ]
+            }
+          ]
+        },
+        "config": {
+          "current_port": "JPYOK",
+          "time_pick": 180,
+          "time_load": 120,
+          "time_discharge": 120,
+          "time_place": 180,
+          "time_move": 60,
+          "time_rehandle": 300,
+          "min_transit": 2,
+          "safety_gap": 1,
+          "max_bays": 10,
+          "max_rows": 6,
+          "max_tiers": 5,
+          "max_vessel_bays": 20,
+          "max_vessel_rows": 8,
+          "max_vessel_tiers": 6,
+          "weight_bay_move": 100,
+          "weight_row_move": 10,
+          "weight_tier_factor": 5,
+          "time_limit": 15
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "Infeasible Tight Shift",
+      "description": "シフト稼働時間が2分（120秒）のみ。コンテナ1本のMOVE(60s)+LOAD(120s)=180秒必要なため物理的に不可能。シフト時間延長で Feasible になる。",
+      "tag": "YARD",
+      "tag_color": "#00e5ff",
+      "dsl_json": {
+        "problem_class": "RCPSP",
+        "version": "1.0",
+        "extensions": [
+          "physical_space"
+        ],
+        "description": "シフト稼働時間が2分（120秒）のみ。コンテナ1本のMOVE(60s)+LOAD(120s)=180秒必要なため物理的に不可能。シフト時間延長で Feasible になる。",
+        "containers": [
+          {
+            "id": "C-S1",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "CNSHA",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 1,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 1,
+              "tier": 1
+            },
+            "order": 1
+          },
+          {
+            "id": "C-S2",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "CNSHA",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 2,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 2,
+              "tier": 1
+            },
+            "order": 2
+          },
+          {
+            "id": "C-S3",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "CNSHA",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 3,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 3,
+              "tier": 1
+            },
+            "order": 3
+          },
+          {
+            "id": "C-S4",
+            "weight": 20,
+            "pol": "JPYOK",
+            "pod": "CNSHA",
+            "operation_type": "LOAD",
+            "yard": {
+              "bay": 1,
+              "row": 4,
+              "tier": 1
+            },
+            "ship": {
+              "bay": 10,
+              "row": 4,
+              "tier": 1
+            },
+            "order": 4
+          }
+        ],
+        "resources": {
+          "yard_cranes": [
+            {
+              "id": "RC-1",
+              "bay": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "ship_cranes": [
+            {
+              "id": "GC-1",
+              "bay": [
+                10,
+                11
+              ]
+            }
+          ]
+        },
+        "config": {
+          "current_port": "JPYOK",
+          "time_pick": 180,
+          "time_load": 120,
+          "time_discharge": 120,
+          "time_place": 180,
+          "time_move": 60,
+          "time_rehandle": 300,
+          "min_transit": 2,
+          "safety_gap": 1,
+          "max_bays": 10,
+          "max_rows": 6,
+          "max_tiers": 5,
+          "max_vessel_bays": 20,
+          "max_vessel_rows": 8,
+          "max_vessel_tiers": 6,
+          "weight_bay_move": 100,
+          "weight_row_move": 10,
+          "weight_tier_factor": 5,
+          "time_limit": 15,
+          "shifts": [
+            {
+              "id": "shift_rc",
+              "cranes": [
+                "RC-1"
+              ],
+              "start": 0,
+              "end": 2
+            },
+            {
+              "id": "shift_gc",
+              "cranes": [
+                "GC-1"
+              ],
+              "start": 0,
+              "end": 2
+            }
+          ]
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

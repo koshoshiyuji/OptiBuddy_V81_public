@@ -1,0 +1,26 @@
+{
+  "problem_class": "LotSizingScheduler",
+  "domain": "lot_sizing_scheduler",
+  "meta": {
+    "instance_name": "LotSizingScheduler シナリオ #2",
+    "note": "【設計意図】3期間に6注文を割り当てようとするが、1期間1件制約（機械1台）により最大3件しか割り当てられない。allow_unassigned=falseのためinfeasibleになることを期待する。"
+  },
+  "periods": [1, 2, 3],
+  "orders": [
+    {"id": "O001", "product_id": "P_ALPHA", "quantity": 1, "due_period": 1, "holding_cost_per_period": 5.0},
+    {"id": "O002", "product_id": "P_ALPHA", "quantity": 1, "due_period": 1, "holding_cost_per_period": 5.0},
+    {"id": "O003", "product_id": "P_BETA",  "quantity": 1, "due_period": 2, "holding_cost_per_period": 3.0},
+    {"id": "O004", "product_id": "P_BETA",  "quantity": 1, "due_period": 2, "holding_cost_per_period": 3.0},
+    {"id": "O005", "product_id": "P_GAMMA", "quantity": 1, "due_period": 3, "holding_cost_per_period": 4.0},
+    {"id": "O006", "product_id": "P_GAMMA", "quantity": 1, "due_period": 3, "holding_cost_per_period": 4.0}
+  ],
+  "setup_costs": [
+    {"from_product": "P_ALPHA", "to_product": "P_BETA",  "cost": 50},
+    {"from_product": "P_BETA",  "to_product": "P_GAMMA", "cost": 50}
+  ],
+  "config": {
+    "time_limit_sec": 15,
+    "capacity_per_period": 1,
+    "allow_unassigned": false
+  }
+}

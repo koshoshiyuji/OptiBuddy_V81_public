@@ -1,0 +1,19 @@
+{
+  "problem_class": "CapitalProjectSelector",
+  "domain": "capital_project_selector",
+  "meta": {
+    "instance_name": "CapitalProjectSelector シナリオ #2",
+    "note": "【設計意図】予算上限（100万円）を全案件の最小投資額（2,000万円）より低く設定することで、予算制約のみで解なし（いかなる案件も1件も選べない）を実現する構成。min_projectsには依存しない。【検証結果】未検証。"
+  },
+  "budget": 1000000,
+  "projects": [
+    {"id": "P001", "name": "工場ライン自動化", "value": 28000000, "weight": 35000000, "category": "生産性向上", "tags": ["製造"]},
+    {"id": "P002", "name": "倉庫管理システム刷新", "value": 15000000, "weight": 20000000, "category": "コスト削減", "tags": ["物流"]},
+    {"id": "P003", "name": "省エネ設備導入", "value": 12000000, "weight": 18000000, "category": "コスト削減", "tags": ["エネルギー"]},
+    {"id": "P004", "name": "品質検査自動化", "value": 20000000, "weight": 25000000, "category": "生産性向上", "tags": ["品質"]},
+    {"id": "P005", "name": "ERP基幹システム更新", "value": 18000000, "weight": 30000000, "category": "IT基盤", "tags": ["IT"]}
+  ],
+  "config": {
+    "time_limit_sec": 30
+  }
+}

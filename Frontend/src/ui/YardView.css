@@ -1,0 +1,30 @@
+/* src/ui/YardView.css */
+
+.yard-root {
+  border: 1px solid #ccc;
+  padding: 8px;
+  margin-top: 12px;
+}
+
+.yard-item {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.yard-item:last-child {
+  border-bottom: none;
+}
+
+.yard-item.dimmed {
+  opacity: 0.3;
+}
+
+.yard-id {
+  font-weight: bold;
+}
+
+.yard-pos {
+  font-size: 12px;
+  color: #555;
+}

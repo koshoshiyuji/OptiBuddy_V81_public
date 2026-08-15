@@ -1,0 +1,25 @@
+{
+  "problem_class": "MeetingRoom",
+  "domain": "meeting_room",
+  "meta": {
+    "instance_name": "MeetingRoom シナリオ #2",
+    "note": "【設計意図】全会議が同一時間帯に集中し、かつ全会議がprojector+video_confを要求するが、その設備を持つ部屋が1室しかないため、ほとんどの会議が未割当になることを狙った設計。"
+  },
+  "config": {
+    "dept_same_room_bonus": 0.1,
+    "waste_penalty_weight": 1,
+    "dept_consecutive_gap_min": 60,
+    "solve_time_sec": 20
+  },
+  "meetings": [
+    {"id": "M001", "name": "会議1", "dept": "A部", "start_min": 600, "end_min": 660, "attendees": 5,  "required_features": ["projector", "video_conf"]},
+    {"id": "M002", "name": "会議2", "dept": "B部", "start_min": 600, "end_min": 660, "attendees": 5,  "required_features": ["projector", "video_conf"]},
+    {"id": "M003", "name": "会議3", "dept": "C部", "start_min": 600, "end_min": 660, "attendees": 5,  "required_features": ["projector", "video_conf"]},
+    {"id": "M004", "name": "会議4", "dept": "D部", "start_min": 600, "end_min": 660, "attendees": 5,  "required_features": ["projector", "video_conf"]},
+    {"id": "M005", "name": "会議5", "dept": "E部", "start_min": 600, "end_min": 660, "attendees": 50, "required_features": ["projector", "video_conf"]}
+  ],
+  "rooms": [
+    {"id": "R001", "name": "会議室A（大）", "capacity": 50, "features": ["projector", "video_conf"], "available_start_min": 480, "available_end_min": 1200},
+    {"id": "R002", "name": "会議室B（小）", "capacity": 8,  "features": [],                          "available_start_min": 480, "available_end_min": 1200}
+  ]
+}

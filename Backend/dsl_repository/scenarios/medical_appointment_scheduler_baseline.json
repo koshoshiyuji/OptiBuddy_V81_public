@@ -1,0 +1,196 @@
+{
+  "problem_class": "MedicalAppointmentScheduler",
+  "domain": "medical_appointment_scheduler",
+  "meta": {
+    "instance_name": "外来診療予約 シナリオ #1",
+    "note": "【設計意図】標準的な外来クリニックを想定。医師3名・検査室2室、受診依頼8件。大半は割当可能な条件。希望違反が数件発生する構成。"
+  },
+  "config": {
+    "time_limit_sec": 20,
+    "slot_duration_min": 30
+  },
+  "resources": [
+    {
+      "id": "DR001",
+      "name": "山田医師（循環器科）",
+      "resource_type": "cardio_doctor",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 2, "start_min": 600, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-02", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "morning"},
+        {"day": "2026-09-02", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "morning"},
+        {"day": "2026-09-03", "slot_index": 0, "start_min": 840, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "afternoon"},
+        {"day": "2026-09-03", "slot_index": 1, "start_min": 870, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "afternoon"}
+      ]
+    },
+    {
+      "id": "DR002",
+      "name": "鈴木医師（循環器科）",
+      "resource_type": "cardio_doctor",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-02", "slot_index": 0, "start_min": 840, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "afternoon"},
+        {"day": "2026-09-02", "slot_index": 1, "start_min": 870, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "afternoon"},
+        {"day": "2026-09-03", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "morning"},
+        {"day": "2026-09-03", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "morning"}
+      ]
+    },
+    {
+      "id": "DR003",
+      "name": "田中医師（内科）",
+      "resource_type": "internal_doctor",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 2, "start_min": 840, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "afternoon"},
+        {"day": "2026-09-02", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "morning"},
+        {"day": "2026-09-03", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "morning"},
+        {"day": "2026-09-03", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "morning"}
+      ]
+    },
+    {
+      "id": "CT001",
+      "name": "CT検査室1",
+      "resource_type": "ct_room",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-01", "slot_index": 2, "start_min": 840, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "afternoon"},
+        {"day": "2026-09-02", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "morning"},
+        {"day": "2026-09-02", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "morning"},
+        {"day": "2026-09-03", "slot_index": 0, "start_min": 840, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "afternoon"}
+      ]
+    },
+    {
+      "id": "CT002",
+      "name": "CT検査室2",
+      "resource_type": "ct_room",
+      "calendar": [
+        {"day": "2026-09-01", "slot_index": 0, "start_min": 600, "slot_duration_min": 30, "weekday": "Tuesday", "time_slot": "morning"},
+        {"day": "2026-09-02", "slot_index": 0, "start_min": 840, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "afternoon"},
+        {"day": "2026-09-02", "slot_index": 1, "start_min": 870, "slot_duration_min": 30, "weekday": "Wednesday", "time_slot": "afternoon"},
+        {"day": "2026-09-03", "slot_index": 0, "start_min": 540, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "morning"},
+        {"day": "2026-09-03", "slot_index": 1, "start_min": 570, "slot_duration_min": 30, "weekday": "Thursday", "time_slot": "morning"}
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "id": "REQ001",
+      "patient_id": "P001",
+      "patient_name": "田中 一郎",
+      "resource_type_needs": [
+        {"resource_type": "cardio_doctor", "count": 1},
+        {"resource_type": "ct_room", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": ["DR001"],
+      "preferred_day_time_combinations": [{"weekday": "Tuesday", "time_slot": "morning"}]
+    },
+    {
+      "id": "REQ002",
+      "patient_id": "P002",
+      "patient_name": "佐藤 花子",
+      "resource_type_needs": [
+        {"resource_type": "cardio_doctor", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": ["2026-09-01"],
+      "preferred_days": ["2026-09-02"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": [{"weekday": "Wednesday", "time_slot": "morning"}]
+    },
+    {
+      "id": "REQ003",
+      "patient_id": "P003",
+      "patient_name": "鈴木 次郎",
+      "resource_type_needs": [
+        {"resource_type": "internal_doctor", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": [],
+      "preferred_resource_ids": ["DR003"],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ004",
+      "patient_id": "P004",
+      "patient_name": "山本 三郎",
+      "resource_type_needs": [
+        {"resource_type": "cardio_doctor", "count": 1},
+        {"resource_type": "ct_room", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": ["2026-09-03"],
+      "preferred_days": ["2026-09-02"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": [{"weekday": "Wednesday", "time_slot": "afternoon"}]
+    },
+    {
+      "id": "REQ005",
+      "patient_id": "P005",
+      "patient_name": "伊藤 四郎",
+      "resource_type_needs": [
+        {"resource_type": "internal_doctor", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-03"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": [{"weekday": "Thursday", "time_slot": "morning"}]
+    },
+    {
+      "id": "REQ006",
+      "patient_id": "P006",
+      "patient_name": "渡辺 五郎",
+      "resource_type_needs": [
+        {"resource_type": "cardio_doctor", "count": 1},
+        {"resource_type": "ct_room", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": [],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": []
+    },
+    {
+      "id": "REQ007",
+      "patient_id": "P007",
+      "patient_name": "中村 六郎",
+      "resource_type_needs": [
+        {"resource_type": "internal_doctor", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": ["2026-09-02"],
+      "preferred_days": ["2026-09-01"],
+      "preferred_resource_ids": [],
+      "preferred_day_time_combinations": [{"weekday": "Tuesday", "time_slot": "afternoon"}]
+    },
+    {
+      "id": "REQ008",
+      "patient_id": "P008",
+      "patient_name": "小林 七郎",
+      "resource_type_needs": [
+        {"resource_type": "cardio_doctor", "count": 1}
+      ],
+      "duration_min": 30,
+      "slot_duration_min": 30,
+      "avoid_days": [],
+      "preferred_days": ["2026-09-03"],
+      "preferred_resource_ids": ["DR001"],
+      "preferred_day_time_combinations": [{"weekday": "Thursday", "time_slot": "afternoon"}]
+    }
+  ]
+}

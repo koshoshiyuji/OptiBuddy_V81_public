@@ -1,0 +1,31 @@
+{
+  "problem_class": "TransportCostMinimizer",
+  "domain": "transport_cost_minimizer",
+  "meta": {
+    "instance_name": "TransportCostMinimizer シナリオ #2",
+    "note": "【設計意図】総供給量（80）が総需要量（230）を大幅に下回る構成。全店舗の需要を満たすことが物理的に不可能なため、実行不可能（infeasible）になることを狙う。"
+  },
+  "factories": [
+    {"id": "F1", "name": "工場A（東京）", "supply": 50},
+    {"id": "F2", "name": "工場B（大阪）", "supply": 30}
+  ],
+  "stores": [
+    {"id": "S1", "name": "店舗1（横浜）",   "demand":  70},
+    {"id": "S2", "name": "店舗2（名古屋）", "demand":  50},
+    {"id": "S3", "name": "店舗3（神戸）",   "demand":  60},
+    {"id": "S4", "name": "店舗4（北九州）", "demand":  50}
+  ],
+  "costs": [
+    {"factory_id": "F1", "store_id": "S1", "cost_per_unit": 2.0},
+    {"factory_id": "F1", "store_id": "S2", "cost_per_unit": 3.0},
+    {"factory_id": "F1", "store_id": "S3", "cost_per_unit": 5.0},
+    {"factory_id": "F1", "store_id": "S4", "cost_per_unit": 9.0},
+    {"factory_id": "F2", "store_id": "S1", "cost_per_unit": 4.0},
+    {"factory_id": "F2", "store_id": "S2", "cost_per_unit": 1.5},
+    {"factory_id": "F2", "store_id": "S3", "cost_per_unit": 2.5},
+    {"factory_id": "F2", "store_id": "S4", "cost_per_unit": 6.0}
+  ],
+  "config": {
+    "time_limit_sec": 30
+  }
+}

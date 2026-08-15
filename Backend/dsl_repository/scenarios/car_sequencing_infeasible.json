@@ -1,0 +1,23 @@
+{
+  "problem_class": "CarSequencing",
+  "domain": "car_sequencing",
+  "meta": {
+    "instance_name": "自動車組立ライン シナリオ #2（Infeasible）",
+    "note": "【設計意図】需要合計21台に対しスロット総数（= sum of count）は20台分しか用意しない意図だが、CP Optimizerでは総スロット数=需要合計で自動決定されるため、代わりに車種ごとの需要台数の合計をスロット数と意図的に不一致にする。具体的には、ダミー車種 CT_EXTRA を count=1 追加して需要合計=21台とし、一方でソルバーが参照するスロット数を20に固定するため config.total_slots=20 を設定する。ソルバーは total_slots が指定された場合はそれをシーケンス長として使用し、需要合計と不一致であれば infeasible を返す。"
+  },
+  "car_types": [
+    {"car_type_id": "CT1", "car_type_name": "ナビ搭載A", "count": 6, "option_ids": ["OPT_NAVI"]},
+    {"car_type_id": "CT2", "car_type_name": "ナビ搭載B", "count": 7, "option_ids": ["OPT_NAVI", "OPT_SUNROOF"]},
+    {"car_type_id": "CT3", "car_type_name": "ベース",     "count": 7, "option_ids": []},
+    {"car_type_id": "CT_EXTRA", "car_type_name": "余剰車（意図的不一致用）", "count": 1, "option_ids": []}
+  ],
+  "options": [
+    {"option_id": "OPT_NAVI",    "option_name": "カーナビ",   "max_per_window": 2, "window_size": 3},
+    {"option_id": "OPT_SUNROOF", "option_name": "サンルーフ", "max_per_window": 1, "window_size": 2}
+  ],
+  "config": {
+    "max_consecutive_same": 2,
+    "solve_time_sec": 20,
+    "total_slots": 20
+  }
+}

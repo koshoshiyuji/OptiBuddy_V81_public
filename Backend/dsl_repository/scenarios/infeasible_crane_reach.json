@@ -1,0 +1,106 @@
+{
+  "problem_class": "RCPSP",
+  "version": "1.0",
+  "extensions": [
+    "physical_space"
+  ],
+  "description": "ヤードクレーン RC-1 の担当が bay 1〜3 のみで、コンテナが bay 8 にある。GC-1 は bay 10/20 をカバー済み。RC-1 の担当ベイ拡大のみで Feasible になる。",
+  "containers": [
+    {
+      "id": "C-X1",
+      "weight": 22,
+      "pol": "JPYOK",
+      "pod": "USLAX",
+      "operation_type": "LOAD",
+      "yard": {
+        "bay": 8,
+        "row": 1,
+        "tier": 1
+      },
+      "ship": {
+        "bay": 10,
+        "row": 1,
+        "tier": 1
+      },
+      "order": 1
+    },
+    {
+      "id": "C-X2",
+      "weight": 18,
+      "pol": "JPYOK",
+      "pod": "USLAX",
+      "operation_type": "LOAD",
+      "yard": {
+        "bay": 8,
+        "row": 2,
+        "tier": 1
+      },
+      "ship": {
+        "bay": 10,
+        "row": 2,
+        "tier": 1
+      },
+      "order": 2
+    },
+    {
+      "id": "C-X3",
+      "weight": 15,
+      "pol": "JPYOK",
+      "pod": "USLAX",
+      "operation_type": "LOAD",
+      "yard": {
+        "bay": 8,
+        "row": 3,
+        "tier": 1
+      },
+      "ship": {
+        "bay": 10,
+        "row": 3,
+        "tier": 1
+      },
+      "order": 3
+    }
+  ],
+  "resources": {
+    "yard_cranes": [
+      {
+        "id": "RC-1",
+        "bay": [
+          1,
+          2,
+          3
+        ]
+      }
+    ],
+    "ship_cranes": [
+      {
+        "id": "GC-1",
+        "bay": [
+          10,
+          20
+        ]
+      }
+    ]
+  },
+  "config": {
+    "current_port": "JPYOK",
+    "time_pick": 180,
+    "time_load": 120,
+    "time_discharge": 120,
+    "time_place": 180,
+    "time_move": 60,
+    "time_rehandle": 300,
+    "min_transit": 2,
+    "safety_gap": 1,
+    "max_bays": 10,
+    "max_rows": 6,
+    "max_tiers": 5,
+    "max_vessel_bays": 20,
+    "max_vessel_rows": 8,
+    "max_vessel_tiers": 6,
+    "weight_bay_move": 100,
+    "weight_row_move": 10,
+    "weight_tier_factor": 5,
+    "time_limit": 15
+  }
+}

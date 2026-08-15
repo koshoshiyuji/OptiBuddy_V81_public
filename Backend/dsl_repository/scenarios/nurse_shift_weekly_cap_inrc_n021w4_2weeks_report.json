@@ -1,0 +1,10 @@
+{
+  "converted": [
+    "2週分を連結し、通し日数1〜14のtasks 129件を生成",
+    "staff: 21 件生成（NURSESから、全週共通）"
+  ],
+  "not_converted": [
+    "INRC-IIのhistory（境界データ・カウンタ）は実装していない。その代わり複数週のtasksを1本のhorizonとして1回のsolveに渡すことで、週境界をまたぐ連続夜勤・ローリングウィンドウの制約自体は検証できる（詳細はbuild_business_dsl_multi_weekのdocstring参照）"
+  ],
+  "warnings": []
+}

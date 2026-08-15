@@ -1,0 +1,45 @@
+{
+  "problem_class": "InventoryReplenishmentPlanner",
+  "domain": "inventory_replenishment_planner",
+  "meta": {
+    "instance_name": "InventoryReplenishmentPlanner シナリオ #2",
+    "note": "【設計意図】中央倉庫の週次供給能力（supply_capacity_per_period=100）が需要合計（C1+C2+C3 = 各週600個）を大幅に下回るよう設定した実行不可能シナリオ。需要充足はハード制約（欠品・バックオーダー不可）であるため、供給能力が需要を満たせない場合はモデルがInfeasibleと判定され、feasible=falseが返ることを確認する。"
+  },
+  "warehouses": [
+    {"id": "WH1", "name": "中央倉庫（東京）"}
+  ],
+  "centers": [
+    {"id": "C1", "name": "仙台センター",  "initial_inventory": 0},
+    {"id": "C2", "name": "名古屋センター","initial_inventory": 0},
+    {"id": "C3", "name": "福岡センター",  "initial_inventory": 0}
+  ],
+  "periods": [
+    {"id": "W1", "label": "第1週"},
+    {"id": "W2", "label": "第2週"},
+    {"id": "W3", "label": "第3週"},
+    {"id": "W4", "label": "第4週"}
+  ],
+  "demands": [
+    {"center_id": "C1", "period_id": "W1", "quantity": 200},
+    {"center_id": "C1", "period_id": "W2", "quantity": 200},
+    {"center_id": "C1", "period_id": "W3", "quantity": 200},
+    {"center_id": "C1", "period_id": "W4", "quantity": 200},
+    {"center_id": "C2", "period_id": "W1", "quantity": 200},
+    {"center_id": "C2", "period_id": "W2", "quantity": 200},
+    {"center_id": "C2", "period_id": "W3", "quantity": 200},
+    {"center_id": "C2", "period_id": "W4", "quantity": 200},
+    {"center_id": "C3", "period_id": "W1", "quantity": 200},
+    {"center_id": "C3", "period_id": "W2", "quantity": 200},
+    {"center_id": "C3", "period_id": "W3", "quantity": 200},
+    {"center_id": "C3", "period_id": "W4", "quantity": 200}
+  ],
+  "config": {
+    "holding_cost_rate": 0.05,
+    "fixed_shipping_cost": 8000,
+    "supply_capacity_per_period": 100,
+    "solve_time_sec": 30,
+    "use_integer_lots": true,
+    "lot_min_unit": 1,
+    "max_inventory_per_center": 500
+  }
+}

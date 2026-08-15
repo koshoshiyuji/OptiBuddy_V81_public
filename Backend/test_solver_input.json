@@ -1,0 +1,309 @@
+{
+  "metadata": {
+    "problem_class": "RCPSP",
+    "version": "1.0",
+    "extensions": [
+      "physical_space",
+      "phase_separation"
+    ],
+    "source_dsl_hash": "sha256:12abca67fcbed0be",
+    "generated_at": "2026-06-02T06:38:21.405117Z"
+  },
+  "tasks": [
+    {
+      "id": "P-C01",
+      "duration": 180,
+      "operation": "PICK",
+      "containerId": "C01",
+      "sequence": 1,
+      "resourceId": "RC-1",
+      "resource_requirements": {
+        "crane": 1
+      },
+      "yard": {
+        "bay": 1,
+        "row": 1,
+        "tier": 1
+      },
+      "ship": {
+        "bay": 10,
+        "row": 1,
+        "tier": 1
+      },
+      "order": 1,
+      "attrs": []
+    },
+    {
+      "id": "L-C01",
+      "duration": 300,
+      "operation": "LOAD",
+      "containerId": "C01",
+      "sequence": 2,
+      "resourceId": "GC-1",
+      "resource_requirements": {
+        "crane": 1
+      },
+      "yard": {
+        "bay": 1,
+        "row": 1,
+        "tier": 1
+      },
+      "ship": {
+        "bay": 10,
+        "row": 1,
+        "tier": 1
+      },
+      "order": 1,
+      "attrs": []
+    },
+    {
+      "id": "P-C02",
+      "duration": 180,
+      "operation": "PICK",
+      "containerId": "C02",
+      "sequence": 1,
+      "resourceId": "RC-1",
+      "resource_requirements": {
+        "crane": 1
+      },
+      "yard": {
+        "bay": 1,
+        "row": 1,
+        "tier": 2
+      },
+      "ship": {
+        "bay": 10,
+        "row": 1,
+        "tier": 2
+      },
+      "order": 2,
+      "attrs": []
+    },
+    {
+      "id": "L-C02",
+      "duration": 300,
+      "operation": "LOAD",
+      "containerId": "C02",
+      "sequence": 2,
+      "resourceId": "GC-1",
+      "resource_requirements": {
+        "crane": 1
+      },
+      "yard": {
+        "bay": 1,
+        "row": 1,
+        "tier": 2
+      },
+      "ship": {
+        "bay": 10,
+        "row": 1,
+        "tier": 2
+      },
+      "order": 2,
+      "attrs": []
+    },
+    {
+      "id": "D-C03",
+      "duration": 300,
+      "operation": "DISCHARGE",
+      "containerId": "C03",
+      "sequence": 1,
+      "resourceId": "GC-1",
+      "resource_requirements": {
+        "crane": 1
+      },
+      "ship": {
+        "bay": 12,
+        "row": 1,
+        "tier": 1
+      },
+      "yard": {
+        "bay": 2,
+        "row": 1,
+        "tier": 1
+      },
+      "order": 1,
+      "attrs": []
+    },
+    {
+      "id": "PL-C03",
+      "duration": 180,
+      "operation": "PLACE",
+      "containerId": "C03",
+      "sequence": 2,
+      "resourceId": "RC-1",
+      "resource_requirements": {
+        "crane": 1
+      },
+      "ship": {
+        "bay": 12,
+        "row": 1,
+        "tier": 1
+      },
+      "yard": {
+        "bay": 2,
+        "row": 1,
+        "tier": 1
+      },
+      "order": 1,
+      "attrs": []
+    }
+  ],
+  "resources": {
+    "yard_cranes": [
+      {
+        "id": "RC-1",
+        "capacity": 1,
+        "bay": [
+          1,
+          2,
+          3
+        ]
+      }
+    ],
+    "ship_cranes": [
+      {
+        "id": "GC-1",
+        "capacity": 1,
+        "bay": [
+          10,
+          11,
+          12
+        ]
+      }
+    ]
+  },
+  "constraints": [
+    {
+      "type": "precedence",
+      "params": {
+        "from_task": "P-C01",
+        "to_task": "L-C01",
+        "delay": 10
+      }
+    },
+    {
+      "type": "precedence",
+      "params": {
+        "from_task": "P-C02",
+        "to_task": "L-C02",
+        "delay": 10
+      }
+    },
+    {
+      "type": "precedence",
+      "params": {
+        "from_task": "D-C03",
+        "to_task": "PL-C03",
+        "delay": 10
+      }
+    },
+    {
+      "type": "no_overlap",
+      "params": {
+        "resource_id": "RC-1",
+        "task_ids": [
+          "P-C01",
+          "P-C02",
+          "PL-C03"
+        ]
+      }
+    },
+    {
+      "type": "no_overlap",
+      "params": {
+        "resource_id": "GC-1",
+        "task_ids": [
+          "L-C01",
+          "L-C02",
+          "D-C03"
+        ]
+      }
+    },
+    {
+      "type": "physical_stack_order",
+      "params": {
+        "location": "yard",
+        "bay": 1,
+        "row": 1,
+        "stack": [
+          {
+            "container_id": "C02",
+            "tier": 2,
+            "task_id": "P-C02"
+          },
+          {
+            "container_id": "C01",
+            "tier": 1,
+            "task_id": "P-C01"
+          }
+        ],
+        "order": "descending",
+        "delay": 10
+      }
+    },
+    {
+      "type": "physical_stack_order",
+      "params": {
+        "location": "ship",
+        "bay": 10,
+        "row": 1,
+        "stack": [
+          {
+            "container_id": "C01",
+            "tier": 1,
+            "task_id": "L-C01"
+          },
+          {
+            "container_id": "C02",
+            "tier": 2,
+            "task_id": "L-C02"
+          }
+        ],
+        "order": "ascending",
+        "delay": 1
+      }
+    },
+    {
+      "type": "phase_separation",
+      "params": {
+        "phase_a": "DISCHARGE",
+        "phase_b": "LOAD",
+        "phase_a_tasks": [
+          "D-C03",
+          "PL-C03"
+        ],
+        "phase_b_tasks": [
+          "P-C01",
+          "L-C01",
+          "P-C02",
+          "L-C02"
+        ],
+        "constraint": "all_a_before_any_b"
+      }
+    }
+  ],
+  "objective": {
+    "primary": "minimize_makespan",
+    "weights": {
+      "w_makespan": 1,
+      "w_penalty": 300,
+      "w_cost": 0
+    },
+    "penalty_pairs": [
+      {
+        "task_a": "L-C01",
+        "task_b": "L-C02",
+        "expected_order": "a_before_b"
+      }
+    ]
+  },
+  "config": {
+    "current_port": "JPYOK",
+    "time_pick": 180,
+    "time_load": 300,
+    "time_discharge": 300,
+    "time_place": 180,
+    "safety_gap": 10
+  }
+}

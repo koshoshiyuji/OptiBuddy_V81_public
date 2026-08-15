@@ -1,0 +1,27 @@
+[
+  {
+    "id": "simple_issue",
+    "name": "Simple Issue",
+    "description": "2コンテナの基本ケース。ヤード・船ともに矛盾なく積み込める正常シナリオ。",
+    "tag": "BASIC",
+    "tag_color": "#00e5ff",
+    "domain": "yard",
+    "dsl_path": "Frontend/public/scenarios/simple_issue.json"
+  },
+  {
+    "id": "rehandling",
+    "name": "Rehandling",
+    "description": "上段のC02が邪魔で先に積むべきC01が取り出せない。リハンドリングが発生するシナリオ。",
+    "tag": "REHANDLE",
+    "tag_color": "#ffea00",
+    "domain": "yard"
+  },
+  {
+    "id": "congestion",
+    "name": "Congestion",
+    "description": "クレーン1台に対してコンテナ4本が集中し、待ち行列が発生するシナリオ。",
+    "tag": "STRESS",
+    "tag_color": "#ff6b35",
+    "domain": "yard"
+  }
+]

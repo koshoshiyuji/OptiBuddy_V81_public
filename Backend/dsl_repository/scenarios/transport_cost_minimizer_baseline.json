@@ -1,0 +1,28 @@
+{
+  "problem_class": "TransportCostMinimizer",
+  "domain": "transport_cost_minimizer",
+  "meta": {
+    "instance_name": "TransportCostMinimizer シナリオ #1",
+    "note": "【設計意図】ヒアリングシート「登録用シナリオデータ」節に記載された実数値をそのまま使用（2工場・3店舗）。総供給量700が総需要量600を上回る不均衡輸送問題。scipy.optimize.linprogで裏取り済みの最適解: 総コスト1620（工場1→a:50/b:200/c:0、工場2→a:150/b:0/c:200）。"
+  },
+  "factories": [
+    {"id": "F1", "name": "工場1", "supply": 250},
+    {"id": "F2", "name": "工場2", "supply": 450}
+  ],
+  "stores": [
+    {"id": "Sa", "name": "店舗a", "demand": 200},
+    {"id": "Sb", "name": "店舗b", "demand": 200},
+    {"id": "Sc", "name": "店舗c", "demand": 200}
+  ],
+  "costs": [
+    {"factory_id": "F1", "store_id": "Sa", "cost_per_unit": 3.4},
+    {"factory_id": "F1", "store_id": "Sb", "cost_per_unit": 2.2},
+    {"factory_id": "F1", "store_id": "Sc", "cost_per_unit": 2.9},
+    {"factory_id": "F2", "store_id": "Sa", "cost_per_unit": 3.4},
+    {"factory_id": "F2", "store_id": "Sb", "cost_per_unit": 2.4},
+    {"factory_id": "F2", "store_id": "Sc", "cost_per_unit": 2.5}
+  ],
+  "config": {
+    "time_limit_sec": 30
+  }
+}

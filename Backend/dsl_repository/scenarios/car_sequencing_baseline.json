@@ -1,0 +1,26 @@
+{
+  "problem_class": "CarSequencing",
+  "domain": "car_sequencing",
+  "meta": {
+    "instance_name": "自動車組立ライン シナリオ #1",
+    "note": "【設計意図】6車種10台、4オプション工程を含む標準的な構成。オプション制約を全て満たす解が存在するはず。"
+  },
+  "car_types": [
+    {"car_type_id": "CT1", "car_type_name": "セダン・標準", "count": 2, "option_ids": ["OPT_SUNROOF"]},
+    {"car_type_id": "CT2", "car_type_name": "セダン・上位", "count": 2, "option_ids": ["OPT_SUNROOF", "OPT_NAVI", "OPT_LEATHER"]},
+    {"car_type_id": "CT3", "car_type_name": "SUV・標準",   "count": 2, "option_ids": ["OPT_NAVI"]},
+    {"car_type_id": "CT4", "car_type_name": "SUV・上位",   "count": 1, "option_ids": ["OPT_SUNROOF", "OPT_NAVI", "OPT_LEATHER", "OPT_AWD"]},
+    {"car_type_id": "CT5", "car_type_name": "ミニバン",     "count": 2, "option_ids": ["OPT_NAVI", "OPT_AWD"]},
+    {"car_type_id": "CT6", "car_type_name": "ベース車",     "count": 1, "option_ids": []}
+  ],
+  "options": [
+    {"option_id": "OPT_SUNROOF",  "option_name": "サンルーフ",   "max_per_window": 1, "window_size": 2},
+    {"option_id": "OPT_NAVI",     "option_name": "カーナビ",     "max_per_window": 2, "window_size": 3},
+    {"option_id": "OPT_LEATHER",  "option_name": "本革シート",   "max_per_window": 1, "window_size": 3},
+    {"option_id": "OPT_AWD",      "option_name": "四輪駆動",     "max_per_window": 1, "window_size": 3}
+  ],
+  "config": {
+    "max_consecutive_same": 2,
+    "solve_time_sec": 30
+  }
+}

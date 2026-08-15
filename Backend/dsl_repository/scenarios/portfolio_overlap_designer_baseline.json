@@ -1,0 +1,34 @@
+{
+  "problem_class": "PortfolioOverlapDesigner",
+  "domain": "portfolio_overlap_designer",
+  "meta": {
+    "instance_name": "PortfolioOverlapDesigner シナリオ #1",
+    "note": "【設計意図】4本のファンドが15銘柄のプールから各5銘柄を選ぶ標準的な条件を想定。ペアワイズ重複の最悪値を小さくできる余地がある（プールに対して組入比率が低め）。\n【検証結果】未実施。"
+  },
+  "funds": [
+    {"id": "F001", "name": "グロースファンドA", "required_count": 5},
+    {"id": "F002", "name": "バリューファンドB", "required_count": 5},
+    {"id": "F003", "name": "バランスファンドC", "required_count": 5},
+    {"id": "F004", "name": "インカムファンドD", "required_count": 5}
+  ],
+  "pool": [
+    {"id": "S001", "name": "トヨタ自動車",   "sector": "自動車"},
+    {"id": "S002", "name": "ソニーグループ",  "sector": "電機"},
+    {"id": "S003", "name": "キーエンス",      "sector": "精密機器"},
+    {"id": "S004", "name": "信越化学工業",    "sector": "化学"},
+    {"id": "S005", "name": "東京エレクトロン","sector": "半導体"},
+    {"id": "S006", "name": "ファナック",       "sector": "機械"},
+    {"id": "S007", "name": "リクルートHD",    "sector": "サービス"},
+    {"id": "S008", "name": "KDDI",            "sector": "通信"},
+    {"id": "S009", "name": "任天堂",           "sector": "娯楽"},
+    {"id": "S010", "name": "三菱UFJ",         "sector": "金融"},
+    {"id": "S011", "name": "伊藤忠商事",      "sector": "商社"},
+    {"id": "S012", "name": "NTTデータ",       "sector": "IT"},
+    {"id": "S013", "name": "中外製薬",        "sector": "医薬"},
+    {"id": "S014", "name": "SBIホールディングス","sector": "金融"},
+    {"id": "S015", "name": "オリエンタルランド","sector": "娯楽"}
+  ],
+  "config": {
+    "time_limit_sec": 30
+  }
+}

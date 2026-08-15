@@ -1,0 +1,103 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+
+# --- existing ---
+.env
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+solutions_v3/*.json
+
+# --- recommended additions ---
+# Python build artifacts
+**/__pycache__/**
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+dist-ssr/
+build/
+*.local
+
+# macOS system files
+.DS_Store
+
+# Node / frontend build cache
+node_modules/
+
+# Flask / temporary files
+instance/
+*.db
+*.sqlite3
+
+# IDE caches
+.idea/
+*.code-workspace
+
+# Temp or backup files
+*.bak
+*.tmp
+
+# --- 2026-07-21: 内部開発ノート（顧客配布リポジトリに含めない） ---
+# 移設先: ローカルの OptiBuddy_V81_devnotes/ フォルダ（gitなし）。
+# 今後、設計メモ・引き継ぎメモ・開発ログはこのリポジトリのdocs/配下ではなく
+# devnotesフォルダ側に書くこと。
+#
+# 注意: docs/OptiBuddy_V81_spec.md と docs/app_routing_snippet.md は
+# domain_generator.py の DEFAULT_ATTACHMENTS から実行時に読み込まれ、
+# 新規ドメイン登録AI機能でLLMに送信される「顧客配布に必須のファイル」。
+# 誤って同種のパターンでこの2つを除外しないよう、ここには含めない。
+docs/DESIGN_*.md
+docs/HANDOFF_*.md
+docs/ENGINEERING_LOG.md
+docs/CAPABILITY_BOUNDARY_CHECKLIST.md
+docs/gate2_coverage_*.json
+docs/test_hearings/hospital_shift_planner_hearing_v2_obsoleted.md
+docs/test_hearings/store_site_solver_docplex_mp_draft.py
+docs/test_hearings/production_lot_scheduler_hearing.md
+docs/test_hearings/production_lot_scheduler_hearing_description.md
+Backend/venv/
+
+# --- 2026-08-12: ドメインシード（顧客配布リポジトリに含めない） ---
+# domain_seeds/*.json は「案A」配布方針上コードではなくデータ（scenarios の
+# dsl_json に実際の顧客シナリオが入りうる。例: truck_dispatcher.json に
+# 実在しそうな顧客名・配送データが確認されている）。共有gitリポジトリに
+# コミットすると契約外の顧客にも配布されてしまうため、以後はコミットしない。
+# 納品時は Backend/dsl_repository/export_domain.py でその顧客の契約ドメイン分
+# だけをローカル生成し、リポジトリとは別経路（手動コピー等）で渡すこと。
+# import_domain.py 側の使い方は変更なし（domain_seeds/ にファイルが存在すれば
+# 投入できる、という既存の挙動のまま）。
+Backend/dsl_repository/domain_seeds/*.json
+
+# --- 2026-08-15: Qiita公開向けクリーンアップ。実顧客データを含むため除外 ---
+Backend/dsl_repository/scenarios/truck_dispatcher_convdata.json
+Backend/dsl_repository/scenarios/truck_dispatcher_convdata2.json
+Backend/dsl_repository/scenarios/truck_dispatcher_infeasible.json
+Backend/dsl_repository/scenarios/truck_dispatcher_merge_test.json
+Backend/dsl_repository/scenarios/truck_dispatcher_merge_test2_tight_tw.json
+Backend/dsl_repository/scenarios/truck_dispatcher_tight.json
+Backend/dsl_repository/truck_dispatcher_vehicle_master.json
+Backend/dsl_repository/csv_to_business_dsl_truck_dispatcher.py
+
+# --- 2026-08-15: OSS公開クリーンアップ ---
+node_modules/
+llm_file_cache.json
+repomix-*.xml
+repomix.*.json
+docs/test_hearings/
+testfile123
+mcp_write_test.txt
+Backend/dsl_repository/scenarios/truck_dispatcher_baseline.json

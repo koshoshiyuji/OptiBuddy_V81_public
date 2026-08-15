@@ -1,0 +1,49 @@
+{
+  "problem_class": "ShiftRotationScheduler",
+  "domain": "shift_rotation_scheduler",
+  "meta": {
+    "instance_name": "ShiftRotationScheduler シナリオ #2",
+    "note": "【設計意図】従業員2名・2週周期で、全曜日に早番2名・遅番2名・夜勤2名（計6名/日）を要求する明らかに充足不能なシナリオ。2名しかいないのに1日6名分を要求するため数値的に不可能。infeasible判定の検証用。"
+  },
+  "employees": [
+    {"id": "E1", "name": "従業員1"},
+    {"id": "E2", "name": "従業員2"}
+  ],
+  "shifts": [
+    {"id": "off",   "name": "休み",  "type": "off"},
+    {"id": "early", "name": "早番",  "type": "early"},
+    {"id": "late",  "name": "遅番",  "type": "late"},
+    {"id": "night", "name": "夜勤",  "type": "night"}
+  ],
+  "daily_requirements": [
+    {"day_of_week": 0, "shift_id": "early", "required": 2},
+    {"day_of_week": 0, "shift_id": "late",  "required": 2},
+    {"day_of_week": 0, "shift_id": "night", "required": 2},
+    {"day_of_week": 1, "shift_id": "early", "required": 2},
+    {"day_of_week": 1, "shift_id": "late",  "required": 2},
+    {"day_of_week": 1, "shift_id": "night", "required": 2},
+    {"day_of_week": 2, "shift_id": "early", "required": 2},
+    {"day_of_week": 2, "shift_id": "late",  "required": 2},
+    {"day_of_week": 2, "shift_id": "night", "required": 2},
+    {"day_of_week": 3, "shift_id": "early", "required": 2},
+    {"day_of_week": 3, "shift_id": "late",  "required": 2},
+    {"day_of_week": 3, "shift_id": "night", "required": 2},
+    {"day_of_week": 4, "shift_id": "early", "required": 2},
+    {"day_of_week": 4, "shift_id": "late",  "required": 2},
+    {"day_of_week": 4, "shift_id": "night", "required": 2},
+    {"day_of_week": 5, "shift_id": "early", "required": 2},
+    {"day_of_week": 5, "shift_id": "late",  "required": 2},
+    {"day_of_week": 5, "shift_id": "night", "required": 2},
+    {"day_of_week": 6, "shift_id": "early", "required": 2},
+    {"day_of_week": 6, "shift_id": "late",  "required": 2},
+    {"day_of_week": 6, "shift_id": "night", "required": 2}
+  ],
+  "constraints": {
+    "min_consecutive": 2,
+    "max_consecutive": 4,
+    "min_days_off_per_14": 2
+  },
+  "config": {
+    "time_limit_sec": 30
+  }
+}

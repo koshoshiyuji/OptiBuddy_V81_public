@@ -1,0 +1,40 @@
+{
+  "problem_class": "StoreSite",
+  "domain": "store_site",
+  "meta": {
+    "instance_name": "StoreSite シナリオ #1",
+    "note": "【設計意図】12エリア×6候補地の標準的な配置問題。全エリアが何らかの店舗に割り当てられ、稼働率の偏りも小さい解が得られることを狙う。"
+  },
+  "areas": [
+    {"id": "A01", "name": "渋谷エリア",   "demand": 120, "lat": 35.658, "lng": 139.701},
+    {"id": "A02", "name": "新宿エリア",   "demand": 150, "lat": 35.690, "lng": 139.700},
+    {"id": "A03", "name": "池袋エリア",   "demand": 100, "lat": 35.729, "lng": 139.710},
+    {"id": "A04", "name": "品川エリア",   "demand": 80,  "lat": 35.628, "lng": 139.739},
+    {"id": "A05", "name": "目黒エリア",   "demand": 60,  "lat": 35.633, "lng": 139.716},
+    {"id": "A06", "name": "六本木エリア", "demand": 90,  "lat": 35.663, "lng": 139.731},
+    {"id": "A07", "name": "秋葉原エリア", "demand": 110, "lat": 35.702, "lng": 139.774},
+    {"id": "A08", "name": "上野エリア",   "demand": 95,  "lat": 35.713, "lng": 139.777},
+    {"id": "A09", "name": "浅草エリア",   "demand": 70,  "lat": 35.712, "lng": 139.796},
+    {"id": "A10", "name": "錦糸町エリア", "demand": 85,  "lat": 35.695, "lng": 139.813},
+    {"id": "A11", "name": "豊洲エリア",   "demand": 75,  "lat": 35.645, "lng": 139.796},
+    {"id": "A12", "name": "有明エリア",   "demand": 55,  "lat": 35.630, "lng": 139.795}
+  ],
+  "candidates": [
+    {"id": "C01", "name": "渋谷店",   "fixed_cost": 500000, "capacity": 350, "lat": 35.660, "lng": 139.703},
+    {"id": "C02", "name": "新宿店",   "fixed_cost": 600000, "capacity": 400, "lat": 35.691, "lng": 139.699},
+    {"id": "C03", "name": "池袋店",   "fixed_cost": 480000, "capacity": 300, "lat": 35.730, "lng": 139.711},
+    {"id": "C04", "name": "品川店",   "fixed_cost": 420000, "capacity": 280, "lat": 35.626, "lng": 139.738},
+    {"id": "C05", "name": "秋葉原店", "fixed_cost": 550000, "capacity": 380, "lat": 35.700, "lng": 139.773},
+    {"id": "C06", "name": "豊洲店",   "fixed_cost": 390000, "capacity": 250, "lat": 35.644, "lng": 139.795}
+  ],
+  "config": {
+    "max_distance_km": 5.0,
+    "unmet_penalty": 100000,
+    "store_count_weight": 5000,
+    "utilization_penalty_weight": 3000,
+    "distance_penalty_weight": 50,
+    "utilization_threshold": 0.8,
+    "supply_cost_per_km": 200,
+    "time_limit_sec": 30
+  }
+}

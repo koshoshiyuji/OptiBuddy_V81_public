@@ -1,0 +1,28 @@
+{
+  "problem_class": "SteelMillSlabDesign",
+  "domain": "steel_mill_slab_design",
+  "meta": {
+    "instance_name": "SteelMillSlabDesign シナリオ #1",
+    "note": "【設計意図】標準的な注文セット（12注文、4色、単一規格20t）を狙って作成。廃棄重量の最小化とスラブ個数の最小化が二段階で動作することを確認する。"
+  },
+  "slab_capacity": 20,
+  "orders": [
+    {"id": "O01", "name": "注文A1", "weight": 4,  "colors": ["red"],           "customer": "得意先A"},
+    {"id": "O02", "name": "注文A2", "weight": 7,  "colors": ["red"],           "customer": "得意先A"},
+    {"id": "O03", "name": "注文B1", "weight": 3,  "colors": ["blue"],          "customer": "得意先B"},
+    {"id": "O04", "name": "注文B2", "weight": 5,  "colors": ["blue"],          "customer": "得意先B"},
+    {"id": "O05", "name": "注文C1", "weight": 6,  "colors": ["green"],         "customer": "得意先C"},
+    {"id": "O06", "name": "注文C2", "weight": 4,  "colors": ["green"],         "customer": "得意先C"},
+    {"id": "O07", "name": "注文D1", "weight": 8,  "colors": ["yellow"],        "customer": "得意先D"},
+    {"id": "O08", "name": "注文AB1","weight": 3,  "colors": ["red", "blue"],   "customer": "得意先A"},
+    {"id": "O09", "name": "注文BC1","weight": 5,  "colors": ["blue", "green"], "customer": "得意先B"},
+    {"id": "O10", "name": "注文RG1","weight": 2,  "colors": ["red", "green"],  "customer": "得意先C"},
+    {"id": "O11", "name": "注文Y2", "weight": 9,  "colors": ["yellow"],        "customer": "得意先D"},
+    {"id": "O12", "name": "注文G3", "weight": 6,  "colors": ["green"],         "customer": "得意先E"}
+  ],
+  "config": {
+    "time_limit_sec": 30,
+    "max_slabs": 12,
+    "operation_date": "2026-08-01"
+  }
+}

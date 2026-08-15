@@ -1,0 +1,26 @@
+{
+  "problem_class": "CrewDutyScheduler",
+  "domain": "crew_duty_scheduler",
+  "meta": {
+    "instance_name": "CrewDutyScheduler シナリオ #1",
+    "note": "【設計意図】標準的な路線バス1日ダイヤを想定した10ピース構成。max_duty_min=480分（8時間）・min_break_min=10分で、実行可能パターンが複数存在し最適勤務数が4〜5程度になることを狙う。全便が単一車庫を起終点とする折り返し運行を想定し、origin/destinationはすべて『車庫』とすることで、接続性チェック（destination==origin）は常に成立し、当初の想定解（最適勤務数4〜5程度）を変えない。"
+  },
+  "config": {
+    "max_duty_min": 480,
+    "min_break_min": 10,
+    "max_pieces_per_duty": 4,
+    "solve_time_sec": 30
+  },
+  "pieces": [
+    {"id": "P01", "name": "早朝便A", "route": "路線1",  "origin": "車庫", "destination": "車庫", "start_time": "05:30", "end_time": "06:45"},
+    {"id": "P02", "name": "早朝便B", "route": "路線2",  "origin": "車庫", "destination": "車庫", "start_time": "05:50", "end_time": "07:10"},
+    {"id": "P03", "name": "朝ラッシュA", "route": "路線1", "origin": "車庫", "destination": "車庫", "start_time": "07:00", "end_time": "08:30"},
+    {"id": "P04", "name": "朝ラッシュB", "route": "路線3", "origin": "車庫", "destination": "車庫", "start_time": "07:20", "end_time": "09:00"},
+    {"id": "P05", "name": "日中便A",  "route": "路線2",  "origin": "車庫", "destination": "車庫", "start_time": "09:30", "end_time": "11:00"},
+    {"id": "P06", "name": "日中便B",  "route": "路線1",  "origin": "車庫", "destination": "車庫", "start_time": "10:00", "end_time": "11:45"},
+    {"id": "P07", "name": "昼過ぎ便", "route": "路線3",  "origin": "車庫", "destination": "車庫", "start_time": "12:00", "end_time": "13:30"},
+    {"id": "P08", "name": "夕方便A",  "route": "路線1",  "origin": "車庫", "destination": "車庫", "start_time": "16:00", "end_time": "17:30"},
+    {"id": "P09", "name": "夕ラッシュA", "route": "路線2", "origin": "車庫", "destination": "車庫", "start_time": "17:00", "end_time": "19:00"},
+    {"id": "P10", "name": "夜間便",   "route": "路線3",  "origin": "車庫", "destination": "車庫", "start_time": "20:00", "end_time": "21:30"}
+  ]
+}

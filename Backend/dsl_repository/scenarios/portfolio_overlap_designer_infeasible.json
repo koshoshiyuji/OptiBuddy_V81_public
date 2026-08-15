@@ -1,0 +1,22 @@
+{
+  "problem_class": "PortfolioOverlapDesigner",
+  "domain": "portfolio_overlap_designer",
+  "meta": {
+    "instance_name": "PortfolioOverlapDesigner シナリオ #2",
+    "note": "【設計意図】ファンドの組入銘柄数がプール総数を超える条件を意図的に設定（F001が required_count=6 なのに pool は5銘柄のみ）。バリデーションエラーまたは infeasible として処理されることを確認する。\n【検証結果】未実施。"
+  },
+  "funds": [
+    {"id": "F001", "name": "メガファンドA", "required_count": 6},
+    {"id": "F002", "name": "メガファンドB", "required_count": 6}
+  ],
+  "pool": [
+    {"id": "S001", "name": "銘柄X1", "sector": "電機"},
+    {"id": "S002", "name": "銘柄X2", "sector": "電機"},
+    {"id": "S003", "name": "銘柄X3", "sector": "化学"},
+    {"id": "S004", "name": "銘柄X4", "sector": "金融"},
+    {"id": "S005", "name": "銘柄X5", "sector": "IT"}
+  ],
+  "config": {
+    "time_limit_sec": 10
+  }
+}

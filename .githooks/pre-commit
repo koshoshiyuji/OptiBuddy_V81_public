@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Gate2静的フィールド整合性チェック（差分ベース）をコミット前に自動実行する。
+#
+# Backend/solvers/*_solver.py または Backend/dsl_transformer/*_converter.py
+# （*_ui_converter.py は対象外。UI DSL変換はビジネスDSL⇔ソルバー間の
+# フィールド整合性チェックの対象ではないため）がステージされている場合のみ
+# 発動する。判定ロジック（新規に増えたmissing_in_converterキーだけを見て、
+# 既存の誤検知はブロックしない）の詳細は
+# Backend/dsl_repository/check_staged_field_consistency.py を参照。
+#
+# 有効化方法（このリポジトリで一度だけ実行する。ローカルgit configなので
+# .git/configには保存されるがコミットはされず、他のクローン先には伝播しない）:
+#   git config core.hooksPath .githooks
+#
+# 今回だけスキップしたい場合:
+#   git commit --no-verify
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR || true)"
+
+snakes=()
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  case "$f" in
+    Backend/solvers/*_solver.py)
+      base="$(basename "$f")"
+      snakes+=("${base%_solver.py}")
+      ;;
+    Backend/dsl_transformer/*_ui_converter.py)
+      ;;  # UI converterはフィールド整合性チェックの対象外
+    Backend/dsl_transformer/*_converter.py)
+      base="$(basename "$f")"
+      snakes+=("${base%_converter.py}")
+      ;;
+  esac
+done <<< "$staged_files"
+
+if [ "${#snakes[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+# 重複除去
+IFS=$'\n' unique_snakes=($(printf '%s\n' "${snakes[@]}" | sort -u))
+unset IFS
+
+echo "[Gate2 pre-commit] フィールド整合性チェック対象ドメイン: ${unique_snakes[*]}"
+
+set +e
+(cd Backend && python3 dsl_repository/check_staged_field_consistency.py "${unique_snakes[@]}")
+exit_code=$?
+set -e
+
+if [ "$exit_code" -ne 0 ]; then
+  echo ""
+  echo "[Gate2 pre-commit] converter⇔solverのキー不一致（このコミットでの新規追加分）が見つかりました。上記を確認してください。"
+  echo "どうしても今回はスキップしたい場合は 'git commit --no-verify' を使ってください。"
+fi
+
+exit "$exit_code"

@@ -1,0 +1,72 @@
+{
+  "problem_class": "MysteryShopperScheduler",
+  "domain": "mystery_shopper_scheduler",
+  "meta": {
+    "instance_name": "MysteryShopperScheduler シナリオ #2",
+    "note": "【設計意図】全訪問依頼が高級ブランド資格（luxury_brand）必須だが、資格保有者は1名のみ・稼働日も4日間のみ。訪問依頼12件に対して最大4件しか割り当てられないため、大量の未割当が発生することを狙う。"
+  },
+  "config": {
+    "default_min_revisit_days": 28,
+    "solve_time_sec": 15
+  },
+  "shoppers": [
+    {
+      "id": "S001",
+      "name": "田中 花子",
+      "area": "東京都渋谷区",
+      "available_days": [
+        "2026-08-04","2026-08-11","2026-08-18","2026-08-25"
+      ],
+      "qualifications": ["luxury_brand"]
+    },
+    {
+      "id": "S002",
+      "name": "鈴木 一郎",
+      "area": "東京都新宿区",
+      "available_days": [
+        "2026-08-04","2026-08-05","2026-08-06","2026-08-07","2026-08-11",
+        "2026-08-12","2026-08-13","2026-08-14","2026-08-18","2026-08-19",
+        "2026-08-20","2026-08-21","2026-08-25","2026-08-26","2026-08-27","2026-08-28"
+      ],
+      "qualifications": []
+    }
+  ],
+  "stores": [
+    {
+      "id": "LX001",
+      "name": "ラグジュアリーブランドA",
+      "area": "東京都銀座",
+      "visit_count": 3,
+      "min_revisit_days": 28,
+      "required_qualifications": ["luxury_brand"],
+      "duration_hours": 2.0
+    },
+    {
+      "id": "LX002",
+      "name": "ラグジュアリーブランドB",
+      "area": "東京都表参道",
+      "visit_count": 3,
+      "min_revisit_days": 28,
+      "required_qualifications": ["luxury_brand"],
+      "duration_hours": 2.0
+    },
+    {
+      "id": "LX003",
+      "name": "ラグジュアリーブランドC",
+      "area": "東京都六本木",
+      "visit_count": 3,
+      "min_revisit_days": 28,
+      "required_qualifications": ["luxury_brand"],
+      "duration_hours": 2.0
+    },
+    {
+      "id": "LX004",
+      "name": "ラグジュアリーブランドD",
+      "area": "東京都新宿",
+      "visit_count": 3,
+      "min_revisit_days": 28,
+      "required_qualifications": ["luxury_brand"],
+      "duration_hours": 2.0
+    }
+  ]
+}

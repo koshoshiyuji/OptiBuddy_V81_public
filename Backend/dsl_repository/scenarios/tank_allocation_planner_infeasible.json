@@ -1,0 +1,21 @@
+{
+  "problem_class": "TankAllocationPlanner",
+  "domain": "tank_allocation_planner",
+  "meta": {
+    "instance_name": "TankAllocationPlanner シナリオ #2",
+    "note": "【設計意図】資源逼迫シナリオ。酸性ロットとアルカリ性ロットのみで構成し、混載禁止制約（酸性×アルカリ性）により分離が必要なうえ、総量（72kL）がタンク総容量（40kL）を大幅に超えている。未割当ロット数最小化を最優先とする目的関数のもとで、feasible=true・coverage_rate=0.5（2ロット割当・2ロット未割当）の部分解が返ることを期待する（ヒアリング6節の緩和案提案方針に対応）。"
+  },
+  "lots": [
+    {"id": "L001", "name": "硫酸大量ロット", "volume": 18.0, "category": "酸性", "customer": "A社"},
+    {"id": "L002", "name": "塩酸大量ロット", "volume": 18.0, "category": "酸性", "customer": "A社"},
+    {"id": "L003", "name": "水酸化ナトリウム大量ロット", "volume": 18.0, "category": "アルカリ性", "customer": "B社"},
+    {"id": "L004", "name": "アンモニア大量ロット", "volume": 18.0, "category": "アルカリ性", "customer": "B社"}
+  ],
+  "tanks": [
+    {"id": "T01", "name": "タンク01", "capacity": 20.0},
+    {"id": "T02", "name": "タンク02", "capacity": 20.0}
+  ],
+  "config": {
+    "solve_time_sec": 15
+  }
+}

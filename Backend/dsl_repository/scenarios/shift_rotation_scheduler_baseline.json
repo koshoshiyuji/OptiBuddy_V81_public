@@ -1,0 +1,56 @@
+{
+  "problem_class": "ShiftRotationScheduler",
+  "domain": "shift_rotation_scheduler",
+  "meta": {
+    "instance_name": "ShiftRotationScheduler シナリオ #1",
+    "note": "【設計意図】従業員4名・4週周期のシフトローテーション。平日は休み1名・早番1名・遅番1名・夜勤1名、土日は休み2名・早番1名・遅番1名（夜勤0名）の必要人数を設定。合計は各曜日で4名（=従業員数）となり、14日窓内の最低休日数・連続日数・シフト順序制約を同時に満たす循環テンプレートが存在することを確認するシナリオ。"
+  },
+  "employees": [
+    {"id": "E1", "name": "従業員1"},
+    {"id": "E2", "name": "従業員2"},
+    {"id": "E3", "name": "従業員3"},
+    {"id": "E4", "name": "従業員4"}
+  ],
+  "shifts": [
+    {"id": "off",   "name": "休み",  "type": "off"},
+    {"id": "early", "name": "早番",  "type": "early"},
+    {"id": "late",  "name": "遅番",  "type": "late"},
+    {"id": "night", "name": "夜勤",  "type": "night"}
+  ],
+  "daily_requirements": [
+    {"day_of_week": 0, "shift_id": "off",   "required": 1},
+    {"day_of_week": 0, "shift_id": "early", "required": 1},
+    {"day_of_week": 0, "shift_id": "late",  "required": 1},
+    {"day_of_week": 0, "shift_id": "night", "required": 1},
+    {"day_of_week": 1, "shift_id": "off",   "required": 1},
+    {"day_of_week": 1, "shift_id": "early", "required": 1},
+    {"day_of_week": 1, "shift_id": "late",  "required": 1},
+    {"day_of_week": 1, "shift_id": "night", "required": 1},
+    {"day_of_week": 2, "shift_id": "off",   "required": 1},
+    {"day_of_week": 2, "shift_id": "early", "required": 1},
+    {"day_of_week": 2, "shift_id": "late",  "required": 1},
+    {"day_of_week": 2, "shift_id": "night", "required": 1},
+    {"day_of_week": 3, "shift_id": "off",   "required": 1},
+    {"day_of_week": 3, "shift_id": "early", "required": 1},
+    {"day_of_week": 3, "shift_id": "late",  "required": 1},
+    {"day_of_week": 3, "shift_id": "night", "required": 1},
+    {"day_of_week": 4, "shift_id": "off",   "required": 1},
+    {"day_of_week": 4, "shift_id": "early", "required": 1},
+    {"day_of_week": 4, "shift_id": "late",  "required": 1},
+    {"day_of_week": 4, "shift_id": "night", "required": 1},
+    {"day_of_week": 5, "shift_id": "off",   "required": 2},
+    {"day_of_week": 5, "shift_id": "early", "required": 1},
+    {"day_of_week": 5, "shift_id": "late",  "required": 1},
+    {"day_of_week": 6, "shift_id": "off",   "required": 2},
+    {"day_of_week": 6, "shift_id": "early", "required": 1},
+    {"day_of_week": 6, "shift_id": "late",  "required": 1}
+  ],
+  "constraints": {
+    "min_consecutive": 2,
+    "max_consecutive": 4,
+    "min_days_off_per_14": 2
+  },
+  "config": {
+    "time_limit_sec": 60
+  }
+}

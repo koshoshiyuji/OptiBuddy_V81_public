@@ -1,0 +1,50 @@
+{
+  "problem_class": "LotSizingScheduler",
+  "domain": "lot_sizing_scheduler",
+  "meta": {
+    "instance_name": "LotSizingScheduler シナリオ #1",
+    "note": "【設計意図】5製品・12注文・14期間の標準的な生産計画。1期間1件制約（機械1台）のため注文数以上の期間を確保。保管コストと段取り替えコストがトレードオフになる構成。全注文が割り当て可能なfeasibleシナリオ。"
+  },
+  "periods": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+  "orders": [
+    {"id": "O001", "product_id": "P_ALPHA", "quantity": 1, "due_period": 4,  "holding_cost_per_period": 5.0},
+    {"id": "O002", "product_id": "P_ALPHA", "quantity": 1, "due_period": 8,  "holding_cost_per_period": 5.0},
+    {"id": "O003", "product_id": "P_BETA",  "quantity": 1, "due_period": 6,  "holding_cost_per_period": 3.0},
+    {"id": "O004", "product_id": "P_BETA",  "quantity": 1, "due_period": 10, "holding_cost_per_period": 3.0},
+    {"id": "O005", "product_id": "P_GAMMA", "quantity": 1, "due_period": 7,  "holding_cost_per_period": 4.0},
+    {"id": "O006", "product_id": "P_GAMMA", "quantity": 1, "due_period": 12, "holding_cost_per_period": 4.0},
+    {"id": "O007", "product_id": "P_DELTA", "quantity": 1, "due_period": 5,  "holding_cost_per_period": 6.0},
+    {"id": "O008", "product_id": "P_DELTA", "quantity": 1, "due_period": 11, "holding_cost_per_period": 6.0},
+    {"id": "O009", "product_id": "P_EPS",   "quantity": 1, "due_period": 3,  "holding_cost_per_period": 2.0},
+    {"id": "O010", "product_id": "P_EPS",   "quantity": 1, "due_period": 9,  "holding_cost_per_period": 2.0},
+    {"id": "O011", "product_id": "P_ALPHA", "quantity": 1, "due_period": 13, "holding_cost_per_period": 5.0},
+    {"id": "O012", "product_id": "P_BETA",  "quantity": 1, "due_period": 14, "holding_cost_per_period": 3.0}
+  ],
+  "setup_costs": [
+    {"from_product": "P_ALPHA", "to_product": "P_BETA",  "cost": 50},
+    {"from_product": "P_ALPHA", "to_product": "P_GAMMA", "cost": 60},
+    {"from_product": "P_ALPHA", "to_product": "P_DELTA", "cost": 80},
+    {"from_product": "P_ALPHA", "to_product": "P_EPS",   "cost": 40},
+    {"from_product": "P_BETA",  "to_product": "P_ALPHA", "cost": 50},
+    {"from_product": "P_BETA",  "to_product": "P_GAMMA", "cost": 55},
+    {"from_product": "P_BETA",  "to_product": "P_DELTA", "cost": 70},
+    {"from_product": "P_BETA",  "to_product": "P_EPS",   "cost": 35},
+    {"from_product": "P_GAMMA", "to_product": "P_ALPHA", "cost": 60},
+    {"from_product": "P_GAMMA", "to_product": "P_BETA",  "cost": 55},
+    {"from_product": "P_GAMMA", "to_product": "P_DELTA", "cost": 65},
+    {"from_product": "P_GAMMA", "to_product": "P_EPS",   "cost": 45},
+    {"from_product": "P_DELTA", "to_product": "P_ALPHA", "cost": 80},
+    {"from_product": "P_DELTA", "to_product": "P_BETA",  "cost": 70},
+    {"from_product": "P_DELTA", "to_product": "P_GAMMA", "cost": 65},
+    {"from_product": "P_DELTA", "to_product": "P_EPS",   "cost": 55},
+    {"from_product": "P_EPS",   "to_product": "P_ALPHA", "cost": 40},
+    {"from_product": "P_EPS",   "to_product": "P_BETA",  "cost": 35},
+    {"from_product": "P_EPS",   "to_product": "P_GAMMA", "cost": 45},
+    {"from_product": "P_EPS",   "to_product": "P_DELTA", "cost": 55}
+  ],
+  "config": {
+    "time_limit_sec": 30,
+    "capacity_per_period": 1,
+    "allow_unassigned": false
+  }
+}

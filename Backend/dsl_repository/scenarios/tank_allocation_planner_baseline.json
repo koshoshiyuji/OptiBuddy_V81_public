@@ -1,0 +1,35 @@
+{
+  "problem_class": "TankAllocationPlanner",
+  "domain": "tank_allocation_planner",
+  "meta": {
+    "instance_name": "TankAllocationPlanner シナリオ #1",
+    "note": "【設計意図】標準的な薬品タンク割当シナリオ。酸性・アルカリ性・酸化性・可燃性・中性の各分類が混在し、混載禁止制約と容量制約の両方がかかる。得意先の分散最小化副次目的も検証できる構成。"
+  },
+  "lots": [
+    {"id": "L001", "name": "硫酸ロットA", "volume": 8.0, "category": "酸性", "customer": "山田化学"},
+    {"id": "L002", "name": "硫酸ロットB", "volume": 6.0, "category": "酸性", "customer": "山田化学"},
+    {"id": "L003", "name": "水酸化ナトリウムロットA", "volume": 7.0, "category": "アルカリ性", "customer": "鈴木工業"},
+    {"id": "L004", "name": "水酸化ナトリウムロットB", "volume": 5.0, "category": "アルカリ性", "customer": "鈴木工業"},
+    {"id": "L005", "name": "過酸化水素ロット", "volume": 9.0, "category": "酸化性", "customer": "田中物産"},
+    {"id": "L006", "name": "エタノールロットA", "volume": 6.0, "category": "可燃性", "customer": "佐藤商事"},
+    {"id": "L007", "name": "エタノールロットB", "volume": 4.0, "category": "可燃性", "customer": "佐藤商事"},
+    {"id": "L008", "name": "純水ロットA", "volume": 10.0, "category": "中性", "customer": "中村製薬"},
+    {"id": "L009", "name": "純水ロットB", "volume": 8.0, "category": "中性", "customer": "中村製薬"},
+    {"id": "L010", "name": "グリセリンロット", "volume": 5.0, "category": "中性", "customer": "高橋食品"},
+    {"id": "L011", "name": "塩酸ロット", "volume": 7.0, "category": "酸性", "customer": "伊藤化工"},
+    {"id": "L012", "name": "アンモニア水ロット", "volume": 6.0, "category": "アルカリ性", "customer": "渡辺薬品"}
+  ],
+  "tanks": [
+    {"id": "T01", "name": "タンク01", "capacity": 20.0},
+    {"id": "T02", "name": "タンク02", "capacity": 20.0},
+    {"id": "T03", "name": "タンク03", "capacity": 20.0},
+    {"id": "T04", "name": "タンク04", "capacity": 15.0},
+    {"id": "T05", "name": "タンク05", "capacity": 15.0},
+    {"id": "T06", "name": "タンク06", "capacity": 15.0},
+    {"id": "T07", "name": "タンク07", "capacity": 10.0},
+    {"id": "T08", "name": "タンク08", "capacity": 10.0}
+  ],
+  "config": {
+    "solve_time_sec": 30
+  }
+}

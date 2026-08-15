@@ -1,0 +1,161 @@
+{
+  "problem_class": "MysteryShopperScheduler",
+  "domain": "mystery_shopper_scheduler",
+  "meta": {
+    "instance_name": "MysteryShopperScheduler シナリオ #1",
+    "note": "【設計意図】標準的な月次スケジュール。10店舗・5調査員・各店舗2〜3回の訪問依頼。資格要件あり店舗2件を含む。充足率90%以上の解が得られることを狙う。"
+  },
+  "config": {
+    "default_min_revisit_days": 28,
+    "solve_time_sec": 30
+  },
+  "shoppers": [
+    {
+      "id": "S001",
+      "name": "田中 花子",
+      "area": "東京都渋谷区",
+      "available_days": [
+        "2026-08-04","2026-08-05","2026-08-06","2026-08-07","2026-08-11",
+        "2026-08-12","2026-08-13","2026-08-14","2026-08-18","2026-08-19",
+        "2026-08-20","2026-08-21","2026-08-25","2026-08-26","2026-08-27",
+        "2026-08-28"
+      ],
+      "qualifications": ["luxury_brand", "food_hygiene"]
+    },
+    {
+      "id": "S002",
+      "name": "鈴木 一郎",
+      "area": "東京都新宿区",
+      "available_days": [
+        "2026-08-03","2026-08-04","2026-08-05","2026-08-10","2026-08-11",
+        "2026-08-12","2026-08-17","2026-08-18","2026-08-19","2026-08-24",
+        "2026-08-25","2026-08-26"
+      ],
+      "qualifications": ["food_hygiene"]
+    },
+    {
+      "id": "S003",
+      "name": "山田 美咲",
+      "area": "神奈川県横浜市",
+      "available_days": [
+        "2026-08-06","2026-08-07","2026-08-13","2026-08-14","2026-08-20",
+        "2026-08-21","2026-08-27","2026-08-28"
+      ],
+      "qualifications": ["luxury_brand"]
+    },
+    {
+      "id": "S004",
+      "name": "佐藤 健太",
+      "area": "東京都品川区",
+      "available_days": [
+        "2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07",
+        "2026-08-10","2026-08-11","2026-08-12","2026-08-13","2026-08-14",
+        "2026-08-17","2026-08-18","2026-08-19","2026-08-20","2026-08-21",
+        "2026-08-24","2026-08-25","2026-08-26","2026-08-27","2026-08-28"
+      ],
+      "qualifications": []
+    },
+    {
+      "id": "S005",
+      "name": "伊藤 さくら",
+      "area": "東京都目黒区",
+      "available_days": [
+        "2026-08-04","2026-08-05","2026-08-11","2026-08-12","2026-08-18",
+        "2026-08-19","2026-08-25","2026-08-26"
+      ],
+      "qualifications": []
+    }
+  ],
+  "stores": [
+    {
+      "id": "ST001",
+      "name": "プレミアム・ブティックA",
+      "area": "東京都渋谷区",
+      "visit_count": 2,
+      "min_revisit_days": 21,
+      "required_qualifications": ["luxury_brand"],
+      "duration_hours": 1.5
+    },
+    {
+      "id": "ST002",
+      "name": "カフェ・ド・パリ",
+      "area": "東京都新宿区",
+      "visit_count": 3,
+      "min_revisit_days": 14,
+      "required_qualifications": ["food_hygiene"],
+      "duration_hours": 1.0
+    },
+    {
+      "id": "ST003",
+      "name": "ファミリーレストランB",
+      "area": "東京都品川区",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 1.0
+    },
+    {
+      "id": "ST004",
+      "name": "スーパーマーケットC",
+      "area": "神奈川県横浜市",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 0.5
+    },
+    {
+      "id": "ST005",
+      "name": "コンビニエンスD",
+      "area": "東京都目黒区",
+      "visit_count": 3,
+      "min_revisit_days": 10,
+      "required_qualifications": [],
+      "duration_hours": 0.5
+    },
+    {
+      "id": "ST006",
+      "name": "ドラッグストアE",
+      "area": "東京都渋谷区",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 0.75
+    },
+    {
+      "id": "ST007",
+      "name": "書店F",
+      "area": "東京都新宿区",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 0.75
+    },
+    {
+      "id": "ST008",
+      "name": "スポーツショップG",
+      "area": "東京都品川区",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 1.0
+    },
+    {
+      "id": "ST009",
+      "name": "電器量販店H",
+      "area": "神奈川県横浜市",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 1.0
+    },
+    {
+      "id": "ST010",
+      "name": "ホームセンターI",
+      "area": "東京都目黒区",
+      "visit_count": 2,
+      "min_revisit_days": 28,
+      "required_qualifications": [],
+      "duration_hours": 1.0
+    }
+  ]
+}

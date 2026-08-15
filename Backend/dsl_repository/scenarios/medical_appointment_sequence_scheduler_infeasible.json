@@ -1,0 +1,62 @@
+{
+  "problem_class": "MedicalAppointmentSequenceScheduler",
+  "domain": "medical_appointment_sequence_scheduler",
+  "meta": {
+    "instance_name": "MedicalAppointmentSequenceScheduler シナリオ #2",
+    "note": "【設計意図】資源不足・間隔ルール矛盾による解なし条件を狙って作成。受診に必要な資源タイプが稼働時間ゼロ（利用不可）の状態と、不可能な間隔ルール（最大間隔より最小間隔が大きい）を組み合わせ、全系列が割り当て不可能になることを狙う。"
+  },
+  "sequences": [
+    {
+      "id": "seq_infeas_001",
+      "patient_name": "解なし患者A",
+      "visits": [
+        {
+          "id": "seq_infeas_001_v0",
+          "required_resources": [{"type": "mri", "count": 1}],
+          "duration_min": 60,
+          "order": 0
+        },
+        {
+          "id": "seq_infeas_001_v1",
+          "required_resources": [{"type": "mri", "count": 1}],
+          "duration_min": 60,
+          "order": 1
+        }
+      ],
+      "interval_rules": [
+        {"from_visit": 0, "to_visit": 1, "min_gap": 1000, "max_gap": 10, "unit": "min"}
+      ],
+      "same_resource_rules": [],
+      "blackout_slots": []
+    },
+    {
+      "id": "seq_infeas_002",
+      "patient_name": "解なし患者B",
+      "visits": [
+        {
+          "id": "seq_infeas_002_v0",
+          "required_resources": [{"type": "ct", "count": 2}],
+          "duration_min": 45,
+          "order": 0
+        }
+      ],
+      "interval_rules": [],
+      "same_resource_rules": [],
+      "blackout_slots": []
+    }
+  ],
+  "resources": [
+    {
+      "id": "physician_only",
+      "name": "内科医師",
+      "type": "physician",
+      "available_slots": [
+        {"start_min": 480, "end_min": 720}
+      ]
+    }
+  ],
+  "config": {
+    "time_limit_sec": 10,
+    "horizon_min": 1440
+  }
+}

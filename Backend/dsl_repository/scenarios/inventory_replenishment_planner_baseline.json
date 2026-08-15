@@ -1,0 +1,46 @@
+{
+  "problem_class": "InventoryReplenishmentPlanner",
+  "domain": "inventory_replenishment_planner",
+  "meta": {
+    "instance_name": "InventoryReplenishmentPlanner シナリオ #1",
+    "note": "【設計意図】中央倉庫1拠点・配送センター3拠点・4週計画の標準的な補充計画。供給能力は合計需要より十分に大きく設定しており、全需要が充足される解が得られることを想定。発送固定費の節約のため、複数週分をまとめて発送するエコノミー型の解が出ることを期待する。"
+  },
+  "warehouses": [
+    {"id": "WH1", "name": "中央倉庫（東京）"}
+  ],
+  "centers": [
+    {"id": "C1", "name": "仙台センター",  "initial_inventory": 100},
+    {"id": "C2", "name": "名古屋センター","initial_inventory": 50},
+    {"id": "C3", "name": "福岡センター",  "initial_inventory": 80}
+  ],
+  "periods": [
+    {"id": "W1", "label": "第1週"},
+    {"id": "W2", "label": "第2週"},
+    {"id": "W3", "label": "第3週"},
+    {"id": "W4", "label": "第4週"}
+  ],
+  "demands": [
+    {"center_id": "C1", "period_id": "W1", "quantity": 120},
+    {"center_id": "C1", "period_id": "W2", "quantity": 150},
+    {"center_id": "C1", "period_id": "W3", "quantity": 130},
+    {"center_id": "C1", "period_id": "W4", "quantity": 160},
+    {"center_id": "C2", "period_id": "W1", "quantity": 200},
+    {"center_id": "C2", "period_id": "W2", "quantity": 180},
+    {"center_id": "C2", "period_id": "W3", "quantity": 220},
+    {"center_id": "C2", "period_id": "W4", "quantity": 190},
+    {"center_id": "C3", "period_id": "W1", "quantity": 90},
+    {"center_id": "C3", "period_id": "W2", "quantity": 110},
+    {"center_id": "C3", "period_id": "W3", "quantity": 100},
+    {"center_id": "C3", "period_id": "W4", "quantity": 120}
+  ],
+  "config": {
+    "holding_cost_rate": 0.05,
+    "fixed_shipping_cost": 8000,
+    "supply_capacity_per_period": 2000,
+    "shortage_penalty": 100000,
+    "solve_time_sec": 30,
+    "use_integer_lots": true,
+    "lot_min_unit": 1,
+    "max_inventory_per_center": 500
+  }
+}

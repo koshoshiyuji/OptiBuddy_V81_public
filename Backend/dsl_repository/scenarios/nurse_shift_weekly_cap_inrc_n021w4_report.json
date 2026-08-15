@@ -1,0 +1,43 @@
+{
+  "converted": [
+    "SHIFT_TYPES 'Night' (max_consec=5) → work_limits.max_consecutive_night_shifts の既定値として全staffに適用",
+    "tasks: 64 件生成（REQUIREMENTSのmin>0行から）",
+    "staff: 21 件生成（NURSESから）"
+  ],
+  "not_converted": [
+    "CONTRACTS 'FullTime': 総勤務数(15, 22), 連続勤務(3, 5), 連続休日(2, 3), 週末上限2, complete_weekend=True → NurseShiftWeeklyCapに対応フィールド無し",
+    "CONTRACTS 'PartTime': 総勤務数(7, 15), 連続勤務(3, 5), 連続休日(2, 5), 週末上限2, complete_weekend=True → NurseShiftWeeklyCapに対応フィールド無し",
+    "CONTRACTS 'HalfTime': 総勤務数(7, 11), 連続勤務(3, 5), 連続休日(3, 5), 週末上限1, complete_weekend=True → NurseShiftWeeklyCapに対応フィールド無し",
+    "FORBIDDEN_SHIFT_TYPES_SUCCESSIONS: Late の前日に ['Early', 'Day'] を割り当て禁止 → 夜勤以外の汎用遷移禁止は未対応",
+    "FORBIDDEN_SHIFT_TYPES_SUCCESSIONS: Night の前日に ['Early', 'Day', 'Late'] を割り当て禁止 → 夜勤以外の汎用遷移禁止は未対応",
+    "REQUIREMENTS Early/Caretaker/Mon: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Early/Caretaker/Thu: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Day/Caretaker/Thu: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Late/Caretaker/Tue: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Late/Caretaker/Wed: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Late/Caretaker/Thu: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Late/Caretaker/Sun: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Night/Caretaker/Mon: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Night/Caretaker/Wed: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "REQUIREMENTS Night/Caretaker/Thu: optimal=2 > min=1 (S1目標充足) → required_count=1のみ変換。optimal超過分の目的関数項は無し",
+    "SHIFT_OFF_REQUESTS CT_13 Night Tue: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS NU_8 Night Tue: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS CT_12 Night Wed: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS NU_9 Any Wed: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS HN_1 Day Thu: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS TR_17 Any Thu: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS HN_2 Any Fri: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS NU_7 Any Fri: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS NU_9 Any Fri: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS TR_16 Day Fri: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS CT_13 Day Sat: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS CT_14 Any Sat: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS HN_0 Any Sat: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS TR_18 Day Sat: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS CT_14 Late Sun: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS CT_15 Day Sun: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS NU_3 Late Sun: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）",
+    "SHIFT_OFF_REQUESTS TR_19 Late Sun: ソフトな回避希望(S4) → NurseShiftWeeklyCapのapproved_days_offはハード制約用のため、意図的に変換しない（誤ってハード化するリスクを避けるため）"
+  ],
+  "warnings": []
+}

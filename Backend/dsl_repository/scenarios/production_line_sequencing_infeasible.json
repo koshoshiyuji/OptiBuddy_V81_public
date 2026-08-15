@@ -1,0 +1,32 @@
+{
+  "problem_class": "ProductionLineSequencing",
+  "domain": "production_line_sequencing",
+  "meta": {
+    "instance_name": "自動車組立ライン生産順序 シナリオ #2（解なし）",
+    "note": "【設計意図】バッチ数がスロット数を大幅に超えており、all-different制約のもとで全バッチを割り当てることが数学的に不可能な構成を狙って作成。"
+  },
+  "lines": [
+    {"id": "L1", "name": "組立ライン1"},
+    {"id": "L2", "name": "組立ライン2"}
+  ],
+  "vehicle_types": [
+    {"id": "SEDAN", "name": "セダン", "daily_limit": 1, "priority_order": 1},
+    {"id": "SUV",   "name": "SUV",   "daily_limit": 1, "priority_order": 2},
+    {"id": "EV",    "name": "EV",    "daily_limit": 1, "priority_order": 3}
+  ],
+  "slots": [
+    {"id": "L1_d1_h8", "line_id": "L1", "line_name": "組立ライン1", "day": 1, "start_hour": 8},
+    {"id": "L2_d1_h8", "line_id": "L2", "line_name": "組立ライン2", "day": 1, "start_hour": 8}
+  ],
+  "batches": [
+    {"id": "B01", "name": "セダン-001", "compatible_lines": null, "line_on_day": 1, "line_off_day": 1, "vehicle_type": "SEDAN"},
+    {"id": "B02", "name": "セダン-002", "compatible_lines": null, "line_on_day": 1, "line_off_day": 1, "vehicle_type": "SEDAN"},
+    {"id": "B03", "name": "セダン-003", "compatible_lines": null, "line_on_day": 1, "line_off_day": 1, "vehicle_type": "SEDAN"},
+    {"id": "B04", "name": "SUV-001",   "compatible_lines": null, "line_on_day": 1, "line_off_day": 1, "vehicle_type": "SUV"},
+    {"id": "B05", "name": "EV-001",    "compatible_lines": null, "line_on_day": 1, "line_off_day": 1, "vehicle_type": "EV"}
+  ],
+  "distribution_exceptions": [],
+  "config": {
+    "time_limit_sec": 10
+  }
+}

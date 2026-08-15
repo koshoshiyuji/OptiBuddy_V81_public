@@ -1,0 +1,1509 @@
+{
+  "problem_class": "NurseShiftWeeklyCap",
+  "staff": [
+    {
+      "id": "N000",
+      "name": "看護師000",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N001",
+      "name": "看護師001",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N002",
+      "name": "看護師002",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N003",
+      "name": "看護師003",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N004",
+      "name": "看護師004",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N005",
+      "name": "看護師005",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N006",
+      "name": "看護師006",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N007",
+      "name": "看護師007",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N008",
+      "name": "看護師008",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N009",
+      "name": "看護師009",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N010",
+      "name": "看護師010",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N011",
+      "name": "看護師011",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N012",
+      "name": "看護師012",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N013",
+      "name": "看護師013",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N014",
+      "name": "看護師014",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N015",
+      "name": "看護師015",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N016",
+      "name": "看護師016",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N017",
+      "name": "看護師017",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N018",
+      "name": "看護師018",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N019",
+      "name": "看護師019",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N020",
+      "name": "看護師020",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N021",
+      "name": "看護師021",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N022",
+      "name": "看護師022",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N023",
+      "name": "看護師023",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N024",
+      "name": "看護師024",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N025",
+      "name": "看護師025",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N026",
+      "name": "看護師026",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N027",
+      "name": "看護師027",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N028",
+      "name": "看護師028",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N029",
+      "name": "看護師029",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N030",
+      "name": "看護師030",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N031",
+      "name": "看護師031",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N032",
+      "name": "看護師032",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N033",
+      "name": "看護師033",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N034",
+      "name": "看護師034",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N035",
+      "name": "看護師035",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N036",
+      "name": "看護師036",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N037",
+      "name": "看護師037",
+      "grade": "STANDARD",
+      "hourly_rate": 1800,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N038",
+      "name": "看護師038",
+      "grade": "JUNIOR",
+      "hourly_rate": 1300,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    },
+    {
+      "id": "N039",
+      "name": "看護師039",
+      "grade": "CHIEF",
+      "hourly_rate": 2500,
+      "skills": [
+        "nurse"
+      ],
+      "certifications": [
+        "registered_nurse",
+        "leader"
+      ],
+      "availability": {
+        "start": 0,
+        "end": 14400
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 2,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T_DAY_D1",
+      "name": "DAY勤D1",
+      "day": 1,
+      "start_window": 480,
+      "end_window": 960,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D1",
+      "name": "EVE勤D1",
+      "day": 1,
+      "start_window": 960,
+      "end_window": 1200,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D1",
+      "name": "NIGHT勤D1",
+      "day": 1,
+      "start_window": 1200,
+      "end_window": 1920,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D2",
+      "name": "DAY勤D2",
+      "day": 2,
+      "start_window": 1920,
+      "end_window": 2400,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D2",
+      "name": "EVE勤D2",
+      "day": 2,
+      "start_window": 2400,
+      "end_window": 2640,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D2",
+      "name": "NIGHT勤D2",
+      "day": 2,
+      "start_window": 2640,
+      "end_window": 3360,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D3",
+      "name": "DAY勤D3",
+      "day": 3,
+      "start_window": 3360,
+      "end_window": 3840,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D3",
+      "name": "EVE勤D3",
+      "day": 3,
+      "start_window": 3840,
+      "end_window": 4080,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D3",
+      "name": "NIGHT勤D3",
+      "day": 3,
+      "start_window": 4080,
+      "end_window": 4800,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D4",
+      "name": "DAY勤D4",
+      "day": 4,
+      "start_window": 4800,
+      "end_window": 5280,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D4",
+      "name": "EVE勤D4",
+      "day": 4,
+      "start_window": 5280,
+      "end_window": 5520,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D4",
+      "name": "NIGHT勤D4",
+      "day": 4,
+      "start_window": 5520,
+      "end_window": 6240,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D5",
+      "name": "DAY勤D5",
+      "day": 5,
+      "start_window": 6240,
+      "end_window": 6720,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D5",
+      "name": "EVE勤D5",
+      "day": 5,
+      "start_window": 6720,
+      "end_window": 6960,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D5",
+      "name": "NIGHT勤D5",
+      "day": 5,
+      "start_window": 6960,
+      "end_window": 7680,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D6",
+      "name": "DAY勤D6",
+      "day": 6,
+      "start_window": 7680,
+      "end_window": 8160,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D6",
+      "name": "EVE勤D6",
+      "day": 6,
+      "start_window": 8160,
+      "end_window": 8400,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D6",
+      "name": "NIGHT勤D6",
+      "day": 6,
+      "start_window": 8400,
+      "end_window": 9120,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D7",
+      "name": "DAY勤D7",
+      "day": 7,
+      "start_window": 9120,
+      "end_window": 9600,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D7",
+      "name": "EVE勤D7",
+      "day": 7,
+      "start_window": 9600,
+      "end_window": 9840,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D7",
+      "name": "NIGHT勤D7",
+      "day": 7,
+      "start_window": 9840,
+      "end_window": 10560,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D8",
+      "name": "DAY勤D8",
+      "day": 8,
+      "start_window": 10560,
+      "end_window": 11040,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D8",
+      "name": "EVE勤D8",
+      "day": 8,
+      "start_window": 11040,
+      "end_window": 11280,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D8",
+      "name": "NIGHT勤D8",
+      "day": 8,
+      "start_window": 11280,
+      "end_window": 12000,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D9",
+      "name": "DAY勤D9",
+      "day": 9,
+      "start_window": 12000,
+      "end_window": 12480,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D9",
+      "name": "EVE勤D9",
+      "day": 9,
+      "start_window": 12480,
+      "end_window": 12720,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D9",
+      "name": "NIGHT勤D9",
+      "day": 9,
+      "start_window": 12720,
+      "end_window": 13440,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_DAY_D10",
+      "name": "DAY勤D10",
+      "day": 10,
+      "start_window": 13440,
+      "end_window": 13920,
+      "duration": 480,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_EVE_D10",
+      "name": "EVE勤D10",
+      "day": 10,
+      "start_window": 13920,
+      "end_window": 14160,
+      "duration": 240,
+      "is_night_shift": false,
+      "required_count": 3,
+      "min_chiefs": 0,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    },
+    {
+      "id": "T_NIGHT_D10",
+      "name": "NIGHT勤D10",
+      "day": 10,
+      "start_window": 14160,
+      "end_window": 14880,
+      "duration": 480,
+      "is_night_shift": true,
+      "required_count": 3,
+      "min_chiefs": 1,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      }
+    }
+  ],
+  "config": {
+    "time_limit": 20,
+    "preference_penalty_weight": 50,
+    "rolling_window_days": 7,
+    "relax_incomplete_window_at_period_end": true,
+    "ce_limit_batch_size": 30
+  },
+  "issue_statuses": {}
+}

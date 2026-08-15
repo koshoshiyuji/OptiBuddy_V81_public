@@ -1,0 +1,120 @@
+{
+  "containers": [
+    {
+      "id": "DCHU001",
+      "ship": {"bay": 10, "row": 1, "tier": 4},
+      "yard": {"bay": 1, "row": 1, "tier": 1},
+      "order": 1,
+      "weight": 22000,
+      "pod": "USNYC",
+      "pol": "JPYOK",
+      "currentPort": "USNYC"
+    },
+    {
+      "id": "DCHU002",
+      "ship": {"bay": 10, "row": 1, "tier": 3},
+      "yard": {"bay": 1, "row": 1, "tier": 2},
+      "order": 2,
+      "weight": 20000,
+      "pod": "USNYC",
+      "pol": "JPYOK",
+      "currentPort": "USNYC"
+    },
+    {
+      "id": "DCHU003",
+      "ship": {"bay": 10, "row": 1, "tier": 2},
+      "yard": {"bay": 1, "row": 1, "tier": 3},
+      "order": 3,
+      "weight": 18000,
+      "pod": "USNYC",
+      "pol": "JPYOK",
+      "currentPort": "USNYC"
+    },
+    {
+      "id": "DCHU004",
+      "ship": {"bay": 10, "row": 1, "tier": 1},
+      "yard": {"bay": 1, "row": 1, "tier": 4},
+      "order": 4,
+      "weight": 24000,
+      "pod": "USNYC",
+      "pol": "JPYOK",
+      "currentPort": "USNYC"
+    },
+    {
+      "id": "DCHU005",
+      "ship": {"bay": 10, "row": 2, "tier": 3},
+      "yard": {"bay": 1, "row": 2, "tier": 1},
+      "order": 5,
+      "weight": 19000,
+      "pod": "USLAX",
+      "pol": "JPYOK",
+      "currentPort": "USLAX"
+    },
+    {
+      "id": "DCHU006",
+      "ship": {"bay": 10, "row": 2, "tier": 2},
+      "yard": {"bay": 1, "row": 2, "tier": 2},
+      "order": 6,
+      "weight": 21000,
+      "pod": "USLAX",
+      "pol": "JPYOK",
+      "currentPort": "USLAX"
+    },
+    {
+      "id": "DCHU007",
+      "ship": {"bay": 10, "row": 2, "tier": 1},
+      "yard": {"bay": 1, "row": 2, "tier": 3},
+      "order": 7,
+      "weight": 23000,
+      "pod": "USLAX",
+      "pol": "JPYOK",
+      "currentPort": "USLAX"
+    }
+  ],
+  "resources": {
+    "yard_cranes": [
+      {"id": "RC-1", "bay": [1, 2, 3, 4, 5]},
+      {"id": "RC-2", "bay": [6, 7, 8, 9, 10]}
+    ],
+    "ship_cranes": [
+      {"id": "GC-1", "bay": [8, 9, 10, 11, 12]},
+      {"id": "GC-2", "bay": [13, 14, 15, 16, 17]}
+    ]
+  },
+  "config": {
+    "current_port": "JPYOK",
+    "time_pick": 180,
+    "time_load": 120,
+    "time_discharge": 120,
+    "time_place": 180,
+    "time_move": 60,
+    "time_rehandle": 5,
+    "min_transit": 2,
+    "safety_gap": 1,
+    "max_bays": 10,
+    "max_rows": 6,
+    "max_tiers": 5,
+    "max_vessel_bays": 20,
+    "max_vessel_rows": 8,
+    "max_vessel_tiers": 6,
+    "weight_bay_move": 100,
+    "weight_row_move": 10,
+    "weight_tier_factor": 5,
+    "time_limit": 20,
+    "crane_interference": false,
+    "solution_profiles": [
+      {
+        "name": "Plan A",
+        "label": "全作業時間最短",
+        "w_makespan": 1,
+        "w_penalty": 1
+      },
+      {
+        "name": "Plan B",
+        "label": "揚げ順遵守",
+        "w_makespan": 1,
+        "w_penalty": 300
+      }
+    ]
+  }
+}

@@ -1,0 +1,1818 @@
+{
+  "problem_class": "NurseShiftWeeklyCap",
+  "domain": "nurse_shift_weekly_cap",
+  "id": "nurse_shift_weekly_cap_inrc_n021w4",
+  "label": "NurseShiftWeeklyCap — INRC-II変換 (n021w4_2)",
+  "description": "INRC-II 'n021w4_2' シナリオ + 1週間分のweek dataから inrc_to_business_dsl_nurse_shift_weekly_cap.py により自動生成。変換対象外の制約はreportを参照。",
+  "version": "1.0",
+  "tag": "HOSPITAL",
+  "tagColor": "#8b5cf6",
+  "meta": {
+    "days": 7,
+    "staffCount": 21,
+    "taskCount": 64,
+    "source": "INRC-II",
+    "source_scenario": "n021w4_2"
+  },
+  "extensions": [
+    "weekly_night_shift_cap",
+    "rolling_window_constraint",
+    "certification_requirement",
+    "fatigue_constraint",
+    "multi_day_horizon"
+  ],
+  "staff": [
+    {
+      "id": "HN_0",
+      "name": "HN_0",
+      "grade": "STANDARD",
+      "skills": [
+        "headnurse",
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": true,
+      "employment_type": "full_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "HN_1",
+      "name": "HN_1",
+      "grade": "STANDARD",
+      "skills": [
+        "headnurse",
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": true,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "HN_2",
+      "name": "HN_2",
+      "grade": "STANDARD",
+      "skills": [
+        "headnurse",
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": true,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_3",
+      "name": "NU_3",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_4",
+      "name": "NU_4",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_5",
+      "name": "NU_5",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_6",
+      "name": "NU_6",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_7",
+      "name": "NU_7",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_8",
+      "name": "NU_8",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "full_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_9",
+      "name": "NU_9",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "NU_10",
+      "name": "NU_10",
+      "grade": "STANDARD",
+      "skills": [
+        "nurse",
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "CT_11",
+      "name": "CT_11",
+      "grade": "STANDARD",
+      "skills": [
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "CT_12",
+      "name": "CT_12",
+      "grade": "STANDARD",
+      "skills": [
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "CT_13",
+      "name": "CT_13",
+      "grade": "STANDARD",
+      "skills": [
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "CT_14",
+      "name": "CT_14",
+      "grade": "STANDARD",
+      "skills": [
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "CT_15",
+      "name": "CT_15",
+      "grade": "STANDARD",
+      "skills": [
+        "caretaker"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "TR_16",
+      "name": "TR_16",
+      "grade": "STANDARD",
+      "skills": [
+        "trainee"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "TR_17",
+      "name": "TR_17",
+      "grade": "STANDARD",
+      "skills": [
+        "trainee"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "TR_18",
+      "name": "TR_18",
+      "grade": "STANDARD",
+      "skills": [
+        "trainee"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "full_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "TR_19",
+      "name": "TR_19",
+      "grade": "STANDARD",
+      "skills": [
+        "trainee"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    },
+    {
+      "id": "TR_20",
+      "name": "TR_20",
+      "grade": "STANDARD",
+      "skills": [
+        "trainee"
+      ],
+      "certifications": [],
+      "hourly_rate": 2000,
+      "availability": {
+        "start": 0,
+        "end": 10080
+      },
+      "preferences": {
+        "desired_tasks": []
+      },
+      "work_limits": {
+        "max_consecutive_night_shifts": 5,
+        "max_daily_hours": 8,
+        "max_night_shifts_per_rolling_7days": 3,
+        "min_rest_after_night_shift": 480
+      },
+      "qualification_type": "RN",
+      "experience_years": 0.0,
+      "has_leader_cert": false,
+      "employment_type": "part_time",
+      "approved_days_off": [],
+      "paid_leave_days": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T_Early_HeadNurse_Mon",
+      "name": "Early/HeadNurse (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "headnurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_HeadNurse_Thu",
+      "name": "Early/HeadNurse (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "headnurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Mon",
+      "name": "Early/Nurse (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Tue",
+      "name": "Early/Nurse (Tue)",
+      "day": 2,
+      "start_window": 1860,
+      "end_window": 2340,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Wed",
+      "name": "Early/Nurse (Wed)",
+      "day": 3,
+      "start_window": 3300,
+      "end_window": 3780,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Thu",
+      "name": "Early/Nurse (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Fri",
+      "name": "Early/Nurse (Fri)",
+      "day": 5,
+      "start_window": 6180,
+      "end_window": 6660,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Sat",
+      "name": "Early/Nurse (Sat)",
+      "day": 6,
+      "start_window": 7620,
+      "end_window": 8100,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Nurse_Sun",
+      "name": "Early/Nurse (Sun)",
+      "day": 7,
+      "start_window": 9060,
+      "end_window": 9540,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Caretaker_Mon",
+      "name": "Early/Caretaker (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Caretaker_Tue",
+      "name": "Early/Caretaker (Tue)",
+      "day": 2,
+      "start_window": 1860,
+      "end_window": 2340,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Caretaker_Wed",
+      "name": "Early/Caretaker (Wed)",
+      "day": 3,
+      "start_window": 3300,
+      "end_window": 3780,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Caretaker_Thu",
+      "name": "Early/Caretaker (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Caretaker_Fri",
+      "name": "Early/Caretaker (Fri)",
+      "day": 5,
+      "start_window": 6180,
+      "end_window": 6660,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Caretaker_Sat",
+      "name": "Early/Caretaker (Sat)",
+      "day": 6,
+      "start_window": 7620,
+      "end_window": 8100,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Trainee_Mon",
+      "name": "Early/Trainee (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Trainee_Tue",
+      "name": "Early/Trainee (Tue)",
+      "day": 2,
+      "start_window": 1860,
+      "end_window": 2340,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Trainee_Thu",
+      "name": "Early/Trainee (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Early_Trainee_Sat",
+      "name": "Early/Trainee (Sat)",
+      "day": 6,
+      "start_window": 7620,
+      "end_window": 8100,
+      "duration": 480,
+      "shift_type": "early",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Mon",
+      "name": "Day/Nurse (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Tue",
+      "name": "Day/Nurse (Tue)",
+      "day": 2,
+      "start_window": 1860,
+      "end_window": 2340,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Wed",
+      "name": "Day/Nurse (Wed)",
+      "day": 3,
+      "start_window": 3300,
+      "end_window": 3780,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Thu",
+      "name": "Day/Nurse (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Fri",
+      "name": "Day/Nurse (Fri)",
+      "day": 5,
+      "start_window": 6180,
+      "end_window": 6660,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Sat",
+      "name": "Day/Nurse (Sat)",
+      "day": 6,
+      "start_window": 7620,
+      "end_window": 8100,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Nurse_Sun",
+      "name": "Day/Nurse (Sun)",
+      "day": 7,
+      "start_window": 9060,
+      "end_window": 9540,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Caretaker_Mon",
+      "name": "Day/Caretaker (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Caretaker_Tue",
+      "name": "Day/Caretaker (Tue)",
+      "day": 2,
+      "start_window": 1860,
+      "end_window": 2340,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Caretaker_Thu",
+      "name": "Day/Caretaker (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Caretaker_Fri",
+      "name": "Day/Caretaker (Fri)",
+      "day": 5,
+      "start_window": 6180,
+      "end_window": 6660,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Trainee_Mon",
+      "name": "Day/Trainee (Mon)",
+      "day": 1,
+      "start_window": 420,
+      "end_window": 900,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Trainee_Tue",
+      "name": "Day/Trainee (Tue)",
+      "day": 2,
+      "start_window": 1860,
+      "end_window": 2340,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Trainee_Thu",
+      "name": "Day/Trainee (Thu)",
+      "day": 4,
+      "start_window": 4740,
+      "end_window": 5220,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Day_Trainee_Sat",
+      "name": "Day/Trainee (Sat)",
+      "day": 6,
+      "start_window": 7620,
+      "end_window": 8100,
+      "duration": 480,
+      "shift_type": "day",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Mon",
+      "name": "Late/Nurse (Mon)",
+      "day": 1,
+      "start_window": 900,
+      "end_window": 1380,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Tue",
+      "name": "Late/Nurse (Tue)",
+      "day": 2,
+      "start_window": 2340,
+      "end_window": 2820,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Wed",
+      "name": "Late/Nurse (Wed)",
+      "day": 3,
+      "start_window": 3780,
+      "end_window": 4260,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Thu",
+      "name": "Late/Nurse (Thu)",
+      "day": 4,
+      "start_window": 5220,
+      "end_window": 5700,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Fri",
+      "name": "Late/Nurse (Fri)",
+      "day": 5,
+      "start_window": 6660,
+      "end_window": 7140,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Sat",
+      "name": "Late/Nurse (Sat)",
+      "day": 6,
+      "start_window": 8100,
+      "end_window": 8580,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Nurse_Sun",
+      "name": "Late/Nurse (Sun)",
+      "day": 7,
+      "start_window": 9540,
+      "end_window": 10020,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Caretaker_Tue",
+      "name": "Late/Caretaker (Tue)",
+      "day": 2,
+      "start_window": 2340,
+      "end_window": 2820,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Caretaker_Wed",
+      "name": "Late/Caretaker (Wed)",
+      "day": 3,
+      "start_window": 3780,
+      "end_window": 4260,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Caretaker_Thu",
+      "name": "Late/Caretaker (Thu)",
+      "day": 4,
+      "start_window": 5220,
+      "end_window": 5700,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Caretaker_Fri",
+      "name": "Late/Caretaker (Fri)",
+      "day": 5,
+      "start_window": 6660,
+      "end_window": 7140,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Caretaker_Sat",
+      "name": "Late/Caretaker (Sat)",
+      "day": 6,
+      "start_window": 8100,
+      "end_window": 8580,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Caretaker_Sun",
+      "name": "Late/Caretaker (Sun)",
+      "day": 7,
+      "start_window": 9540,
+      "end_window": 10020,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Trainee_Mon",
+      "name": "Late/Trainee (Mon)",
+      "day": 1,
+      "start_window": 900,
+      "end_window": 1380,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Trainee_Wed",
+      "name": "Late/Trainee (Wed)",
+      "day": 3,
+      "start_window": 3780,
+      "end_window": 4260,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Late_Trainee_Sat",
+      "name": "Late/Trainee (Sat)",
+      "day": 6,
+      "start_window": 8100,
+      "end_window": 8580,
+      "duration": 480,
+      "shift_type": "late",
+      "is_night_shift": false,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_HeadNurse_Wed",
+      "name": "Night/HeadNurse (Wed)",
+      "day": 3,
+      "start_window": 4260,
+      "end_window": 4740,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "headnurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Mon",
+      "name": "Night/Nurse (Mon)",
+      "day": 1,
+      "start_window": 1380,
+      "end_window": 1860,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Tue",
+      "name": "Night/Nurse (Tue)",
+      "day": 2,
+      "start_window": 2820,
+      "end_window": 3300,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Wed",
+      "name": "Night/Nurse (Wed)",
+      "day": 3,
+      "start_window": 4260,
+      "end_window": 4740,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Thu",
+      "name": "Night/Nurse (Thu)",
+      "day": 4,
+      "start_window": 5700,
+      "end_window": 6180,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Fri",
+      "name": "Night/Nurse (Fri)",
+      "day": 5,
+      "start_window": 7140,
+      "end_window": 7620,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Sat",
+      "name": "Night/Nurse (Sat)",
+      "day": 6,
+      "start_window": 8580,
+      "end_window": 9060,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Nurse_Sun",
+      "name": "Night/Nurse (Sun)",
+      "day": 7,
+      "start_window": 10020,
+      "end_window": 10500,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "nurse"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Caretaker_Mon",
+      "name": "Night/Caretaker (Mon)",
+      "day": 1,
+      "start_window": 1380,
+      "end_window": 1860,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Caretaker_Tue",
+      "name": "Night/Caretaker (Tue)",
+      "day": 2,
+      "start_window": 2820,
+      "end_window": 3300,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Caretaker_Wed",
+      "name": "Night/Caretaker (Wed)",
+      "day": 3,
+      "start_window": 4260,
+      "end_window": 4740,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Caretaker_Thu",
+      "name": "Night/Caretaker (Thu)",
+      "day": 4,
+      "start_window": 5700,
+      "end_window": 6180,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Caretaker_Sat",
+      "name": "Night/Caretaker (Sat)",
+      "day": 6,
+      "start_window": 8580,
+      "end_window": 9060,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "caretaker"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    },
+    {
+      "id": "T_Night_Trainee_Fri",
+      "name": "Night/Trainee (Fri)",
+      "day": 5,
+      "start_window": 7140,
+      "end_window": 7620,
+      "duration": 480,
+      "shift_type": "night",
+      "is_night_shift": true,
+      "requirement": {
+        "attr": "skills",
+        "op": "atom",
+        "value": "trainee"
+      },
+      "required_count": 1,
+      "min_chiefs": 0,
+      "novice_requires_senior": false
+    }
+  ],
+  "config": {
+    "time_limit": 60,
+    "preference_penalty_weight": 50,
+    "min_preference_satisfaction_rate": 0.6,
+    "operation_start": 0,
+    "rolling_window_days": 7,
+    "relax_incomplete_window_at_period_end": true,
+    "shifts": [],
+    "breaks": []
+  },
+  "resources": {
+    "ship_cranes": [],
+    "yard_cranes": []
+  },
+  "containers": []
+}

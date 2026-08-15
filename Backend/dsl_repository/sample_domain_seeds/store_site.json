@@ -1,0 +1,284 @@
+{
+  "domain_key": "store_site",
+  "problem_class": "StoreSite",
+  "exported_at": "2026-07-20T12:32:38.549781+00:00",
+  "dsl_definition": {
+    "problem_class": "StoreSite",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "areas": [
+        {
+          "id": "str",
+          "name": "str",
+          "demand": "int",
+          "lat": "float",
+          "lng": "float"
+        }
+      ],
+      "candidates": [
+        {
+          "id": "str",
+          "name": "str",
+          "fixed_cost": "int",
+          "capacity": "int",
+          "lat": "float",
+          "lng": "float"
+        }
+      ],
+      "config": {
+        "max_distance_km": "float",
+        "unmet_penalty": "int",
+        "store_count_weight": "int",
+        "utilization_penalty_weight": "int",
+        "distance_penalty_weight": "int",
+        "utilization_threshold": "float",
+        "supply_cost_per_km": "int",
+        "time_limit_sec": "int"
+      }
+    },
+    "description": "StoreSiteの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "StoreSite — 標準",
+      "description": "StoreSiteの標準シナリオ",
+      "tag": "STORES",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "StoreSite",
+        "domain": "store_site",
+        "meta": {
+          "instance_name": "StoreSite シナリオ #1",
+          "note": "【設計意図】12エリア×6候補地の標準的な配置問題。全エリアが何らかの店舗に割り当てられ、稼働率の偏りも小さい解が得られることを狙う。"
+        },
+        "areas": [
+          {
+            "id": "A01",
+            "name": "渋谷エリア",
+            "demand": 120,
+            "lat": 35.658,
+            "lng": 139.701
+          },
+          {
+            "id": "A02",
+            "name": "新宿エリア",
+            "demand": 150,
+            "lat": 35.69,
+            "lng": 139.7
+          },
+          {
+            "id": "A03",
+            "name": "池袋エリア",
+            "demand": 100,
+            "lat": 35.729,
+            "lng": 139.71
+          },
+          {
+            "id": "A04",
+            "name": "品川エリア",
+            "demand": 80,
+            "lat": 35.628,
+            "lng": 139.739
+          },
+          {
+            "id": "A05",
+            "name": "目黒エリア",
+            "demand": 60,
+            "lat": 35.633,
+            "lng": 139.716
+          },
+          {
+            "id": "A06",
+            "name": "六本木エリア",
+            "demand": 90,
+            "lat": 35.663,
+            "lng": 139.731
+          },
+          {
+            "id": "A07",
+            "name": "秋葉原エリア",
+            "demand": 110,
+            "lat": 35.702,
+            "lng": 139.774
+          },
+          {
+            "id": "A08",
+            "name": "上野エリア",
+            "demand": 95,
+            "lat": 35.713,
+            "lng": 139.777
+          },
+          {
+            "id": "A09",
+            "name": "浅草エリア",
+            "demand": 70,
+            "lat": 35.712,
+            "lng": 139.796
+          },
+          {
+            "id": "A10",
+            "name": "錦糸町エリア",
+            "demand": 85,
+            "lat": 35.695,
+            "lng": 139.813
+          },
+          {
+            "id": "A11",
+            "name": "豊洲エリア",
+            "demand": 75,
+            "lat": 35.645,
+            "lng": 139.796
+          },
+          {
+            "id": "A12",
+            "name": "有明エリア",
+            "demand": 55,
+            "lat": 35.63,
+            "lng": 139.795
+          }
+        ],
+        "candidates": [
+          {
+            "id": "C01",
+            "name": "渋谷店",
+            "fixed_cost": 500000,
+            "capacity": 350,
+            "lat": 35.66,
+            "lng": 139.703
+          },
+          {
+            "id": "C02",
+            "name": "新宿店",
+            "fixed_cost": 600000,
+            "capacity": 400,
+            "lat": 35.691,
+            "lng": 139.699
+          },
+          {
+            "id": "C03",
+            "name": "池袋店",
+            "fixed_cost": 480000,
+            "capacity": 300,
+            "lat": 35.73,
+            "lng": 139.711
+          },
+          {
+            "id": "C04",
+            "name": "品川店",
+            "fixed_cost": 420000,
+            "capacity": 280,
+            "lat": 35.626,
+            "lng": 139.738
+          },
+          {
+            "id": "C05",
+            "name": "秋葉原店",
+            "fixed_cost": 550000,
+            "capacity": 380,
+            "lat": 35.7,
+            "lng": 139.773
+          },
+          {
+            "id": "C06",
+            "name": "豊洲店",
+            "fixed_cost": 390000,
+            "capacity": 250,
+            "lat": 35.644,
+            "lng": 139.795
+          }
+        ],
+        "config": {
+          "max_distance_km": 5.0,
+          "unmet_penalty": 100000,
+          "store_count_weight": 5000,
+          "utilization_penalty_weight": 3000,
+          "distance_penalty_weight": 50,
+          "utilization_threshold": 0.8,
+          "supply_cost_per_km": 200,
+          "time_limit_sec": 30
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "StoreSite — 解なし",
+      "description": "StoreSiteのInfeasibleシナリオ",
+      "tag": "STORES",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "StoreSite",
+        "domain": "store_site",
+        "meta": {
+          "instance_name": "StoreSite シナリオ #2",
+          "note": "【設計意図】max_distance_km=0.5km（極めて短い）かつ候補地が1か所のみで、ほぼ全エリアが到達不可能になることを狙う。多数のエリアが未割当となり、unmet_penaltyによるCRITICALイシューが複数発生することを確認する。"
+        },
+        "areas": [
+          {
+            "id": "A01",
+            "name": "渋谷エリア",
+            "demand": 200,
+            "lat": 35.658,
+            "lng": 139.701
+          },
+          {
+            "id": "A02",
+            "name": "新宿エリア",
+            "demand": 200,
+            "lat": 35.69,
+            "lng": 139.7
+          },
+          {
+            "id": "A03",
+            "name": "池袋エリア",
+            "demand": 200,
+            "lat": 35.729,
+            "lng": 139.71
+          },
+          {
+            "id": "A04",
+            "name": "品川エリア",
+            "demand": 200,
+            "lat": 35.628,
+            "lng": 139.739
+          },
+          {
+            "id": "A05",
+            "name": "浅草エリア",
+            "demand": 200,
+            "lat": 35.712,
+            "lng": 139.796
+          }
+        ],
+        "candidates": [
+          {
+            "id": "C01",
+            "name": "新宿店のみ",
+            "fixed_cost": 300000,
+            "capacity": 50,
+            "lat": 35.691,
+            "lng": 139.699
+          }
+        ],
+        "config": {
+          "max_distance_km": 0.5,
+          "unmet_penalty": 100000,
+          "store_count_weight": 5000,
+          "utilization_penalty_weight": 3000,
+          "distance_penalty_weight": 50,
+          "utilization_threshold": 0.8,
+          "supply_cost_per_km": 200,
+          "time_limit_sec": 15
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

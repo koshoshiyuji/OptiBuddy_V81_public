@@ -1,0 +1,54 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+
+# --- existing ---
+.env
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+solutions_v3/*.json
+# LLM file cache (Anthropic Files API)
+llm_file_cache.json
+
+# --- recommended additions ---
+# Python build artifacts
+**/__pycache__/**
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+dist-ssr/
+build/
+*.local
+
+# macOS system files
+.DS_Store
+
+# Node / frontend build cache
+node_modules/
+
+# Flask / temporary files
+instance/
+*.db
+*.sqlite3
+
+# IDE caches
+.idea/
+*.code-workspace
+
+# Temp or backup files
+*.bak
+*.tmp

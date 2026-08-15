@@ -1,0 +1,18 @@
+{
+  "problem_class": "SteelMillSlabDesign",
+  "domain": "steel_mill_slab_design",
+  "meta": {
+    "instance_name": "SteelMillSlabDesign シナリオ #2",
+    "note": "【設計意図】単一スラブしか許可しない（max_slabs=1）が、全注文の合計重量がどの規格の最大容量をも超えるように設定し、解なし状態を狙う。単一注文が規格最大重量（12t）を超える重さ（15t）を持つため、max_slabs=1では物理的に割り付け不能。"
+  },
+  "slab_capacities": [12],
+  "orders": [
+    {"id": "O01", "name": "巨大注文X", "weight": 15, "colors": ["red"]},
+    {"id": "O02", "name": "注文Y",     "weight": 3,  "colors": ["blue"]}
+  ],
+  "config": {
+    "time_limit_sec": 10,
+    "max_slabs": 1,
+    "operation_date": "2026-08-01"
+  }
+}
