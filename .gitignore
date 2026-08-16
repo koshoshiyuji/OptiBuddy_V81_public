@@ -31,6 +31,8 @@ dist/
 dist-ssr/
 build/
 *.local
+package.json
+package-lock.json
 
 # macOS system files
 .DS_Store
