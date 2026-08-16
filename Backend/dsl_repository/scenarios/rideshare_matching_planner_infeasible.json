@@ -1,0 +1,157 @@
+{
+    "problem_class": "RideshareMatchingPlanner",
+    "domain": "rideshare_matching_planner",
+    "meta": {
+        "instance_name": "相乗りマッチングプランナー シナリオ #2",
+        "note": "【設計意図】乗客6名・運転手1名（座席2）、かつ全員の希望時刻が単一時点（08:00ちょうど）に固定されたシナリオ。2026-08-16修正: 以前はwindow_start/endが08:00〜08:30の30分幅だったため、実際には運転手が同一時間帯内で複数回の逐次ピストン輸送を行えば座席容量制約（同時使用数のみ制限）を満たしたまま全員マッチング可能になってしまい、infeasibleシナリオとして機能していなかった（Gate2動的検証で発覚）。希望時刻を単一時点に固定することで、同時刻に座席数(2)を超える乗客を物理的に乗せられないという真のハード制約により、少なくとも4名が確実に未割当になることを保証する。全件解なしではなく「一部未割当」としてstatus:okで返るはずだが、未割当件数が多いため実質的にinfeasibleに近い結果を確認する。"
+    },
+    "passengers": [
+        {
+            "id": "P001",
+            "name": "乗客 A",
+            "pickup_loc": "LOC_NORTH",
+            "dropoff_loc": "LOC_CENTER",
+            "window_start": "08:00",
+            "window_end": "08:00",
+            "direct_time_min": 10
+        },
+        {
+            "id": "P002",
+            "name": "乗客 B",
+            "pickup_loc": "LOC_NORTH",
+            "dropoff_loc": "LOC_CENTER",
+            "window_start": "08:00",
+            "window_end": "08:00",
+            "direct_time_min": 10
+        },
+        {
+            "id": "P003",
+            "name": "乗客 C",
+            "pickup_loc": "LOC_SOUTH",
+            "dropoff_loc": "LOC_CENTER",
+            "window_start": "08:00",
+            "window_end": "08:00",
+            "direct_time_min": 8
+        },
+        {
+            "id": "P004",
+            "name": "乗客 D",
+            "pickup_loc": "LOC_EAST",
+            "dropoff_loc": "LOC_CENTER",
+            "window_start": "08:00",
+            "window_end": "08:00",
+            "direct_time_min": 12
+        },
+        {
+            "id": "P005",
+            "name": "乗客 E",
+            "pickup_loc": "LOC_WEST",
+            "dropoff_loc": "LOC_CENTER",
+            "window_start": "08:00",
+            "window_end": "08:00",
+            "direct_time_min": 15
+        },
+        {
+            "id": "P006",
+            "name": "乗客 F",
+            "pickup_loc": "LOC_NORTH",
+            "dropoff_loc": "LOC_CENTER",
+            "window_start": "08:00",
+            "window_end": "08:00",
+            "direct_time_min": 10
+        }
+    ],
+    "drivers": [
+        {
+            "id": "D001",
+            "name": "運転手 一人",
+            "start_loc": "LOC_NORTH",
+            "end_loc": "LOC_CENTER",
+            "seats": 2,
+            "depart_time": "07:50",
+            "arrive_time": "09:00"
+        }
+    ],
+    "config": {
+        "detour_factor": 1.5,
+        "horizon_min": 720,
+        "time_limit_sec": 20,
+        "speed_kmh": 40
+    },
+    "dist_matrix": [
+        [
+            0,
+            5,
+            8,
+            10,
+            12,
+            15
+        ],
+        [
+            5,
+            0,
+            6,
+            8,
+            9,
+            10
+        ],
+        [
+            8,
+            6,
+            0,
+            7,
+            8,
+            9
+        ],
+        [
+            10,
+            8,
+            7,
+            0,
+            6,
+            8
+        ],
+        [
+            12,
+            9,
+            8,
+            6,
+            0,
+            7
+        ],
+        [
+            15,
+            10,
+            9,
+            8,
+            7,
+            0
+        ]
+    ],
+    "locations": [
+        {
+            "id": "LOC_NORTH",
+            "index": 0
+        },
+        {
+            "id": "LOC_SOUTH",
+            "index": 1
+        },
+        {
+            "id": "LOC_EAST",
+            "index": 2
+        },
+        {
+            "id": "LOC_WEST",
+            "index": 3
+        },
+        {
+            "id": "LOC_CENTER",
+            "index": 4
+        },
+        {
+            "id": "LOC_BASE",
+            "index": 5
+        }
+    ]
+}

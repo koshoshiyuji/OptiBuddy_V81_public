@@ -1,0 +1,137 @@
+{
+  "problem_class": "RideshareMatchingPlanner",
+  "domain": "rideshare_matching_planner",
+  "meta": {
+    "instance_name": "相乗りマッチングプランナー シナリオ #1",
+    "note": "【設計意図】標準的な相乗りマッチング条件を想定。乗客8名・運転手3名。全乗客のマッチングを目指す。"
+  },
+  "passengers": [
+    {
+      "id": "P001",
+      "name": "田中 一郎",
+      "pickup_loc": "LOC_A",
+      "dropoff_loc": "LOC_F",
+      "window_start": "08:00",
+      "window_end": "09:00",
+      "direct_time_min": 20
+    },
+    {
+      "id": "P002",
+      "name": "鈴木 花子",
+      "pickup_loc": "LOC_B",
+      "dropoff_loc": "LOC_F",
+      "window_start": "08:15",
+      "window_end": "09:15",
+      "direct_time_min": 15
+    },
+    {
+      "id": "P003",
+      "name": "佐藤 次郎",
+      "pickup_loc": "LOC_A",
+      "dropoff_loc": "LOC_G",
+      "window_start": "08:00",
+      "window_end": "09:30",
+      "direct_time_min": 25
+    },
+    {
+      "id": "P004",
+      "name": "山田 三郎",
+      "pickup_loc": "LOC_C",
+      "dropoff_loc": "LOC_G",
+      "window_start": "08:30",
+      "window_end": "09:30",
+      "direct_time_min": 18
+    },
+    {
+      "id": "P005",
+      "name": "高橋 四郎",
+      "pickup_loc": "LOC_B",
+      "dropoff_loc": "LOC_H",
+      "window_start": "07:45",
+      "window_end": "09:00",
+      "direct_time_min": 30
+    },
+    {
+      "id": "P006",
+      "name": "伊藤 五郎",
+      "pickup_loc": "LOC_D",
+      "dropoff_loc": "LOC_H",
+      "window_start": "08:00",
+      "window_end": "09:00",
+      "direct_time_min": 22
+    },
+    {
+      "id": "P007",
+      "name": "渡辺 六子",
+      "pickup_loc": "LOC_E",
+      "dropoff_loc": "LOC_F",
+      "window_start": "08:30",
+      "window_end": "10:00",
+      "direct_time_min": 12
+    },
+    {
+      "id": "P008",
+      "name": "中村 七子",
+      "pickup_loc": "LOC_C",
+      "dropoff_loc": "LOC_H",
+      "window_start": "08:00",
+      "window_end": "09:30",
+      "direct_time_min": 28
+    }
+  ],
+  "drivers": [
+    {
+      "id": "D001",
+      "name": "運転手 甲",
+      "start_loc": "LOC_A",
+      "end_loc": "LOC_F",
+      "seats": 3,
+      "depart_time": "07:30",
+      "arrive_time": "10:00"
+    },
+    {
+      "id": "D002",
+      "name": "運転手 乙",
+      "start_loc": "LOC_B",
+      "end_loc": "LOC_G",
+      "seats": 4,
+      "depart_time": "07:45",
+      "arrive_time": "10:00"
+    },
+    {
+      "id": "D003",
+      "name": "運転手 丙",
+      "start_loc": "LOC_D",
+      "end_loc": "LOC_H",
+      "seats": 2,
+      "depart_time": "07:30",
+      "arrive_time": "10:00"
+    }
+  ],
+  "config": {
+    "detour_factor": 1.5,
+    "horizon_min": 720,
+    "time_limit_sec": 30,
+    "speed_kmh": 40
+  },
+  "dist_matrix": [
+    [0,  5,  8, 12, 10, 20, 25, 30],
+    [5,  0,  6,  9,  8, 15, 20, 28],
+    [8,  6,  0,  7,  9, 18, 18, 22],
+    [12, 9,  7,  0,  5, 22, 20, 18],
+    [10, 8,  9,  5,  0, 12, 14, 25],
+    [20, 15, 18, 22, 12,  0,  8, 15],
+    [25, 20, 18, 20, 14,  8,  0, 12],
+    [30, 28, 22, 18, 25, 15, 12,  0]
+  ],
+  "locations": [
+    {"id": "LOC_A", "index": 0},
+    {"id": "LOC_B", "index": 1},
+    {"id": "LOC_C", "index": 2},
+    {"id": "LOC_D", "index": 3},
+    {"id": "LOC_E", "index": 4},
+    {"id": "LOC_F", "index": 5},
+    {"id": "LOC_G", "index": 6},
+    {"id": "LOC_H", "index": 7}
+  ]
+}

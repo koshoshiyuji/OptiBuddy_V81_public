@@ -70,7 +70,7 @@ MIPが使われていないことを意味しない。
 | prob056 | SONET Problem（光通信網設計） | 通信網(光ファイバーリング)の設計。ノード配置・容量制約。 | 通信インフラ | CP | 高 | ― | ― |
 | prob058 | Discrete Lot Sizing（離散ロットサイジング） | 単一機械・複数品目の生産計画。段取り替え+在庫コスト最小化。 | 製造業(生産計画) | 両方 | 高 | LotSizingScheduler（実装済み） | ◯ |
 | prob059 | Energy-Cost Aware Scheduling（電力コスト考慮型生産スケジューリング） | 時間帯別電力料金を考慮した生産スケジュール全体のコスト最小化。 | 製造業(エネルギー管理) | CP | 高 | EnergyCostAwareScheduler（実装済み、2026-08-09登録） | ◯ |
-| prob060 | Ridesharing（ライドシェアマッチング） | 乗客と運転手のマッチング・ルーティングを制約下で決める。 | モビリティ・配車 | CP | 高 | ― | ― |
+| prob060 | Ridesharing（ライドシェアマッチング） | 乗客と運転手のマッチング・ルーティングを制約下で決める。 | モビリティ・配車 | CP | 高 | RideshareMatchingPlanner（実装済み、2026-08-16登録） | ◯ |
 | prob061 | RCPSP（資源制約付きプロジェクトスケジューリング） | アクティビティを資源容量・先行関係下でスケジュールしメイクスパン最小化。 | プロジェクト管理・生産切替 | CP | 高 | LineChangeoverScheduler（実装済み） | ◯ |
 | prob063 | Winner Determination（組合せオークション落札者決定） | 重複しない入札の組合せで総落札額を最大化。 | オークション・調達 | MIP | 高 | AuctionWinnerSelector（実装済み） | ◯ |
 | prob065 | Optimal Financial Portfolio Design（最適金融ポートフォリオ設計） | リスク・リターン等の制約下で分散投資配分を最適化。 | 金融(資産運用) | CP | 高 | PortfolioOverlapDesigner（実装済み） | ◯ |
@@ -141,8 +141,8 @@ E. タイムスロット割当・タイムテーブリング系   [Root: prob046
    └─ prob089 MASP            (2資源(部屋+時間) → 医師×時間枠×患者の多次元割当) ※OptiBuddy: MedicalAppointmentScheduler（実装済み、2026-08-08）
         └─ prob091 MASSP      (割当後にさらに実施順序を決める拡張) ※OptiBuddy: MedicalAppointmentSequenceScheduler（実装済み、2026-08-08）
 
-F. 車両・機材ルーティング系   [Root: prob086 CVRP] ※実装例なし（2026-08-06訂正、下記「唯一の判断が分かれた問題」節参照）
-   ├─ prob060 Ridesharing             (静的配送ルート → 動的マッチング+ルーティング)
+F. 車両・機材ルーティング系   [Root: prob086 CVRP] ※Root自体は実装例なし（2026-08-06訂正、下記「唯一の判断が分かれた問題」節参照）
+   ├─ prob060 Ridesharing             (静的配送ルート → 動的マッチング+ルーティング) ※OptiBuddy: RideshareMatchingPlanner（実装済み、2026-08-16）
    └─ prob115 Tail Assignment         (積載車両 → 機材(航空機)の運航規則制約付き経路)
 
 G. 多段階サプライチェーン・在庫フロー系   [Root: prob040 Wagner-Whitin型配送コスト問題]
@@ -293,7 +293,7 @@ TankAllocationPlanner（prob051）は2026-08-10に`classify_problem()`が自然�
 | | | | prob030 BACP | 未着手 |
 | | | | prob089 MASP → **MedicalAppointmentScheduler** | ✅（2026-08-08登録） |
 | | | | prob091 MASSP → **MedicalAppointmentSequenceScheduler** | ✅（2026-08-08登録） |
-| F 車両・機材ルーティング系 | prob086 CVRP | 未着手（TruckDispatcherは既存の独立ドメインだが実装例としては扱わない。2026-08-06訂正） | prob060 Ridesharing | 未着手 |
+| F 車両・機材ルーティング系 | prob086 CVRP | 未着手（TruckDispatcherは既存の独立ドメインだが実装例としては扱わない。2026-08-06訂正） | prob060 Ridesharing → **RideshareMatchingPlanner** | ✅（2026-08-16登録） |
 | | | | prob115 Tail Assignment | 未着手 |
 | G 多段階サプライチェーン・在庫フロー系 | prob040 Wagner-Whitin型 → **InventoryReplenishmentPlanner** | ✅ | prob047 Supply Chain Coordinations | 未着手 |
 | 独立（family未所属） | ― | ― | prob082 Patient Transportation → **PatientTransportPlanner** | ✅（2026-08-06登録。2026-08-06訂正: 従来Family Fの子として掲載していたが、独立問題への分類変更に伴い本表もFamily Fの行から独立行へ移動） |

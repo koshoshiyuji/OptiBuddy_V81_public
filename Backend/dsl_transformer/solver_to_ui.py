@@ -146,6 +146,11 @@ def convert_solver_to_ui(solver_output: Dict[str, Any]) -> Dict[str, Any]:
             from .production_line_sequencing_ui_converter import convert_production_line_sequencing_to_ui
             return convert_production_line_sequencing_to_ui(solver_output)
 
+
+    if problem_class == "RideshareMatchingPlanner":
+            from .rideshare_matching_planner_ui_converter import convert_rideshare_matching_planner_to_ui
+            return convert_rideshare_matching_planner_to_ui(solver_output)
+
 # ── 新規4DSLドメインはここに追加 ──
     # if problem_class == "NextDomain":
     #     from .next_domain_ui_converter import convert_next_domain_to_ui

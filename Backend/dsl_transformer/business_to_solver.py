@@ -156,6 +156,11 @@ def convert_business_to_solver(business_dsl: Dict[str, Any]) -> Dict[str, Any]:
             from .production_line_sequencing_converter import convert_production_line_sequencing_to_solver
             return convert_production_line_sequencing_to_solver(business_dsl)
 
+
+    if problem_class == "RideshareMatchingPlanner":
+            from .rideshare_matching_planner_converter import convert_rideshare_matching_planner_to_solver
+            return convert_rideshare_matching_planner_to_solver(business_dsl)
+
 # ── 新規4DSLドメインはここに追加 ──
     # if problem_class == "NextDomain":
     #     from .next_domain_converter import convert_next_domain_to_solver
