@@ -56,6 +56,7 @@ const TAG_MAP: Record<string, { tag: string; tagColor: string; domain: string }>
   EnergyCostAwareScheduler: { tag: 'ENERGY', tagColor: '#8b5cf6', domain: 'energy_cost_aware_scheduler' },
   TankAllocationPlanner: { tag: 'TANKAL', tagColor: '#8b5cf6', domain: 'tank_allocation_planner' },
   ProductionLineSequencing: { tag: 'PRODUC', tagColor: '#8b5cf6', domain: 'production_line_sequencing' },
+  RideshareMatchingPlanner: { tag: 'RIDESH', tagColor: '#8b5cf6', domain: 'rideshare_matching_planner' },
   // ↓ 自動登録ドメインはここに自動追加される（domain_generator.py が管理）
 };
 
