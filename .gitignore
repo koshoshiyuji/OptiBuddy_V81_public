@@ -101,3 +101,9 @@ docs/test_hearings/
 testfile123
 mcp_write_test.txt
 Backend/dsl_repository/scenarios/truck_dispatcher_baseline.json
+
+# --- 2026-08-16: RideshareMatchingPlanner登録時のクリーンアップ ---
+# SQLiteジャーナルの破棄用残骸ファイル（アプリが生成する使い捨てファイル）
+Backend/dsl_repository/*.db-journal.trash.*
+# 顧客固有のインストール手順書（公開リポジトリでは常に管理外にする方針）
+docs/INSTALL_customer_*.md
