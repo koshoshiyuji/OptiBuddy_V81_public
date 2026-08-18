@@ -240,6 +240,28 @@ Pythonのバージョンが古い可能性があります。`python --version`�
 
 `sample_domain_seeds/<ドメイン名>.json`が存在するか、ドメイン名のスペルを確認してください。
 
+### バックエンド終了時に `resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown` という警告が出る
+
+> 2026-08-15調査・解決済み。旧`INSTALL_20260713.md`（本リポジトリからは既に見当たらない版）→`docs/INSTALL_customer_20260812.md`（2026-08-18に統合・削除）と引き継がれてきた内容を、本書に統合。
+
+**原因**: OptiBuddy自体のコード（`decomposer.py`のソルバー並列化、CPLEX/docplex、joblib、ortools等）は原因ではないことを確認済み。真因は Werkzeug の対話型デバッガ（`DebuggedApplication`）で、`app.py` の `app.run(debug=True, ...)` によりデバッガが有効化されると、PIN認証の失敗回数をプロセス間共有するために内部で `multiprocessing.Value("B")` を生成し、これがセマフォを1つ作成する（`WERKZEUG_DEBUG_PIN=off` でもこの生成自体は回避できないことを実機検証済み）。`Ctrl+C`（SIGINT）でサーバーを停止すると、このセマフォの`multiprocessing`側クリーンアップ処理が完了する前にプロセスが終了するため、`resource_tracker`が「1個未回収」と警告を出す。
+
+再現手順で `multiprocessing.resource_tracker.register`/`unregister`（**モジュールレベル関数**。`ResourceTracker`クラスのメソッドではない点に注意）をトレースするパッチを一時的に仕込み、以下のスタックトレースで実証済み:
+
+```
+werkzeug/debug/__init__.py, line 291, in __init__
+    self._failed_pin_auth = Value("B")
+```
+
+**実害**: 単一の開発サーバー起動あたりセマフォが1個作られるだけで蓄積・増殖はしない。本番ではこの経路（Werkzeugの開発サーバー自体）を使わないため発生しない。
+
+**対処（V8.6.1で対応済み）**: `app.py` 冒頭に、起動直後に自分自身を `os.execve()` で1度だけ再実行し、`PYTHONWARNINGS` 環境変数を通じて `multiprocessing.resource_tracker` モジュールが出すこの警告だけを抑制するコードを追加した。
+
+対処の過程で判明した重要な落とし穴（今後同種の問題に当たった際のために記録）:
+- `warnings.filterwarnings()` を`app.py`側で呼んでも一切効果がない。この警告は`multiprocessing.resource_tracker`が**別プロセス**（`spawnv_passfds`で起動される専用の子プロセス）内で`warnings.warn()`を呼んで出しているため、親プロセス側の`warnings`状態は子プロセスに伝播しない。
+- 実行中のプロセス内で`os.environ["PYTHONWARNINGS"] = ...`と代入するだけでも効果がない。Pythonの`os.environ`辞書を更新しても、後から`fork_exec`で起動される子プロセス（resource_tracker）の実環境には反映されないことを実機・再現テストの両方で確認済み。
+- 確実に効かせるには、`PYTHONWARNINGS`が**最初から設定された状態でプロセスを起動する**必要がある。そのため`os.execve()`で自分自身を1回だけ再実行するトリックを使っている（`_OPTIBUDDY_PW_PATCHED`環境変数で再実行ループを防止）。
+
 ---
 
 ## ディレクトリ構成（参考）
