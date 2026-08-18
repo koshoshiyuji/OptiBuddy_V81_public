@@ -30,7 +30,11 @@ OptiBuddyは、**業務の現実をDSL（Domain Specific Language／業務記述
 
 ## ライセンス
 
-OptiBuddy本体は [Apache License 2.0](./LICENSE) の下で公開しています。
+OptiBuddy本体は [Business Source License 1.1](./LICENSE)（BSL 1.1）の下で公開しています。無償で本番利用できるのは以下7ドメインのみです。
+
+- `yard` / `truck_dispatcher` / `nurse_shift_weekly_cap` / `car_sequencing` / `meeting_room` / `store_site` / `line_changeover_scheduler`
+
+上記以外のドメインは、コードの閲覧・改変・検証目的での利用（非本番利用）は自由ですが、本番利用には別途商用ライセンス契約が必要です。「本番利用」の定義や具体例は [LICENSE-FAQ.md](./LICENSE-FAQ.md) を参照してください。BSL 1.1は`LICENSE`記載のChange Dateをもって、Licensed Work全体（無償・有償ドメインを問わず）がApache License 2.0へ自動的に切り替わります。
 
 最適化エンジンとしてIBM CPLEX / CP Optimizer(`docplex`)を任意で利用できますが、
 これは別ライセンス(IBM)です。`Backend/requirements.txt`だけをインストールした
