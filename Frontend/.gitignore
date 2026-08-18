@@ -53,4 +53,7 @@ instance/
 
 # LLM Files API キャッシュ（ローカル生成）
 llm_file_cache.json
-repomix-domain-addition.xml.vite/
+repomix-domain-addition.xml
+
+# Vite ビルドキャッシュ（ローカル生成）
+.vite/
