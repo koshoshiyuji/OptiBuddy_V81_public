@@ -47,7 +47,14 @@
     "addScenario": "シナリオ追加",
     "showRegistry": "レジストリー表示",
     "loading": "読み込み中...",
-    "noScenarios": "シナリオがありません。「シナリオ追加」ボタンからDSLファイルを登録してください。"
+    "noScenarios": "シナリオがありません。「シナリオ追加」ボタンからDSLファイルを登録してください。",
+    "filterPlaceholder": "ドメイン名で絞り込み",
+    "noFilterMatches": "該当するドメインがありません",
+    "adhocRunTooltip": "外部JSONを読み込んで今すぐ実行（保存しない）",
+    "adhocParseFailed": "選択したファイルの解析に失敗しました",
+    "adhocInvalidTopLevel": "JSONのトップレベルはオブジェクトである必要があります",
+    "adhocLabelSuffix": "（外部JSON・未保存）",
+    "adhocMismatchNote": "⚠️選択したドメインと異なるproblem_class（{{pc}}）で実行"
   },
   "studioModeTabs": {
     "constraintReview": "制約見直し"

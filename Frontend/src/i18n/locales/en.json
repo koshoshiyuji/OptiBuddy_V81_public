@@ -47,7 +47,14 @@
     "addScenario": "Add Scenario",
     "showRegistry": "Show Registry",
     "loading": "Loading...",
-    "noScenarios": "No scenarios yet. Use the \"Add Scenario\" button to register a DSL file."
+    "noScenarios": "No scenarios yet. Use the \"Add Scenario\" button to register a DSL file.",
+    "filterPlaceholder": "Filter by domain name",
+    "noFilterMatches": "No domains match your filter",
+    "adhocRunTooltip": "Load an external JSON and run it now (not saved)",
+    "adhocParseFailed": "Failed to parse the selected file",
+    "adhocInvalidTopLevel": "The top level of the JSON must be an object",
+    "adhocLabelSuffix": "(external JSON, unsaved)",
+    "adhocMismatchNote": "⚠️running with a different problem_class ({{pc}}) than the selected domain"
   },
   "studioModeTabs": {
     "constraintReview": "Constraint Review"
