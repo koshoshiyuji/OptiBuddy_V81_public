@@ -1,5 +1,5 @@
 import type { Dsl } from '../domain/types.ts';
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RegisterModal } from './studio/components/RegisterModal.tsx';
 import { RegistryView } from './RegistryView.tsx';
@@ -80,8 +80,10 @@ export function HomeScreen({ onSelect, apiBase = "http://localhost:5000" }: Home
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [searchText, setSearchText] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const refreshFileInputRef = React.useRef<HTMLInputElement>(null);
+  const adhocFileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -252,6 +254,65 @@ export function HomeScreen({ onSelect, apiBase = "http://localhost:5000" }: Home
     reader.readAsText(file);
   };
 
+  // 外部JSONを「入力DSLとして」選択したドメインに投入し、DB登録を挟まずに
+  // 即座にStudio画面へ遷移して結果を表示する（社内テスト用途、アドホック実行）。
+  // 設計: docs/DESIGN_2026-08-18_home_domain_filter_and_json_dsl_import.md
+  const [adhocTarget, setAdhocTarget] = useState<{ problemClass?: string; name: string } | null>(null);
+
+  const handleAdhocRunClick = (scenario: ScenarioCard) => {
+    setAdhocTarget({ problemClass: scenario.dsl_json?.problem_class, name: scenario.name });
+    adhocFileInputRef.current?.click();
+  };
+
+  const handleAdhocFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const target = adhocTarget;
+    event.target.value = '';
+    if (!file || !target) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let dsl: Record<string, unknown>;
+      try {
+        dsl = JSON.parse(e.target?.result as string);
+      } catch (err) {
+        alert(t('home.adhocParseFailed'));
+        console.error(err);
+        return;
+      }
+      if (typeof dsl !== 'object' || dsl === null || Array.isArray(dsl)) {
+        alert(t('home.adhocInvalidTopLevel'));
+        return;
+      }
+
+      // problem_class不一致時の扱い（確定方針: 自動補完＋非ブロッキング通知）
+      const meta = dsl.metadata as { problem_class?: string } | undefined;
+      const uploadedPc = (dsl.problem_class as string | undefined) ?? meta?.problem_class;
+      let mismatchNote = '';
+      if (!uploadedPc) {
+        if (target.problemClass) dsl.problem_class = target.problemClass;
+      } else if (target.problemClass && uploadedPc !== target.problemClass) {
+        mismatchNote = ` ${t('home.adhocMismatchNote', { pc: uploadedPc })}`;
+      }
+
+      const rawName = file.name.replace(/\.json$/i, '');
+      const displayName = (dsl.name as string | undefined) ?? rawName;
+      const label = `${displayName} ${t('home.adhocLabelSuffix')}${mismatchNote}`;
+      handleSelect(dsl as unknown as Dsl, label);
+    };
+    reader.readAsText(file);
+  };
+
+  // ドメインフィルター機能: 表示名（tag）と内部ドメインキー（domain, snake_case）の
+  // 部分一致（大文字小文字無視）で絞り込む。
+  const filteredScenarios = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return scenarios;
+    return scenarios.filter((s) =>
+      (s.tag ?? '').toLowerCase().includes(q) || (s.domain ?? '').toLowerCase().includes(q)
+    );
+  }, [scenarios, searchText]);
+
   return (
     <div style={{ width: "100vw", minHeight: "100vh", background: "#08080a", color: "#eee", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", padding: "40px 20px", boxSizing: "border-box", fontFamily: "monospace", gap: "32px" }}>
       <div style={{ position: "fixed", top: 16, right: 16 }}>
@@ -271,15 +332,35 @@ export function HomeScreen({ onSelect, apiBase = "http://localhost:5000" }: Home
 
       <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileUpload} />
       <input ref={refreshFileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleRefreshFileSelected} />
+      <input ref={adhocFileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleAdhocFileSelected} />
+
+      {!loading && !error && scenarios.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", maxWidth: "1200px" }}>
+          <span style={{ fontSize: "12px", color: "#555" }}>🔍</span>
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder={t('home.filterPlaceholder')}
+            style={{ flex: 1, background: "#121216", border: `1px solid ${searchText ? "#00e5ff" : "#2a2a30"}`, color: "#eee", borderRadius: "6px", fontSize: "12px", padding: "8px 12px", outline: "none", fontFamily: "monospace" }}
+          />
+          {searchText && (
+            <button
+              onClick={() => setSearchText('')}
+              style={{ background: "transparent", border: "none", color: "#555", cursor: "pointer", fontSize: "16px", padding: "0 4px" }}
+            >×</button>
+          )}
+        </div>
+      )}
 
       {loading && <div style={{ color: "#888" }}>{t('home.loading')}</div>}
       {error   && <div style={{ color: "#ff4444" }}>⚠️ {error}</div>}
 
-      {!loading && !error && (
+      {!loading && !error && filteredScenarios.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", width: "100%", maxWidth: "1200px" }}>
-          {scenarios.map((scenario) => (
+          {filteredScenarios.map((scenario) => (
             <PresetCard key={scenario.id} preset={scenario} onSelect={handleSelect} onDelete={handleDelete} onExport={handleExport}
-              onRefresh={handleRefreshClick} refreshing={refreshingId === scenario.id} />
+              onRefresh={handleRefreshClick} onAdhocRun={handleAdhocRunClick} refreshing={refreshingId === scenario.id} />
           ))}
         </div>
       )}
@@ -288,18 +369,23 @@ export function HomeScreen({ onSelect, apiBase = "http://localhost:5000" }: Home
         <div style={{ color: "#888", fontSize: "14px" }}>{t('home.noScenarios')}</div>
       )}
 
+      {!loading && !error && scenarios.length > 0 && filteredScenarios.length === 0 && (
+        <div style={{ color: "#888", fontSize: "14px" }}>{t('home.noFilterMatches')}</div>
+      )}
+
       {showRegisterModal && <RegisterModal onClose={() => setShowRegisterModal(false)} />}
       {showRegistryView  && <RegistryView  onClose={() => setShowRegistryView(false)} apiBase={apiBase} />}
     </div>
   );
 }
 
-function PresetCard({ preset, onSelect, onDelete, onExport, onRefresh, refreshing }: {
+function PresetCard({ preset, onSelect, onDelete, onExport, onRefresh, onAdhocRun, refreshing }: {
   preset: ScenarioCard;
   onSelect: (dsl: Dsl, label?: string | null) => void;
   onDelete: (id: string | number, name: string) => void;
   onExport: (id: string | number, name: string) => void;
   onRefresh: (id: string | number, name: string) => void;
+  onAdhocRun: (scenario: ScenarioCard) => void;
   refreshing: boolean;
 }) {
   const { t } = useTranslation();
@@ -326,6 +412,14 @@ function PresetCard({ preset, onSelect, onDelete, onExport, onRefresh, refreshin
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {hovered && (
+        <button onClick={(e) => { e.stopPropagation(); onAdhocRun(preset); }}
+          title={t('home.adhocRunTooltip')}
+          style={{ position: "absolute", top: "8px", right: "128px", background: "rgba(29,158,117,0.2)", border: "1px solid #1D9E75", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#1D9E75" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(29,158,117,0.3)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(29,158,117,0.2)"; }}
+        >🚀</button>
+      )}
       {hovered && (
         <button onClick={(e) => { e.stopPropagation(); if (!refreshing) onRefresh(preset.id, preset.name); }}
           title={t('home.refreshTooltip')}
