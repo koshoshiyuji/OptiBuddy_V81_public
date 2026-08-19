@@ -216,7 +216,8 @@
           "soft_tw_penalty_per_min": 100,
           "solver_time_limit_sec": 15
         }
-      }
+      },
+      "is_active": true
     },
     {
       "name": "Truck Dispatcher — CSPLib prob086 (CVRPLIB E-n22-k4) 検証用",
@@ -523,7 +524,8 @@
             "preferred_customer_ids": []
           }
         ]
-      }
+      },
+      "is_active": true
     }
   ]
 }

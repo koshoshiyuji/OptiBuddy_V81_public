@@ -106,11 +106,13 @@ cp .env.customer.example .env
 cd Backend/dsl_repository
 
 # 例: TruckDispatcherと看護師シフト編成の2ドメインを試す場合
-python3 import_domain.py truck_dispatcher nurse_shift_weekly_cap
+python3 import_domain.py --seed-dir sample_domain_seeds truck_dispatcher nurse_shift_weekly_cap
 
 # 同梱されている無償7ドメインをまとめて投入する場合
-python3 import_domain.py $(ls sample_domain_seeds | sed 's/\.json$//')
+python3 import_domain.py --seed-dir sample_domain_seeds $(ls sample_domain_seeds | sed 's/\.json$//')
 ```
+
+> ⚠️ `--seed-dir sample_domain_seeds`の指定は必須です。省略した場合、`import_domain.py`はデフォルトで`domain_seeds/`（顧客固有データを含みうるため`.gitignore`で除外されており、本リポジトリのcloneには存在しません）を探しにいき、「⚠️ シードファイルが見つかりません」と表示されて投入に失敗します。
 
 初回実行時、`Backend/dsl_repository/optibuddy.db`が存在しなければ自動的に新規作成されます（`schema.sql`適用）。このコマンドは何度実行しても安全です（非破壊・追記のみ。同じドメインを再指定しても重複投入されません）。
 
@@ -234,7 +236,7 @@ Pythonのバージョンが古い可能性があります。`python --version`�
 
 ### シナリオ一覧に何も表示されない
 
-手順5のシード投入がまだの可能性があります。`python3 import_domain.py <ドメイン名>`を実行してください。
+手順5のシード投入がまだの可能性があります。`python3 import_domain.py --seed-dir sample_domain_seeds <ドメイン名>`を実行してください。
 
 ### シードファイルが見つからないと表示される
 
