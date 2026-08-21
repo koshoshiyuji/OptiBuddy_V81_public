@@ -22,7 +22,13 @@ cpmpy==1.0.0
 immutabledict==4.3.1
 ortools==9.15.6755
 pandas==2.3.3
-protobuf==6.31.1
+# 2026-08-21修正: 6.31.1のままだとクリーンな`pip install -r requirements.txt`が
+# ResolutionImpossibleで失敗する(ortools==9.15.6755がprotobuf>=6.33.1,<6.34を
+# 要求するため、6.31.1と衝突する)。Koshoshiの既存環境では別経路(ortools単体の
+# 後からのアップグレード等)でprotobufが6.33系に上がっていたため気づかれて
+# いなかった不整合。GitHub Actions CI導入(.github/workflows/backend-tests.yml)の
+# クリーンインストール検証で発覚し修正。6.33.6はortoolsの要求範囲内の最新版。
+protobuf==6.33.6
 pytz==2026.3.post1
 tzdata==2026.3
 altgraph==0.17.5

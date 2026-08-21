@@ -1,0 +1,68 @@
+name: Backend Tests (CP-SAT engine)
+
+# 2026-08-21新規追加: OptiBuddy_V81_public限定のCI。
+#
+# 【スコープ】CP-SATエンジン経路のみを対象とする。CPLEX/CP Optimizer
+# (docplex/cplex)はGitHub Actionsの標準ランナーにインストール・ライセンス
+# されていないため、CPLEX依存のテストはこのCIでは検証しない
+# (それらはpytest.importorskip / skipif(not HAS_DOCPLEX)で自動的にスキップ
+# される設計に既になっている。Backend/solvers/base/test_ce_limit_mip_fallback.py
+# などの冒頭コメント参照)。CPLEX経路の検証は引き続きKoshoshiのmacOS開発環境
+# (docplex/cplexインストール済み)で手動実施する。
+#
+# 【public repoのみで実行する理由】単一コードベース方針により
+# OptiBuddy_V81_public は全27ドメインのコードを含んでいるため、テスト対象は
+# private版(OptiBuddy_V81)と変わらない。public repoはGitHub Actionsの
+# 標準ランナー分数が無償のため、privateで重複して課金対象にする必要がない。
+#
+# 【highspyのバージョン上書きについて】Backend/requirements.txtは
+# highspy==1.15.1をピンしている(Koshoshiの開発=本番環境であるmacOSで動作
+# 確認済み)。しかしhighspy==1.15.1のLinux向けmanylinuxホイールは、cpmpy 1.0.0
+# がimport時に行うソルバー検出(CPM_highs.supported())の中でhighspyを
+# importする際に `undefined symbol: _ZN5Highs13releaseMemoryEv` でクラッシュ
+# する(requirements.txt内のhighspyコメントに記載されている、2026-08-12に
+# 一度発見済みの既知のLinux固有ABI不整合)。この問題はmacOS本番環境には
+# 影響しないため、requirements.txt自体のピンは変更しない。CI(Linux)限定で
+# highspy==1.13.1に上書きすることで回避する(cpmpy 1.0.0 + highspy==1.13.1の
+# 組み合わせはLinux上でimport成功し、CPM_highs.supported()もTrueを返すことを
+# 2026-08-21に実機検証済み)。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: Backend/requirements.txt
+
+      - name: Install dependencies (CPLEX/docplexなし、CP-SATのみ)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+          # Linux限定のhighspy ABI問題を回避するCI限定の上書き。上記コメント参照。
+          pip install --force-reinstall --no-deps highspy==1.13.1
+
+      - name: Run tests
+        env:
+          # CP系ドメインの既定ソルバーエンジンをCP-SATに固定(requirements.txt
+          # 側のデフォルトと同じだが、CI環境では明示しておく)。
+          DEFAULT_SOLVER_ENGINE: cpsat
+        run: |
+          python -m pytest -v

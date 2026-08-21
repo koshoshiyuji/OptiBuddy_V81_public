@@ -69,6 +69,7 @@ if _os.environ.get("_OPTIBUDDY_PW_PATCHED") != "1":
 # -------------------------------------------------------------------------
 
 import copy
+import hmac
 import importlib
 import logging
 import os
@@ -119,6 +120,53 @@ app.json.ensure_ascii = False
 @app.before_request
 def _set_request_language():
     set_lang(request.args.get("lang"))
+
+
+# 2026-08-21追記: 簡易APIキー認証（任意機能、既定は無効・後方互換）。
+# 従来Backend/app.pyには認証機構が一切なく、開発ガイドも「社内利用前提、
+# 外部公開時はリバースプロキシ等で認証層を追加すること」と明記していた
+# （OptiBuddy_Development_Guide.md 7-3節）。しかしSタイプ（既存有償ドメインの
+# お客様先導入）が実際の商品として提供され始めた以上、お客様が自分の環境に
+# 導入した際に誤って外部公開してしまう事故を防ぐ最低限のデフォルトを
+# 用意しておく。
+#
+# 設計方針:
+#   - .env に OPTIBUDDY_API_KEY を設定した場合のみ有効化する。未設定（空文字）
+#     なら従来通り認証なしで動作する。無償版のセルフホスト・ローカル検証用途を
+#     壊さないための後方互換。
+#   - 有効時は、/health を除く全エンドポイントで X-API-Key ヘッダー
+#     （または Authorization: Bearer <key>）の一致を要求する。/health は
+#     稼働監視用に外部から素通しできる必要があるため対象外にする。
+#   - CORSプリフライト（OPTIONS）は認証チェックの対象外にする。ブラウザが
+#     自動送信するpreflightリクエストにはカスタムヘッダーが付かないため、
+#     ここでブロックするとCORS自体が機能しなくなる。
+#   - タイミング攻撃を避けるため文字列の単純比較ではなく hmac.compare_digest
+#     を使う。
+_API_KEY = os.environ.get("OPTIBUDDY_API_KEY", "").strip()
+_AUTH_EXEMPT_PATHS = {"/health"}
+
+
+@app.before_request
+def _require_api_key():
+    if not _API_KEY:
+        return None  # 未設定時は従来通り認証なし
+    if request.method == "OPTIONS":
+        return None  # CORSプリフライトは素通し
+    if request.path in _AUTH_EXEMPT_PATHS:
+        return None
+
+    supplied = request.headers.get("X-API-Key", "")
+    if not supplied:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            supplied = auth_header[len("Bearer "):]
+
+    if not hmac.compare_digest(supplied, _API_KEY):
+        return jsonify({
+            "status": "unauthorized",
+            "message": "APIキーが必要です。X-API-Keyヘッダー、またはAuthorization: Bearer <key>で指定してください。",
+        }), 401
+    return None
 
 
 # 2026-08-04追記: 従来はlogging.basicConfig(level=logging.INFO)のみでログが
