@@ -71,6 +71,7 @@ if _os.environ.get("_OPTIBUDDY_PW_PATCHED") != "1":
 import copy
 import hmac
 import importlib
+import json
 import logging
 import os
 import re
@@ -142,13 +143,52 @@ def _set_request_language():
 #     ここでブロックするとCORS自体が機能しなくなる。
 #   - タイミング攻撃を避けるため文字列の単純比較ではなく hmac.compare_digest
 #     を使う。
-_API_KEY = os.environ.get("OPTIBUDDY_API_KEY", "").strip()
+#
+# 2026-08-21(2)追記: 複数キー対応（呼び出し元ごとの識別）。
+# 1顧客＝1台の自前ホスティング環境という前提は変わらないが、その1つの環境の
+# 中で複数の内部システム（自社フロントエンド・ERP連携・夜間バッチ等）が
+# それぞれ別のキーで呼び出せるようにし、どの名前のキーで認証されたかを
+# ログに残せるようにする。複数の顧客デプロイをまたいだ中央管理（ライセンス
+# サーバー的な仕組み）は範囲外（各顧客は引き続き自分の.envを自分で管理する
+# 運用のまま）。
+#   - OPTIBUDDY_API_KEYS（JSON、{"名前": "キー", ...}形式）を設定した場合は
+#     こちらを使う。設定されていれば単一キーのOPTIBUDDY_API_KEYより優先する
+#     （両方設定されている場合はOPTIBUDDY_API_KEYSのみが使われる）。
+#   - OPTIBUDDY_API_KEYS未設定・OPTIBUDDY_API_KEYのみ設定の場合は従来通り
+#     （後方互換、内部的には名前"default"の1件として扱う）。
+#   - OPTIBUDDY_API_KEYSのJSONが壊れている場合、認証なしに静かにフォール
+#     バックするとセキュリティ機能を意図せず無効化してしまうため、起動時に
+#     例外を投げて気付けるようにする（fail-closed）。
+_RAW_API_KEY = os.environ.get("OPTIBUDDY_API_KEY", "").strip()
+_RAW_API_KEYS_JSON = os.environ.get("OPTIBUDDY_API_KEYS", "").strip()
 _AUTH_EXEMPT_PATHS = {"/health"}
+
+if _RAW_API_KEYS_JSON:
+    try:
+        _parsed_keys = json.loads(_RAW_API_KEYS_JSON)
+        if not isinstance(_parsed_keys, dict) or not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in _parsed_keys.items()
+        ):
+            raise ValueError(
+                'OPTIBUDDY_API_KEYSは {"名前": "キー", ...} 形式のJSONオブジェクトである必要があります。'
+            )
+        _API_KEYS = {name: key.strip() for name, key in _parsed_keys.items() if key.strip()}
+        if not _API_KEYS:
+            raise ValueError("OPTIBUDDY_API_KEYSに有効なキーが1件もありません。")
+    except (json.JSONDecodeError, ValueError) as _e:
+        raise RuntimeError(
+            f"OPTIBUDDY_API_KEYSの設定が不正なため起動を中止します: {_e}\n"
+            '例: OPTIBUDDY_API_KEYS={"frontend": "xxxx", "batch": "yyyy"}'
+        ) from _e
+elif _RAW_API_KEY:
+    _API_KEYS = {"default": _RAW_API_KEY}
+else:
+    _API_KEYS = {}
 
 
 @app.before_request
 def _require_api_key():
-    if not _API_KEY:
+    if not _API_KEYS:
         return None  # 未設定時は従来通り認証なし
     if request.method == "OPTIONS":
         return None  # CORSプリフライトは素通し
@@ -161,11 +201,19 @@ def _require_api_key():
         if auth_header.startswith("Bearer "):
             supplied = auth_header[len("Bearer "):]
 
-    if not hmac.compare_digest(supplied, _API_KEY):
+    matched_name = None
+    for name, key in _API_KEYS.items():
+        if hmac.compare_digest(supplied, key):
+            matched_name = name
+            break
+
+    if matched_name is None:
         return jsonify({
             "status": "unauthorized",
             "message": "APIキーが必要です。X-API-Keyヘッダー、またはAuthorization: Bearer <key>で指定してください。",
         }), 401
+
+    logger.info("[Auth] request authenticated key_name=%s path=%s", matched_name, request.path)
     return None
 
 
