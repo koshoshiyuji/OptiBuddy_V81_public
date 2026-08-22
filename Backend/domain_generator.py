@@ -2701,6 +2701,10 @@ def write_files_for_dynamic_check(diffs: list, snake: str) -> list[str]:
     wanted_paths = {
         f"Backend/solvers/{snake}_solver.py",
         f"Backend/dsl_transformer/{snake}_converter.py",
+        f"Backend/i18n/{snake}_messages.py",  # 2026-08-21追加: 2026-08-11のi18n必須化(_I18N_MESSAGE_DICT_INSTRUCTION)
+                                                  # 以降、solver.pyがsolve()内でこのモジュールに依存するため、
+                                                  # 動的検証時点でもディスクに存在させる必要がある
+                                                  # (ReviewDocument登録時にModuleNotFoundErrorで発覚)。
         *(f"Backend/dsl_repository/scenarios/{snake}_{suf}.json" for suf in target_suffixes),
     }
     for item in diffs:
