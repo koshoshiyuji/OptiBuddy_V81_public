@@ -114,6 +114,8 @@ python3 import_domain.py --seed-dir sample_domain_seeds truck_dispatcher nurse_s
 
 # 同梱されている無償7ドメインをまとめて投入する場合
 python3 import_domain.py --seed-dir sample_domain_seeds $(ls sample_domain_seeds | sed 's/\.json$//')
+
+cd ..   # Backend/直下に戻る（後続の「起動方法」節はBackend/直下からの実行を想定）
 ```
 
 > ⚠️ `--seed-dir sample_domain_seeds`の指定は必須です。省略した場合、`import_domain.py`はデフォルトで`domain_seeds/`（顧客固有データを含みうるため`.gitignore`で除外されており、本リポジトリのcloneには存在しません）を探しにいき、「⚠️ シードファイルが見つかりません」と表示されて投入に失敗します。
