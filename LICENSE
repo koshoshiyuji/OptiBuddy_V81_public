@@ -3,9 +3,9 @@ Business Source License 1.1
 
 Parameters
 
-Licensor:             Arche Information Systems Inc.
+Licensor:             Koshoshi
 Licensed Work:        OptiBuddy（本リポジトリに含まれるソースコード一式）
-                       The Licensed Work is (c) 2026 Arche Information Systems Inc.
+                       The Licensed Work is (c) 2026 Koshoshi
 Additional Use Grant:  あなたは、以下に列挙する無償ドメイン（以下「無償ドメイン」）に
                        ついてのみ、Licensed Workを自らの最適化業務のために本番利用する
                        ことができます。これには、自社インフラ上での稼働、および第三者
@@ -59,13 +59,15 @@ Additional Use Grant:  あなたは、以下に列挙する無償ドメイン（
                        License; in case of any conflict, the text of this Additional Use
                        Grant controls.
 
-Change Date:           2030年8月17日（本ライセンスが最初にリポジトリに適用された日から4年後。
-                       実際の適用日に応じて確定してください）
+Change Date:           2030年8月31日（GitHub公開予定日2026年8月31日から4年後として確定。
+                       実際のpush日が数日前後した場合も、本License末尾のTerms条項にある
+                       「Change Date、またはバージョンの最初の公開から4周年目のいずれか
+                       早い方」という自動転換条項により、法的な問題は生じない）
 
 Change License:        Apache License, Version 2.0
 
 本著作物の代替のライセンス形態についてのお問い合わせは、下記までご連絡ください:
-[連絡先メールアドレスを記入]
+koshoshi@gmail.com
 
 Notice
 
