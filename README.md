@@ -54,3 +54,6 @@ OptiBuddy本体は [Business Source License 1.1](./LICENSE)（BSL 1.1）の下�
   必須です。
 
 商用利用時のIBM CPLEXの利用条件は、別途IBMとの契約・利用規約をご確認ください。
+**CPLEX/docplexはOptiBuddy本体（OSS部分）には一切同梱・再配布しません**（`Backend/requirements-cplex.txt`経由で利用者ご自身がインストールする形のみ）。
+
+OptiBuddyが依存するOSSライブラリ（Backend/Frontendとも）のライセンス一覧は [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) を参照してください。
