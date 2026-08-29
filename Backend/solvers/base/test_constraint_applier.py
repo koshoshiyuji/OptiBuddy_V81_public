@@ -127,3 +127,60 @@ def test_apply_all_reports_applied_and_skipped_counts(mdl, three_task_itvs):
     ])
     assert applied == 2
     assert skipped == 1
+
+
+# ---------------------------------------------------------------------------
+# containment（2026-08-30追加: energy_cost_aware_scheduler_solver.pyで見つかった
+# 禁止パターン4該当箇所の共通化）
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def inner_outer_optional_itvs(mdl):
+    """inner（オーダー相当）・outer（ライン相当）ともにoptionalなinterval_var。"""
+    return {
+        "inner": mdl.interval_var(start=(0, 100), end=(0, 100), size=(1, 50),
+                                   optional=True, name="inner"),
+        "outer": mdl.interval_var(start=(0, 100), end=(0, 100), size=(1, 50),
+                                   optional=True, name="outer"),
+    }
+
+
+def test_containment_adds_two_constraints(mdl, inner_outer_optional_itvs):
+    applier = BaseConstraintApplier(mdl, inner_outer_optional_itvs)
+    before = len(mdl.get_all_expressions())
+    applier.apply_all([{
+        "type": "containment",
+        "params": {"inner_task": "inner", "outer_task": "outer"},
+    }])
+    after = len(mdl.get_all_expressions())
+    # start>=start と end<=end の2本。require_outer_present無指定ならif_thenは追加しない。
+    assert after - before == 2
+
+
+def test_containment_with_require_outer_present_adds_presence_implication(mdl, inner_outer_optional_itvs):
+    applier = BaseConstraintApplier(mdl, inner_outer_optional_itvs)
+    before = len(mdl.get_all_expressions())
+    applier.apply_all([{
+        "type": "containment",
+        "params": {"inner_task": "inner", "outer_task": "outer", "require_outer_present": True},
+    }])
+    after = len(mdl.get_all_expressions())
+    # presence implication（if_then）1本 + start/end比較2本 = 3本
+    assert after - before == 3
+
+
+def test_containment_unresolvable_task_id_noop(mdl, inner_outer_optional_itvs):
+    """inner/outerどちらかが存在しないtask_idなら、例外を出さず何も追加しない。"""
+    applier = BaseConstraintApplier(mdl, inner_outer_optional_itvs)
+    before = len(mdl.get_all_expressions())
+    applier.apply_all([{
+        "type": "containment",
+        "params": {"inner_task": "inner", "outer_task": "unknown"},
+    }])
+    after = len(mdl.get_all_expressions())
+    assert after == before
+
+
+def test_containment_registered_in_base_handlers(mdl, inner_outer_optional_itvs):
+    applier = BaseConstraintApplier(mdl, inner_outer_optional_itvs)
+    assert "containment" in applier._CONSTRAINT_HANDLERS

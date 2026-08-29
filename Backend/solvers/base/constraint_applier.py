@@ -97,6 +97,7 @@ class BaseConstraintApplier:
             "no_overlap":   self._handle_no_overlap,
             "cumulative":   self._handle_cumulative,
             "precedence":   self._handle_precedence,
+            "containment":  self._handle_containment,
             "shift_window": self._handle_shift_window,
             "shift_break":  self._handle_shift_break,
         }
@@ -247,6 +248,41 @@ class BaseConstraintApplier:
         itv_to = self._resolve_itv(to_id)
         if itv_from is not None and itv_to is not None:
             self.mdl.add(self.mdl.end_before_start(itv_from, itv_to, delay=delay))
+
+    def _handle_containment(self, p: Dict):
+        """
+        「内側」interval が「外側」interval の時間範囲に完全に収まることを制約する
+        （inner.start >= outer.start かつ inner.end <= outer.end）。
+
+        [2026-08-30追加] energy_cost_aware_scheduler_solver.py で実際に見つかった
+        禁止パターン4（if_then の第2引数に `mdl.xxx(...) <op> mdl.yyy(...)` という
+        比較式を渡す）該当箇所（_CPO_WARN_PATTERNS検出）を機に、この形の制約を
+        層Aの共通レシピとして切り出したもの。if_then は使わず直接 mdl.add() する。
+        inner が optional で absent の場合、この制約自体が CP Optimizer の仕様上
+        自動的に無効化されるため、presence によるガードは不要（is_optional_intervals
+        が True のときは _start_of()/_end_of() が absentValue=0 を自動付与する）。
+
+        params:
+            inner_task: str   内側タスクID（この interval が外側に収まる）
+            outer_task: str   外側タスクID
+            require_outer_present: bool (default False)
+                True の場合、「inner が存在するなら outer も存在する」という
+                presence の含意も追加する。こちらは比較式を含まない単純な
+                presence_of() 同士の if_then なので禁止パターンには該当しない。
+        """
+        inner_id = p.get("inner_task", "")
+        outer_id = p.get("outer_task", "")
+        itv_inner = self._resolve_itv(inner_id)
+        itv_outer = self._resolve_itv(outer_id)
+        if itv_inner is None or itv_outer is None:
+            return
+        if p.get("require_outer_present", False):
+            self.mdl.add(self.mdl.if_then(
+                self.mdl.presence_of(itv_inner),
+                self.mdl.presence_of(itv_outer),
+            ))
+        self.mdl.add(self._start_of(itv_inner) >= self._start_of(itv_outer))
+        self.mdl.add(self._end_of(itv_inner) <= self._end_of(itv_outer))
 
     def _handle_shift_window(self, p: Dict):
         """
