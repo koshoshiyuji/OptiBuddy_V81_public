@@ -251,14 +251,14 @@ class EnergyCostAwareSchedulerSolver:
                     mdl.presence_of(order_itv),
                     mdl.presence_of(line_itv),
                 ))
-                mdl.add(mdl.if_then(
-                    mdl.presence_of(order_itv),
-                    mdl.start_of(order_itv) >= mdl.start_of(line_itv),
-                ))
-                mdl.add(mdl.if_then(
-                    mdl.presence_of(order_itv),
-                    mdl.end_of(order_itv) <= mdl.end_of(line_itv),
-                ))
+                # 禁止パターン4対策（2026-08-30修正、_CPO_WARN_PATTERNS該当）:
+                # if_thenの第2引数に mdl.xxx(...) <op> mdl.yyy(...) という比較式は
+                # 渡せない既知の問題があるため、if_thenを使わず直接mdl.add()する。
+                # order_itvはoptionalなので、absentのときはこの制約自体がCP Optimizer
+                # の仕様により自動的に無効化される。absentValueは明示的に0を指定する
+                # （solvers/base/constraint_applier.pyの_start_of/_end_ofと同じ流儀）。
+                mdl.add(mdl.start_of(order_itv, 0) >= mdl.start_of(line_itv, 0))
+                mdl.add(mdl.end_of(order_itv, 0) <= mdl.end_of(line_itv, 0))
 
         # 4. 境界条件: 計画期間の開始・終了でラインは停止
         #    line_on_itvs は optional なので absence = 停止を表現できる
