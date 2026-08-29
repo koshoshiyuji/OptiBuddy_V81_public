@@ -758,7 +758,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               </div>
               <div style={{ fontSize: '10px', color: '#f97316', marginTop: '8px', padding: '8px 10px',
                             borderRadius: '6px', background: '#1a1208', lineHeight: 1.6 }}>
-                {t('registerModal.confirmationExplanation')}
+                {t(job.loop_exhausted ? 'registerModal.confirmationExplanationLoopExhausted' : 'registerModal.confirmationExplanation')}
               </div>
               {job.match_type && (
                 <div style={{ fontSize: '11px', marginTop: '6px' }}>
@@ -808,12 +808,6 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
                 placeholder={t('registerModal.memoPlaceholder')}
                 style={{ ...inp, resize: 'vertical', minHeight: '70px' }} />
             </div>
-
-            {job.loop_exhausted && (
-              <div style={{ fontSize: '10px', color: '#f97316', marginBottom: '4px', lineHeight: 1.6 }}>
-                {t('registerModal.loopExhaustedNote')}
-              </div>
-            )}
 
             {hasBlockingDynamicIssue(job) && (
               <div style={{ fontSize: '10px', color: '#ff5555', marginBottom: '4px', lineHeight: 1.6 }}>

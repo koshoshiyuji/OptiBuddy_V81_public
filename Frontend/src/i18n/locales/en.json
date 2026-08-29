@@ -269,7 +269,7 @@
     "confirmationNeeded": "Confirmation Needed",
     "confirmationNeededHint": "Automatic detection found some points worth confirming.",
     "confirmationExplanation": "⚠️ The generated result has points that need attention. Click \"Cancel\" to discard this attempt and start over. To proceed, click \"Continue\" — an AI agent directly fixes the generated files. If it hits an ambiguous point that needs a business decision, it will ask you right here (answer it and the agent keeps going, no new round needed). Once the agent's work is done, Gate2 is re-verified once and registration proceeds.",
-    "loopExhaustedNote": "The AI agent's pass and the Gate2 re-check are both done. No further automatic round will run. Choose to cancel, or register as-is knowing what remains.",
+    "confirmationExplanationLoopExhausted": "⚠️ The generated result has points that need attention. The AI agent's automatic fixes and the Gate2 re-check are already complete. Click \"Cancel (discard work-in-progress files)\" to discard this attempt and start over. If the remaining points are acceptable, click \"Register as-is\" to proceed.",
     "processingMethod": "Processing method",
     "base": "Base",
     "pointsToReview": "Points to review ({{count}})",
