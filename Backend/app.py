@@ -646,7 +646,44 @@ def _advance_after_agent_round(job_id: str, domain_name: str, pending: dict, age
         prior_diffs=pending.get("diffs"),
     )
 
-    needs_human_gate = bool(gate2_result["blocking_questions"]) or bool(agent_result["needs_human_decision"])
+    # 2026-08-28追記2（Koshoshi合意）: debug_agentがstopped_reason="max_turns"で
+    # 終了した場合、needs_human_decisionには「ターン切れで検証できないまま終了した」
+    # という自己申告メモ（debug_agent.py側のmax_turnsフォールバック文言）が入る。
+    # しかしこの直後に実行するrun_gate2_checks（静的＋動的検証を実際にやり直す、
+    # debug_agent自身のverify_gate2呼び出し有無に依存しない権威的な再検証）が
+    # blocking_questions=0件と判定した場合、それはdebug_agent自身の「ターン切れで
+    # 未確認」という自己申告よりも信頼できる「実際に直っている」という証拠である。
+    # 実機で、debug_agentが5ターン全てを読み込み・修正に使い切りverify_gate2を
+    # 一度も呼べなかったが、その後のrun_gate2_checksではblocking=0件だったケースを
+    # 確認した（2026-08-28）。この場合に「未解決」「検証未実施」と表示するのは
+    # 誤解を招くため、ここでは自己申告メモを画面表示から外す。
+    # 一方、stopped_reason=="done"でreport_doneが明示的に返すneeds_human_decision
+    # （業務判断が必要な指摘。例:「この設計判断でよいか確認してください」）は、
+    # Gate2の静的・動的検証では検知できない性質のものなので、blocking件数に
+    # 関わらず常に残す。
+    agent_needs_human_decision = agent_result["needs_human_decision"]
+    if agent_result["stopped_reason"] == "max_turns" and not gate2_result["blocking_questions"] \
+            and agent_needs_human_decision:
+        logger.info(
+            f"[confirm_job:{job_id}] debug_agentはターン切れで自己検証できませんでし"
+            f"たが、Gate2再検証はblocking=0件だったため、ターン切れの自己申告メモ"
+            f"{len(agent_needs_human_decision)}件は、業務ユーザー向けの結論に置き換えます: "
+            f"{agent_needs_human_decision}"
+        )
+        agent_needs_human_decision = []
+        # 2026-08-29追加（Koshoshi合意）: 単に消すのではなく、「AIが確認済みで問題なし」
+        # という肯定的な1行に置き換えて完了画面のGate2警告欄に残す。この分岐が
+        # 発動する時点でblocking_questionsも空なので、この後needs_human_gateは必ず
+        # Falseになり、人間の確認を挟まず自動登録される（取りやめ／登録の
+        # 選択自体を出さない）。「聞く必要のないことは1箇所（ここ）で
+        # 解決し、業務ユーザーには内部の仕組み（ターン数・verify_gate2等）を
+        # 見せない」というKoshoshiの方針。
+        gate2_warnings.append(
+            "✅ 自動チェックの結果、この内容のままお使いいただけます。"
+            "特にご対応いただくことはありません。"
+        )
+
+    needs_human_gate = bool(gate2_result["blocking_questions"]) or bool(agent_needs_human_decision)
 
     if needs_human_gate:
         # 2026-07-19: 以前は「（人間の判断が必要）」という接頭辞だったが、
@@ -656,7 +693,7 @@ def _advance_after_agent_round(job_id: str, domain_name: str, pending: dict, age
         # 「判断してください」という言い方は個別に回答できるかのような
         # 誤解を招く。「未解決のまま残っている」という事実の表示にとどめる。
         human_decision_questions = [
-            f"（未解決）{item}" for item in agent_result["needs_human_decision"]
+            f"（未解決）{item}" for item in agent_needs_human_decision
         ]
         fixed_summary_note = (
             [f"（AIエージェント: ここまでの対応）{agent_result['fixed_summary']}"]
@@ -830,9 +867,13 @@ def _run_agent_answer_job(job_id: str, answer: str) -> None:
 # 対象はあくまで「実際にsolve()した結果に基づく客観的な失敗」のみに絞る。
 # 元々は _run_confirm_job 内のローカル変数だったが、force_apply側でも参照する
 # 必要が生じたためモジュールレベルに引き上げた。
+# 2026-08-28追記（Koshoshi合意）: 接頭辞の文言をプレーンな日本語に変更。
+# Backend/domain_generator.py の blocking_questions 組み立てと
+# Frontend/src/app/studio/components/RegisterModal.tsx の
+# DYNAMIC_STRUCTURAL_PREFIXES を必ず同じ文字列に保つこと。
 _DYNAMIC_STRUCTURAL_PREFIXES = (
-    "（自動チェック・実装エラーの疑い／要コード修正）",
-    "（自動チェック・実行検証）",
+    "（プログラムのエラーで停止・要修正）",
+    "（実際に解いてみた結果が想定と違いました）",
 )
 
 
@@ -1002,10 +1043,11 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
 
             # 2026-08-08追加: Gate2の指摘カテゴリ振り分け。
             # run_gate2_checks()のblocking_questionsは接頭辞でカテゴリを識別できる
-            # （静的field-check由来: 「（自動チェック）」「（自動検知・Big-M近似の疑い）」
-            # 「（自動検知・ネストキー不一致の疑い）」。動的検証由来の構造的指摘:
-            # 「（自動チェック・実装エラーの疑い／要コード修正）」＝実行時例外、
-            # 「（自動チェック・実行検証）」＝feasible不一致・退化解検知等）。
+            # （静的field-check由来: 「（入力項目の反映漏れの疑い）」「（数値のざっくり
+            # 近似に関する指摘）」「（設定項目の反映漏れの疑い）」等。動的検証由来の
+            # 構造的指摘: 「（プログラムのエラーで停止・要修正）」＝実行時例外、
+            # 「（実際に解いてみた結果が想定と違いました）」＝feasible不一致・退化解
+            # 検知等。2026-08-28: 接頭辞をプレーンな日本語ラベルに変更済み）。
             # 静的field-check由来はこれまで通りdebug_agentのエージェントラウンドに
             # 委ねる（自己修復ループ=self-repair v2はrun_gate2_checks冒頭で既に
             # 試行済みなので、ここに残っているのはそれでも直らなかったものだけ）。
@@ -1066,7 +1108,19 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
             _job_set(job_id, stage="fixing", interrupt_requested=False)
             # 動的検証系の指摘が混在していた場合は、それを除いた残りだけをエージェントに渡す
             # （混在していなければ従来通りquestions全件）。
-            agent_questions = non_dynamic_questions if dynamic_structural_questions else questions
+            # 2026-08-28追記（Koshoshi合意）: 「人間からの回答・指示」欄に何か
+            # 書かれている場合は、動的検証由来の指摘もエージェントの正式なquestions
+            # に含める。従来はhuman_notes（下記notes_block）には常に全文を渡して
+            # いたのに、questions（エージェントに割り当てられた「対応すべき指摘」）
+            # からは動的指摘を常に除外していたため、人間が動的指摘に対する答え
+            # （例: 「割り当ては必須制約とし、infeasibleとして返してください」）を
+            # 明示的に書いても、エージェントの正式なゴールにはならず、Gate2再検証
+            # （動的指摘の解消確認）まで踏み込まない一因になっていた（実機:
+            # ReviewDocument登録で確認）。回答欄が空の場合は、人間の診断を経ずに
+            # 動的指摘をエージェントに丸投げしない、という従来の設計原則を維持する。
+            agent_questions = questions if (answers or "").strip() else (
+                non_dynamic_questions if dynamic_structural_questions else questions
+            )
             logger.info(f"[confirm_job:{job_id}] 続行: デバッグエージェント開始"
                         f"（指摘{len(agent_questions)}件、対象ファイル{len(written_paths)}件）")
             agent_result = run_debug_agent(

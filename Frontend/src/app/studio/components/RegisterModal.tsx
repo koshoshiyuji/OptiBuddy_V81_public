@@ -72,9 +72,11 @@ interface JobState {
 // memory.mdの「Gate2動的検証は非交渉」という原則により、この接頭辞を持つ指摘が
 // 残っている間は「指摘を残したまま登録する」を無効化する（静的field-check由来の
 // 指摘＝Big-M・absent値誤用・要件カバレッジ等は引き続きforce_apply可能）。
+// 2026-08-28追記（Koshoshi合意）: 接頭辞の文言をプレーンな日本語に変更。
+// Backend/app.py の _DYNAMIC_STRUCTURAL_PREFIXES と必ず同じ文字列に保つこと。
 const DYNAMIC_STRUCTURAL_PREFIXES = [
-  '（自動チェック・実装エラーの疑い／要コード修正）',
-  '（自動チェック・実行検証）',
+  '（プログラムのエラーで停止・要修正）',
+  '（実際に解いてみた結果が想定と違いました）',
 ];
 
 function hasBlockingDynamicIssue(job: JobState | null | undefined): boolean {
@@ -83,6 +85,37 @@ function hasBlockingDynamicIssue(job: JobState | null | undefined): boolean {
   return (job.questions ?? []).some(
     q => typeof q === 'string' && DYNAMIC_STRUCTURAL_PREFIXES.some(p => q.startsWith(p))
   );
+}
+
+// 2026-08-28追記（Koshoshi合意）: 確認画面冒頭の説明文が「取りやめ／続行ボタンの
+// 動き方」という定型文だけで、今回どのカテゴリの指摘が含まれているか・何を
+// 確認すればよいかの手がかりが無かった（実機フィードバック）。
+// Backend/domain_generator.py の blocking_questions 組み立てで前置している
+// プレーンな日本語ラベルを接頭辞として使い、今回の指摘に含まれるカテゴリを
+// 判定して、カテゴリ別の確認ポイント（i18n: categoryGuidance_*）を画面に出す。
+// 接頭辞の文字列は Backend/domain_generator.py の該当箇所と同じに保つこと
+// （DYNAMIC_STRUCTURAL_PREFIXESと違い、こちらは表示用の判定のみでforce_apply
+// の可否には影響しない）。
+const CATEGORY_GUIDANCE_PREFIXES: [string, string][] = [
+  ['（プログラムのエラーで停止・要修正）', 'categoryGuidance_dynamicException'],
+  ['（実際に解いてみた結果が想定と違いました）', 'categoryGuidance_dynamicMismatch'],
+  ['（ヒアリング内容が未反映）', 'categoryGuidance_requiredGap'],
+  ['（設定項目の反映漏れの疑い）', 'categoryGuidance_missingInDslForSolver'],
+  ['（入力項目の反映漏れの疑い）', 'categoryGuidance_unusedInSolver'],
+  ['（数値のざっくり近似に関する指摘）', 'categoryGuidance_bigM'],
+  ['（特殊な条件の扱いに矛盾の疑い）', 'categoryGuidance_absentValue'],
+];
+
+function getPresentCategoryGuidanceKeys(job: JobState | null | undefined): string[] {
+  if (!job) return [];
+  const questions = job.questions ?? [];
+  const keys: string[] = [];
+  for (const [prefix, key] of CATEGORY_GUIDANCE_PREFIXES) {
+    if (questions.some(q => typeof q === 'string' && q.startsWith(prefix)) && !keys.includes(key)) {
+      keys.push(key);
+    }
+  }
+  return keys;
 }
 
 interface RegisterModalProps {
@@ -740,6 +773,21 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               )}
             </div>
 
+            {getPresentCategoryGuidanceKeys(job).length > 0 && (
+              <div style={{ ...card, borderColor: '#5DCAA5' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#5DCAA5', marginBottom: '8px' }}>
+                  {t('registerModal.categorySummaryHeading')}
+                </div>
+                {getPresentCategoryGuidanceKeys(job).map(key => (
+                  <div key={key} style={{ fontSize: '11px', color: '#ccc', padding: '6px 8px',
+                                          marginBottom: '4px', borderRadius: '6px',
+                                          background: '#0d1f19', lineHeight: 1.6 }}>
+                    {t(`registerModal.${key}`)}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div style={card}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', marginBottom: '10px' }}>
                 {t('registerModal.pointsToReview', { count: (job.questions ?? []).length })}
@@ -747,7 +795,8 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               {(job.questions ?? []).map((q, i) => (
                 <div key={i} style={{ fontSize: '12px', color: '#eee', padding: '8px 10px',
                                       marginBottom: '6px', borderRadius: '6px',
-                                      background: '#1a1208', border: '0.5px solid #f9731644' }}>
+                                      background: '#1a1208', border: '0.5px solid #f9731644',
+                                      whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                   {q}
                 </div>
               ))}

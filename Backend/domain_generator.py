@@ -1490,13 +1490,70 @@ def extract_domain_artifacts_from_diffs(diffs: list, snake: str) -> dict:
     return result
 
 
-def humanize_technical_findings(findings: list[str], domain_name: str) -> list[str]:
+# 2026-08-28追記（Koshoshi合意）: カテゴリごとに「何の話か」「業務担当者が
+# 照合できる手がかりとして何を残すべきか」を明示するヒント。以前は
+# 「ファイルパス・変数名・例外名など技術的な表現は全部消す」という一律の指示で
+# 言い換えていたため、Big-M近似の具体的な係数値やDSLキー名など、業務担当者や
+# プログラムを読める担当者が「これは自分の入力したどの項目の話か」を照合する
+# ための手がかりまで一緒に消えてしまい、「結局どこを見ればいいか分からない」
+# という指摘（実機フィードバック）につながっていた。カテゴリごとに「何を
+# 残すべきか」を具体的に指示することで、削るべき生のプログラム表現（スタック
+# トレース断片・ファイルパスの羅列等）と、残すべき手がかり（数値・項目名・
+# シナリオ名・ヒアリング節番号等）を区別させる。
+_FINDING_CATEGORY_HINTS: dict[str, str] = {
+    "dynamic": (
+        "この指摘は、実際にCP Optimizerでシナリオを解いてみた結果、期待していた"
+        "挙動（標準的な条件のシナリオ=baselineなら解が見つかる、あえて無理な"
+        "条件にしたシナリオ=infeasibleなら解が見つからない、等）と食い違った、"
+        "という客観的な事実です。対象のシナリオが『標準的な条件のシナリオ』か"
+        "『あえて無理な条件にしたシナリオ』かを必ず日本語で明記し、実際に何が"
+        "起きたか（解が見つかった／見つからなかった、coverage_rateの値など）を"
+        "指摘に含まれる数値も含めてそのまま具体的に書いてください。"
+    ),
+    "big_m": (
+        "この指摘は、複数の評価基準を1つの計算式にまとめる部分（目的関数）で、"
+        "重みの差が極端に大きい項目が混在している、という内容です。指摘に含まれる"
+        "具体的な係数の値は数値としてそのまま残し、『複数の評価基準に優先順位を"
+        "つけている場合、その優先順位の付け方についての指摘であること』が伝わる"
+        "ようにしてください。"
+    ),
+    "absent_value": (
+        "この指摘は、候補の中から選ばれなかった場合の扱い方に矛盾がある可能性が"
+        "ある、という内容です。『選ばれなかった候補（未採用のケース）の扱いに"
+        "関する計算ロジックについての指摘であること』が伝わるようにしてください。"
+    ),
+    "missing_in_dsl_for_solver": (
+        "この指摘は、入力データ（業務データ）の中の特定の設定項目が、実際の"
+        "計算処理で一度も使われていない可能性がある、という内容です。指摘に"
+        "含まれる具体的な項目名（英語表記のままでよい）は必ずそのまま残し、"
+        "『ヒアリングで指定したどの項目に対応するか、業務側で照合できるように』"
+        "してください。"
+    ),
+    "unused_in_solver": (
+        "この指摘は、入力データの中の特定の項目が、実際の計算処理から一度も"
+        "参照されていない可能性がある、という内容です。指摘に含まれる具体的な"
+        "項目名（英語表記のままでよい）は必ずそのまま残してください。"
+    ),
+}
+
+
+def humanize_technical_findings(
+    findings: list[str], domain_name: str, category: str = "generic"
+) -> list[str]:
     """
     2026-07-16追加: Gate2の技術的な指摘（CPO既知バグパターン検出、自己修復ループの
     結果、動的検証の例外メッセージ等）は、変数名・ファイルパス・Pythonの例外文が
     そのまま混ざっており、最適化やプログラミングの知識がない業務ユーザーには
     読んでも何を答えればよいか分からない。これをLLMで、業務の言葉で「何が起きたか」
     「何を判断すればよいか」が分かる文に言い換える。
+
+    2026-08-28追記（Koshoshi合意）: 「技術的な表現は全部消す」という一律の指示を、
+    「業務担当者が判断材料にできない生のプログラム表現（スタックトレース断片・
+    ファイルパスの羅列等）は消すが、『これは自分の入力したどの項目/条件の話か』を
+    照合できる具体的な手がかり（数値・項目名・シナリオ名・ヒアリング節番号等）は
+    絶対に残す」という指示に変更。加えて、言い換え文の末尾に必ず「次に何を確認
+    すればよいか」を明記させる。category を渡すと、カテゴリ別の手がかり
+    （_FINDING_CATEGORY_HINTS参照）をプロンプトに追加する。
 
     - 意味を変えない・情報を削らない（要約ではなく言い換え）ことを厳守させる。
     - 入力と出力の件数は必ず一致させる（一致しなければLLM出力を信用せず原文を返す）。
@@ -1508,14 +1565,21 @@ def humanize_technical_findings(findings: list[str], domain_name: str) -> list[s
     from llm.llm_client import call_llm, extract_json, fast_model
 
     items_block = "\n".join(f"{i + 1}. {f}" for i, f in enumerate(findings))
+    category_hint = _FINDING_CATEGORY_HINTS.get(category, "")
     system = (
         "あなたはB2B業務システムの登録確認画面に表示する指摘事項を、"
         "プログラミングやCP最適化の知識がない業務担当者にも読んで判断できる"
-        "平易な日本語に言い換えるアシスタントです。ファイルパス・変数名・"
-        "Pythonの例外名やスタックトレースの断片など、技術的な表現をそのまま"
-        "出さず、「業務上何が起きた（起きうる）か」「利用者として何を確認・"
-        "判断すればよいか」を中心に書き直してください。元の指摘が持っている"
-        "情報（対象・件数・深刻さ等）を削ったり意味を変えたりしてはいけません。"
+        "平易な日本語に言い換えるアシスタントです。ファイルパスの羅列や"
+        "Pythonのスタックトレースの断片など、業務担当者が読んでも判断材料に"
+        "できない生のプログラム表現はそのまま出さないでください。ただし、"
+        "指摘の中に含まれる具体的な数値・項目名・シナリオ名・ヒアリングの"
+        "節番号や文言など、『これは自分が入力したどの内容の話か』を業務担当者や"
+        "プログラムを読める担当者が照合するための手がかりになる情報は、"
+        "絶対に削らずそのまま残してください（要約ではなく言い換えです）。"
+        "元の指摘が持っている情報（対象・件数・深刻さ等）を削ったり意味を"
+        "変えたりしてはいけません。言い換え文の最後には必ず一文、"
+        "「次に何を確認すればよいか」を具体的に明記してください。"
+        + (("\n\n" + category_hint) if category_hint else "")
     )
     user = (
         f"## 業務名\n{domain_name}\n\n## 言い換え対象の指摘事項（{len(findings)}件）\n{items_block}\n\n"
@@ -1557,6 +1621,11 @@ def _humanize_exception_findings(findings: list[str], domain_name: str) -> list[
     from llm.llm_client import call_llm, extract_json, fast_model
 
     items_block = "\n".join(f"{i + 1}. {f}" for i, f in enumerate(findings))
+    # 2026-08-28追記（Koshoshi合意）: 「技術的な表現はそのまま出さない」の対象を
+    # 「業務担当者にとって意味のないファイルパスの羅列・スタックトレースの行番号」
+    # に絞り、(a) 対象シナリオが標準/無理な条件のどちらかという業務側の手がかりと
+    # (b) Pythonの例外の種類（KeyError等）というプログラムを読める担当者向けの
+    # 手がかりの両方を、削らずそのまま残すよう変更した。
     system = (
         "あなたはB2B業務システムの登録確認画面に表示する指摘事項を、"
         "プログラミングやCP最適化の知識がない業務担当者にも読んで判断できる"
@@ -1566,10 +1635,14 @@ def _humanize_exception_findings(findings: list[str], domain_name: str) -> list[
         "存在しない（真のinfeasible）』という判定とは明確に別物です。"
         "言い換え文には必ず、これが実装上の不具合（バグ）である可能性が高く、"
         "業務データや制約条件を見直すのではなく、開発者側でのコード修正が"
-        "必要であることが伝わる表現を含めてください。ファイルパス・変数名・"
-        "Pythonの例外名やスタックトレースの断片などの技術的な表現はそのまま"
-        "出さず、対象・件数・原因の種類（例外の種類）といった情報は削らない"
-        "でください。"
+        "必要であることが伝わる表現を含めてください。ファイルパスの羅列や"
+        "スタックトレースの行番号など、業務担当者にとって意味のない生の"
+        "プログラム表現はそのまま出さないでください。ただし、対象のシナリオが"
+        "『標準的な条件のシナリオ』か『あえて無理な条件にしたシナリオ』かは"
+        "必ず日本語で明記し、また元の指摘に含まれるPythonの例外の種類"
+        "（例: KeyError, TypeError等）は、プログラムを読める担当者が原因箇所を"
+        "特定する手がかりになるため、削らずそのまま残してください。対象・件数と"
+        "いった情報も削らないでください。"
     )
     user = (
         f"## 業務名\n{domain_name}\n\n## 言い換え対象の指摘事項（{len(findings)}件、"
@@ -3132,7 +3205,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         static_humanized = repair_notes + sanitizer_warnings
 
     try:
-        dynamic_humanized = humanize_technical_findings(dynamic_warnings, domain_name)
+        dynamic_humanized = humanize_technical_findings(dynamic_warnings, domain_name, category="dynamic")
     except Exception as e:
         logger.warning(f"[gate2_checks] 動的検証指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         dynamic_humanized = dynamic_warnings
@@ -3154,7 +3227,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     # 受け、blocking側（AIエージェントによる自動修正の対象、直せなければ
     # 取りやめ／このまま登録するの判断対象）に分離する。
     try:
-        unused_in_solver_humanized = humanize_technical_findings(unused_in_solver_warnings, domain_name)
+        unused_in_solver_humanized = humanize_technical_findings(unused_in_solver_warnings, domain_name, category="unused_in_solver")
     except Exception as e:
         logger.warning(f"[gate2_checks] unused_in_solver指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         unused_in_solver_humanized = unused_in_solver_warnings
@@ -3165,7 +3238,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     # blocking（人間の確認必須）に分離する。他の静的field-check系（advisory側）
     # とは異なる扱いである点に注意。
     try:
-        big_m_humanized = humanize_technical_findings(big_m_warnings, domain_name)
+        big_m_humanized = humanize_technical_findings(big_m_warnings, domain_name, category="big_m")
     except Exception as e:
         logger.warning(f"[gate2_checks] big_m指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         big_m_humanized = big_m_warnings
@@ -3175,7 +3248,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     # 必ずinfeasibleになる既知の実害パターン）。big_m_warningsと同じ理由でblocking側へ
     # （Koshoshi合意、2026-08-10）。
     try:
-        absent_value_humanized = humanize_technical_findings(absent_value_warnings, domain_name)
+        absent_value_humanized = humanize_technical_findings(absent_value_warnings, domain_name, category="absent_value")
     except Exception as e:
         logger.warning(f"[gate2_checks] absent_value指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         absent_value_humanized = absent_value_warnings
@@ -3186,24 +3259,30 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     # 再発防止が目的）でblocking側に分離する。
     try:
         missing_in_dsl_for_solver_humanized = humanize_technical_findings(
-            missing_in_dsl_for_solver_warnings, domain_name
+            missing_in_dsl_for_solver_warnings, domain_name, category="missing_in_dsl_for_solver"
         )
     except Exception as e:
         logger.warning(f"[gate2_checks] missing_in_dsl_for_solver指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         missing_in_dsl_for_solver_humanized = missing_in_dsl_for_solver_warnings
 
+    # 2026-08-28追記（Koshoshi合意）: 接頭辞を生の技術用語（Big-M近似／optional
+    # interval absent値／ネストキー等）からプレーンな日本語ラベルに変更。
+    # ただし先頭2つ（実装エラーの疑い／実行検証）は Backend/app.py の
+    # _DYNAMIC_STRUCTURAL_PREFIXES と Frontend/.../RegisterModal.tsx の
+    # DYNAMIC_STRUCTURAL_PREFIXES が同じ文字列を前方一致で参照しているため、
+    # 3箇所を必ず同時に変更すること（「Gate2動的検証は非交渉」の判定に使われる）。
     blocking_questions = (
-        [f"（自動チェック・実装エラーの疑い／要コード修正）{w}" for w in dynamic_exception_humanized]
-        + [f"（自動チェック・実行検証）{w}" for w in dynamic_humanized]
-        + [f"（自動検知・要件カバレッジ）{w}" for w in required_gap_warnings]
-        + [f"（自動チェック）{w}" for w in unused_in_solver_humanized]
-        + [f"（自動検知・Big-M近似の疑い）{w}" for w in big_m_humanized]
-        + [f"（自動検知・optional interval absent値の誤用疑い）{w}" for w in absent_value_humanized]
-        + [f"（自動検知・ネストキー不一致の疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
+        [f"（プログラムのエラーで停止・要修正）{w}" for w in dynamic_exception_humanized]
+        + [f"（実際に解いてみた結果が想定と違いました）{w}" for w in dynamic_humanized]
+        + [f"（ヒアリング内容が未反映）{w}" for w in required_gap_warnings]
+        + [f"（入力項目の反映漏れの疑い）{w}" for w in unused_in_solver_humanized]
+        + [f"（数値のざっくり近似に関する指摘）{w}" for w in big_m_humanized]
+        + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_humanized]
+        + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
     )
     advisory_questions = (
-        [f"（自動チェック）{w}" for w in static_humanized]
-        + [f"（自動検知・要件カバレッジ）{w}" for w in optional_gap_summary]
+        [f"（参考情報）{w}" for w in static_humanized]
+        + [f"（ヒアリング内容が未反映・任意項目）{w}" for w in optional_gap_summary]
         + tech_conformance_warnings
         + i18n_coverage_warnings
     )
@@ -3607,6 +3686,23 @@ technical_directivesへの記載は不要（Stage2を通らずbase_domainの実�
 これらがなければ空配列のままでよい。無理に質問をひねり出さないこと。
 （match_type="existing_domain"の軸(a)適合チェックはこのプロンプトの対象外。
 上記2026-07-31分離の追記を参照）
+
+（2026-08-29追記、Koshoshi合意）missing_infoの各項目は、質問文だけを書くのではなく、
+必ず以下の3ブロック構成をこの順で1つの文字列にまとめて（改行を含めて）記載すること。
+
+  {質問文（従来通り）}
+
+  【今回の結論】{この質問に人間が何も回答しなかった場合、実装が実際にどう判断される
+  かを1文で。「わかりません」「未定」のような回答放棄は禁止。必ず具体的な既定動作を
+  書くこと（例:「AIがCPで実装します」「対象は全アイテムとして扱います」「早着・遅着
+  ともに0.5単位未満の端数は切り捨てます」等）}
+  【理由】{その既定動作をなぜ選んだかの根拠を1〜2文で}
+
+目的: 人間の判断を必須とする方針は維持しつつ、「聞かれても何を基準に答えればいいか
+わからない」という状態を避け、画面上で質問と同時に「今回どう扱われるか」と
+「なぜそう扱うか」が一目でわかるようにするため。この3ブロック構成は
+missing_infoの全項目（既存ドメインとの類似度・優先順位・CP/MIP等、種類を問わず）に
+適用すること。
 """
 
 
@@ -3651,7 +3747,10 @@ def _resolve_hedged_technical_directive(result: dict) -> dict:
             missing.append(
                 "CP(制約プログラミング)とMIP(混合整数計画)のどちらで実装すべきか、"
                 "ヒアリング内容・基底問題参考のどちらからも断定できません。"
-                "ご希望があれば教えてください（指定が無ければ実装時にAIが判断します）。"
+                "ご希望があれば教えてください。\n\n"
+                "【今回の結論】指定が無いため、AIが実装時にCP/MIPいずれかを判断します。\n"
+                "【理由】構造的に類似する基底問題は見つかりましたが、一致度自体への確信が"
+                "十分ではなく、CP/MIPどちらか一方に断定できないためです。"
             )
         result["missing_info"] = missing
         logger.info(

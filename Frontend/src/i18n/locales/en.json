@@ -300,6 +300,14 @@
     "partialErrors": "Some errors occurred",
     "close": "Close",
     "error": "Error",
-    "backToInput": "Back to input"
+    "backToInput": "Back to input",
+    "categorySummaryHeading": "Breakdown of this round's findings, and what to check",
+    "categoryGuidance_dynamicException": "Includes a finding where the program actually crashed with an error while running. This needs a code fix from the dev side, not a review of your data or constraints.",
+    "categoryGuidance_dynamicMismatch": "Includes a finding where the actual solve result didn't match what was expected. This is an objective result from real data, so please review it carefully.",
+    "categoryGuidance_requiredGap": "Some required rule from your hearing sheet may not be implemented yet. Please compare the finding against your hearing sheet answers.",
+    "categoryGuidance_missingInDslForSolver": "Some field you provided may not be used in the actual calculation. Please check which of your hearing sheet items the field name in the finding corresponds to.",
+    "categoryGuidance_unusedInSolver": "Some field you provided may not be referenced by the actual calculation.",
+    "categoryGuidance_bigM": "This is about how multiple objectives are prioritized in the calculation. Please check whether the priority order and the numbers in the finding match your intent.",
+    "categoryGuidance_absentValue": "This is a calculation-logic finding about how candidates that weren't selected are handled."
   }
 }

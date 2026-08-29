@@ -502,7 +502,11 @@ def run_debug_agent(
         "1. 必ずread_fileで現在の内容を確認してから直すこと。想像で書き換えない。\n"
         "2. 読み書きできるファイルは以下に限定される。それ以外のファイルには一切アクセスできない:\n"
         f"{file_list_block}\n"
-        "3. 意味を変える大きな設計変更はしない。指摘事項に対する最小限で正確な修正に留める。\n"
+        "3. 意味を変える大きな設計変更はしない。指摘事項に対する最小限で正確な修正に留める。"
+        "ただし、「人間からの追加回答・指示」で業務ルールそのものの変更"
+        "（hard制約かsoft制約か、目的関数の優先順位等）が明示的に指示されている場合は、"
+        "その指示に従って該当する制約・目的関数を実際に書き換えること。"
+        "指示されていない箇所まで意味を変えてはならない。\n"
         + ("" if disable_edit_file else (
             "3.5. 修正手段はedit_file（部分編集）を基本とし、write_file（全文置換）は新規ファイル"
             "作成、またはファイル構造そのものを大きく作り直す場合にのみ使うこと。既存の大きめの"
@@ -682,7 +686,10 @@ def run_debug_agent(
                         "type": "tool_result", "tool_use_id": tu.id,
                         "content": json.dumps(report, ensure_ascii=False, indent=2),
                     })
-                    actions.append({"tool": "verify_gate2", "path": None})
+                    actions.append({
+                        "tool": "verify_gate2", "path": None,
+                        "warnings_count": len(report.get("warnings", [])),
+                    })
                     logger.info(f"[debug_agent] verify_gate2実行: snake={snake_name}, "
                                 f"warnings={len(report.get('warnings', []))}件")
                 except Exception as e:
@@ -847,11 +854,54 @@ def run_debug_agent(
     # 画面がどちらかを知らないため、ここでは「何が起きたか」の事実だけを
     # 述べ、「次に何をすべきか」の指図はしない（それは呼び出し元がUI文脈に
     # 応じて判断する）。
+    # 2026-08-28追加（Koshoshi合意）: edit_file/write_fileの後に必ずverify_gate2を
+    # 呼ぶという厳守事項7があるにもかかわらず、ターン切れで守れないまま終了する
+    # ケースがある（実機: ReviewDocument登録で確認）。この場合、直前の修正が
+    # 実際に効いているかどうかは一切確認されていないので、その事実を明示する。
+    # 2026-08-28追加（Koshoshi合意）: 直近のアクションが「warnings=0のverify_gate2」で
+    # あれば、report_doneを呼ぶターンが残っていなかっただけで、修正自体はGate2の
+    # 動的検証まで含めて確認済み＝実質的に完了している。この場合は誤解を招く
+    # 「未解決」ではなく、"done"として扱う。
+    last_action = actions[-1] if actions else None
+    last_verify_clean = (
+        last_action is not None
+        and last_action.get("tool") == "verify_gate2"
+        and last_action.get("warnings_count") == 0
+    )
+    if last_verify_clean:
+        return {
+            "fixed_summary": (
+                "AIエージェントによる修正後、Gate2の動的検証（verify_gate2）で警告0件を"
+                "確認しました。ただし最大ターン数に達したため、エージェント自身による"
+                "完了報告（report_done）は行われていません。修正内容・検証結果から見て、"
+                "対応は実質的に完了しています。"
+            ),
+            "needs_human_decision": [],
+            "turns_used": max_turns, "stopped_reason": "done", "actions": actions,
+        }
+
+    last_edit_idx = max(
+        (i for i, a in enumerate(actions) if a.get("tool") in ("edit_file", "write_file")),
+        default=-1,
+    )
+    last_verify_idx = max(
+        (i for i, a in enumerate(actions) if a.get("tool") == "verify_gate2"),
+        default=-1,
+    )
+    edit_without_verify = last_edit_idx != -1 and last_edit_idx > last_verify_idx
+
+    max_turns_notes = [
+        f"AIエージェントが最大ターン数（{max_turns}）に達し、この指摘への対応が"
+        "未完了のまま終了しました。"
+    ]
+    if edit_without_verify:
+        max_turns_notes.append(
+            "⚠️ 直前の修正後にGate2再検証（verify_gate2）が実行されないままターン数の"
+            "上限に達しました。この修正が実際に効いているかは未確認です。"
+        )
+
     return {
         "fixed_summary": "",
-        "needs_human_decision": [
-            f"AIエージェントが最大ターン数（{max_turns}）に達し、この指摘への対応が"
-            "未完了のまま終了しました。"
-        ],
+        "needs_human_decision": max_turns_notes,
         "turns_used": max_turns, "stopped_reason": "max_turns", "actions": actions,
     }
