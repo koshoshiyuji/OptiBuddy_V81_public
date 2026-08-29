@@ -99,6 +99,7 @@ node_modules/
 llm_file_cache.json
 repomix-*.xml
 repomix.*.json
+!repomix.domain-addition.json
 docs/test_hearings/
 testfile123
 mcp_write_test.txt

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "repomix-domain-addition.xml",
+    "style": "xml",
+    "headerText": "OptiBuddy 新ドメイン追加用コンテキスト（最小セット）"
+  },
+  "include": [
+    "Backend/solvers/base/constraint_applier.py",
+    "Backend/solvers/base/issue_rules.py",
+    "Backend/solvers/base/objective_terms.py",
+    "Backend/solvers/registry.py",
+    "Backend/dsl_transformer/__init__.py",
+    "Backend/dsl_transformer/business_to_solver.py",
+    "Backend/dsl_transformer/solver_to_ui.py",
+    "docs/app_routing_snippet.md",
+    "docs/OptiBuddy_V81_spec.md",
+    "Backend/dsl_transformer/table_sections.py"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true
+  }
+}
