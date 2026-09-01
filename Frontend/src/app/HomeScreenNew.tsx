@@ -303,13 +303,15 @@ export function HomeScreen({ onSelect, apiBase = "http://localhost:5000" }: Home
     reader.readAsText(file);
   };
 
-  // ドメインフィルター機能: 表示名（tag）と内部ドメインキー（domain, snake_case）の
+  // ドメインフィルター機能: シナリオ名（name）、表示名（tag）、内部ドメインキー（domain, snake_case）の
   // 部分一致（大文字小文字無視）で絞り込む。
   const filteredScenarios = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     if (!q) return scenarios;
     return scenarios.filter((s) =>
-      (s.tag ?? '').toLowerCase().includes(q) || (s.domain ?? '').toLowerCase().includes(q)
+      (s.name ?? '').toLowerCase().includes(q) ||
+      (s.tag ?? '').toLowerCase().includes(q) ||
+      (s.domain ?? '').toLowerCase().includes(q)
     );
   }, [scenarios, searchText]);
 
