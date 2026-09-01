@@ -15,17 +15,14 @@ name: Backend Tests (CP-SAT engine)
 # private版(OptiBuddy_V81)と変わらない。public repoはGitHub Actionsの
 # 標準ランナー分数が無償のため、privateで重複して課金対象にする必要がない。
 #
-# 【highspyのバージョン上書きについて】Backend/requirements.txtは
-# highspy==1.15.1をピンしている(Koshoshiの開発=本番環境であるmacOSで動作
-# 確認済み)。しかしhighspy==1.15.1のLinux向けmanylinuxホイールは、cpmpy 1.0.0
-# がimport時に行うソルバー検出(CPM_highs.supported())の中でhighspyを
-# importする際に `undefined symbol: _ZN5Highs13releaseMemoryEv` でクラッシュ
-# する(requirements.txt内のhighspyコメントに記載されている、2026-08-12に
-# 一度発見済みの既知のLinux固有ABI不整合)。この問題はmacOS本番環境には
-# 影響しないため、requirements.txt自体のピンは変更しない。CI(Linux)限定で
-# highspy==1.13.1に上書きすることで回避する(cpmpy 1.0.0 + highspy==1.13.1の
-# 組み合わせはLinux上でimport成功し、CPM_highs.supported()もTrueを返すことを
-# 2026-08-21に実機検証済み)。
+# 【highspyのバージョン上書きについて】2026-09-01に削除。
+# Backend/requirements.txtからhighspyのピン自体を削除した
+# (CE上限MIPフォールバックがortools内蔵HiGHSに切り替わり、単体highspy
+# パッケージ自体が不要になったため。詳細はrequirements.txt内のコメントと
+# Backend/solvers/base/ce_limit_mip_fallback.py冒頭の【2026-09-01の変更】
+# 参照)。highspyが依存関係に含まれなくなったため、以前ここに書かれていた
+# Linux固有ABI問題(cpmpy 1.0.0のソルバー検出がhighspy importでクラッシュ
+# する件)自体が発生しなくなり、このCI限定のバージョン上書きも不要になった。
 
 on:
   push:
@@ -56,8 +53,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-          # Linux限定のhighspy ABI問題を回避するCI限定の上書き。上記コメント参照。
-          pip install --force-reinstall --no-deps highspy==1.13.1
 
       - name: Run tests
         env:

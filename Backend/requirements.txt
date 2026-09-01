@@ -3,7 +3,8 @@
 # 本ファイルには含めない(requirements-cplex.txtを参照)。
 # 本ファイルだけのpip installでもFlaskは起動し、CPLEXを使わないドメイン
 # (TruckDispatcherの貪欲法フォールバック等)やMIP系ドメインのHiGHS
-# フォールバック(highspy、下記に含む)は動作する。ただし現時点では
+# フォールバック(ortools内蔵HiGHS経由、2026-09-01よりhighspy単体パッケージは
+# 不要。ce_limit_mip_fallback.py参照)は動作する。ただし現時点では
 # CP Optimizer系ドメインの大半はcplex/docplexが無いと動かない
 # (docs/DESIGN_2026-08-12_cp_sat_backend_support.md参照、OR-Tools CP-SAT
 # 対応で解消予定)。
@@ -13,7 +14,8 @@
 # ortoolsは最新(9.15系)を使用。ortools>=9.15はnumpy>=2.0.2を要求するため、
 # 本ファイルのnumpyを1.26.4→2.4.6へ更新した(下記numpy行参照)。
 # Koshoshiの開発・本番環境(macOS、開発=本番)でこの組み合わせ
-# (numpy==2.4.6 + highspy==1.15.1 + cpmpy==1.0.0)の動作を実機確認済み。
+# (numpy==2.4.6 + cpmpy==1.0.0 + ortools==9.15.6755)の動作を実機確認済み
+# (2026-09-01時点、highspyは依存関係から除外済み。下記numpy行のコメントも参照)。
 #   - cpmpy 1.0.0はortools 9.9.x/9.10.x/9.11.x を明示的に除外している
 #     (cpmpy側の既知の非互換)。9.15.6755はこの除外範囲外。
 # 現時点ではまだregistry.py等の本番経路には未接続(パイロットのみ)。
@@ -52,15 +54,18 @@ Flask==3.1.3
 flask-cors==6.0.1
 fonttools==4.63.0
 h11==0.16.0
-# 2026-08-12(2)→(3)で1.14.0に一時ダウングレードしたが、1.15.1に復元。
-# 経緯: cpmpy 1.0.0が内部のソルバー検出(CPM_highs.supported())で
-# highspyをimportする際、Cowork検証サンドボックス(Linux)のmanylinux wheel
-# では`undefined symbol: _ZN5Highs13releaseMemoryEv`でcpmpy自体のimportが
-# クラッシュした。ただしこれはLinux wheel固有のABI不一致で、Koshoshiの
-# 開発・本番環境(macOS、開発と本番が同一)では highspy==1.15.1 + cpmpy==1.0.0
-# + numpy==2.4.6 の組み合わせで問題なく動作することを実機確認済みのため、
-# ダウングレードは不要と判断し1.15.1に戻した。
-highspy==1.15.1
+# 2026-09-01: highspy==1.15.1のピンを削除した。CE上限MIPフォールバック
+# (Backend/solvers/base/ce_limit_mip_fallback.py の_solve_via_highs())が、
+# 単体highspyパッケージからortools内蔵のHiGHSバックエンド
+# (ortools.linear_solver.python.model_builder)に切り替わったため、
+# highspy自体がもう不要になった。単体highspyとortools内蔵HiGHSは別ビルドの
+# 同一ライブラリで、同一プロセス内で両方読み込まれるとdlopenのシンボル
+# 解決エラーやHiGHSワーカースレッド内のsegfaultを引き起こすことが判明した
+# ため(PortfolioOverlapDesigner→MysteryShopperScheduler segfault、
+# MysteryShopperScheduler→NursingWorkloadBalance ImportError、両方2026-08-31
+# 〜09-01に実機確認)、highspyを依存関係から完全に外すことでこの衝突自体を
+# なくした。旧highspy==1.14.0→1.15.1の切替やLinux固有ABI問題の経緯は
+# 過去のコメント参照だったが、highspy自体が不要になったため経緯ごと削除。
 httpcore==1.0.9
 httpx==0.28.1
 idna==3.10
@@ -82,7 +87,8 @@ networkx==3.4.2
 # 更新(cpmpy/ortools追加の経緯はファイル冒頭のコメント参照)。matplotlib等
 # 既存の他numpy依存パッケージも2.xで動作することをクリーンなvenvへの
 # 全量pip installで確認済み。Koshoshiの開発=本番環境(macOS)でも
-# numpy==2.4.6 + ortools最新 + highspy==1.15.1の組み合わせを実機確認済み。
+# numpy==2.4.6 + ortools最新の組み合わせを実機確認済み(2026-09-01時点、
+# highspyは依存関係から除外済み)。
 numpy==2.4.6
 openai==1.108.2
 packaging==25.0
