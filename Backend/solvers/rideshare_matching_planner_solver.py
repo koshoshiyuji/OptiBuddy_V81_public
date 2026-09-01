@@ -558,7 +558,7 @@ class RideshareMatchingPlannerSolver:
         optimality = extract_optimality_metadata(msol)
 
         issues = self._detect_issues(
-            matched_pairs, unmatched_passengers, driver_routes, drivers, issue_statuses
+            matched_pairs, unmatched_passengers, driver_routes, drivers, issue_statuses, passengers, config
         )
 
         return {
@@ -584,8 +584,11 @@ class RideshareMatchingPlannerSolver:
         driver_routes: Dict[str, Dict],
         drivers: List[Dict],
         issue_statuses: Dict,
+        passengers: List[Dict],
+        config: Dict,
     ) -> List[Dict]:
         from i18n.rideshare_matching_planner_messages import t
+        from solvers.base.issue_rules import build_rideshare_matching_planner_contexts, run_issue_rules
         issues = []
 
         # 未割当乗客 警告
@@ -603,22 +606,15 @@ class RideshareMatchingPlannerSolver:
                 "relatedContainerIds": [],
             })
 
-        # 座席使用率 > 座席数（sanity check）
-        for dr in driver_routes.values():
-            seats = dr["seats"]
-            max_concurrent = len(dr["passengers"])  # 近似（簡易チェック）
-            if max_concurrent > seats:
-                iid = f"seat_overflow_{dr['driver_id']}"
-                if issue_statuses.get(iid) != "ACCEPTED":
-                    issues.append({
-                        "id": iid,
-                        "severity": "CRITICAL",
-                        "category": "CAPACITY",
-                        "title": t("issue.seat_overflow.title", name=dr["driver_name"]),
-                        "message": t("issue.seat_overflow.message",
-                                     name=dr["driver_name"], count=max_concurrent, seats=seats),
-                        "relatedContainerIds": [],
-                    })
+        # 解チェッカー（2026-09-01追加、バッチ5）: 座席容量（スイープライン検算）・乗車時間上限・
+        # 乗降順序・乗客時間窓・運転手稼働時間窓・乗客重複割当・乗客欠落の独立検証。
+        # 旧「座席使用率 > 座席数」チェックは総数の近似で実際の同時刻重複を見ておらず、置き換える。
+        checker_ctxs = build_rideshare_matching_planner_contexts(
+            matched_pairs, unmatched_passengers, driver_routes, passengers, config,
+        )
+        issues.extend(run_issue_rules(
+            domain="RideshareMatchingPlanner", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         return issues
 

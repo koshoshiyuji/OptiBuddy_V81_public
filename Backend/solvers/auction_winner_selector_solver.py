@@ -92,7 +92,11 @@ class AuctionWinnerSelectorSolver:
             )
 
         from solvers.base.ce_limit_mip_fallback import solve_with_ce_fallback
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue,
+            build_auction_winner_selector_contexts,
+            run_issue_rules,
+        )
 
         import time
         t0 = time.perf_counter()
@@ -147,6 +151,18 @@ class AuctionWinnerSelectorSolver:
 
         elapsed = time.perf_counter() - t0
 
+        mip_check_issues: List[Dict[str, Any]] = []
+        if sol is not None and not sol.is_valid_solution(tolerance=1e-6):
+            mip_check_issues.append({
+                "id": "mip_solution_invalid",
+                "severity": "CRITICAL",
+                "category": "SOLVER",
+                "title": "解の制約充足検証に失敗（解チェッカー）",
+                "message": "CPLEX/HiGHSが返した解が、モデルに追加した制約"
+                           "（商品ロット重複禁止・最低落札総額）を満たしていません。",
+                "relatedContainerIds": [],
+            })
+
         if sol is None:
             return self._make_result(
                 feasible=False, winners=[], revenue=0.0,
@@ -183,6 +199,15 @@ class AuctionWinnerSelectorSolver:
 
         # ── 異常検知 ─────────────────────────────────────────
         issues: List[Dict[str, Any]] = []
+
+        issues.extend(mip_check_issues)
+
+        checker_ctxs = build_auction_winner_selector_contexts(
+            winners=winners, min_revenue=min_revenue, total_revenue=total_revenue,
+        )
+        issues.extend(run_issue_rules(
+            domain="AuctionWinnerSelector", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         anomaly = build_full_unassignment_issue(
             assigned_count=len(winners),

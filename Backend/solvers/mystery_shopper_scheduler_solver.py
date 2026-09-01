@@ -87,7 +87,7 @@ class MysteryShopperSchedulerSolver:
             )
 
         try:
-            assignments, solve_time = self._solve_mip(shoppers, visits, stores, config)
+            assignments, solve_time, mip_check_issues = self._solve_mip(shoppers, visits, stores, config)
         except _CeLimitError:
             return self._ce_limit_result(config, shoppers, visits, stores)
         except Exception as e:
@@ -106,7 +106,10 @@ class MysteryShopperSchedulerSolver:
             result.update(solver_crash_extra_fields(e))
             return result
 
-        issues = self._detect_issues(assignments, visits, shoppers, stores, config, issue_statuses)
+        issues = self._detect_issues(
+            assignments, visits, shoppers, stores, config, issue_statuses,
+            mip_check_issues=mip_check_issues,
+        )
         return self._make_result(
             feasible=True,
             assignments=assignments,
@@ -203,7 +206,7 @@ class MysteryShopperSchedulerSolver:
 
         if not x:
             # 担当可能な割り当て候補が1件もない
-            return [], 0.0
+            return [], 0.0, []
 
         # 制約1: 各訪問枠は最大1人×1日に割り当てる
         for v in visits:
@@ -279,10 +282,17 @@ class MysteryShopperSchedulerSolver:
         mdl.maximize(total_assigned)
         sol1 = solve_with_ce_fallback(mdl, log_output=False)
         if sol1 is None:
-            return [], 0.0
+            return [], 0.0, []
 
         best_assigned_val = int(round(sol1.get_objective_value()))
         solve_time1 = sol1.solve_details.time if sol1.solve_details else 0.0
+
+        # sol1の妥当性は、Step2でmdlに制約・変数（lock_assigned/max_load/min_load等）が
+        # 追加される「前」の、sol1が実際に解かれた時点のモデル状態に対して検証する。
+        # Step2側の変数はsol1の値マップに存在しないため、Step2追加後のmdlに対して
+        # 検証すると誤って「制約違反」判定になってしまう（2026-09-01発見のfalse
+        # positive）。
+        sol1_valid = sol1.is_valid_solution(tolerance=1e-6)
 
         # Step 2: ばらつき最小化（充足数を下限に固定）
         mdl.add_constraint(total_assigned >= best_assigned_val, ctname="lock_assigned")
@@ -309,8 +319,26 @@ class MysteryShopperSchedulerSolver:
         sol2 = solve_with_ce_fallback(mdl, log_output=False)
         solve_time2 = sol2.solve_details.time if (sol2 and sol2.solve_details) else 0.0
 
+        # sol2はここまでの最終mdl状態（Step2の制約・変数を含む）に対して解かれて
+        # いるため、solve_with_ce_fallback()呼び出し直後・これ以上mdlを変更しない
+        # このタイミングで検証すれば、sol2が実際に解かれた状態と一致する。
+        sol2_valid = sol2.is_valid_solution(tolerance=1e-6) if sol2 is not None else None
+
         sol = sol2 if (sol2 is not None) else sol1
+        sol_valid = sol2_valid if (sol2 is not None) else sol1_valid
         total_solve_time = solve_time1 + solve_time2
+
+        mip_check_issues: List[Dict] = []
+        if not sol_valid:
+            mip_check_issues.append({
+                "id": "mip_solution_invalid",
+                "severity": "CRITICAL",
+                "category": "SOLVER",
+                "title": "解の制約充足検証に失敗（解チェッカー）",
+                "message": "CPLEX/HiGHSが返した解が、モデルに追加した制約"
+                           "（訪問枠1件1人1日・調査員×日1件・再訪問間隔）を満たしていません。",
+                "relatedContainerIds": [],
+            })
 
         # 解抽出
         assignments: List[Dict] = []
@@ -323,7 +351,7 @@ class MysteryShopperSchedulerSolver:
                     "day": day,
                 })
 
-        return assignments, total_solve_time
+        return assignments, total_solve_time, mip_check_issues
 
     # -------------------------------------------------------------------------
     # Issue 検知
@@ -337,10 +365,20 @@ class MysteryShopperSchedulerSolver:
         stores: List[Dict],
         config: Dict,
         issue_statuses: Dict,
+        mip_check_issues: List[Dict],
     ) -> List[Dict]:
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue,
+            build_mystery_shopper_scheduler_contexts,
+            run_issue_rules,
+        )
 
-        issues: List[Dict] = []
+        issues: List[Dict] = list(mip_check_issues)
+
+        checker_ctxs = build_mystery_shopper_scheduler_contexts(assignments)
+        issues.extend(run_issue_rules(
+            domain="MysteryShopperScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         # 全件未割当チェック
         anomaly = build_full_unassignment_issue(

@@ -122,7 +122,7 @@ class ProductionLineSequencingSolver:
         if anomaly:
             issues.append(anomaly)
 
-        issues.extend(self._detect_issues(assignments, batches, slots, vehicle_types, days, issue_statuses))
+        issues.extend(self._detect_issues(assignments, batches, slots, vehicle_types, days, issue_statuses, distribution_exceptions))
 
         # KPI計算
         line_usage = self._calc_line_usage(assignments, days)
@@ -545,7 +545,10 @@ class ProductionLineSequencingSolver:
         vehicle_types: List[Dict],
         days: List[int],
         issue_statuses: Dict,
+        distribution_exceptions: List[Dict],
     ) -> List[Dict]:
+        from solvers.base.issue_rules import build_production_line_sequencing_contexts, run_issue_rules
+
         issues = []
         assigned_batch_ids = {a["batch_id"] for a in assignments}
 
@@ -562,25 +565,15 @@ class ProductionLineSequencingSolver:
                         "relatedContainerIds": [],
                     })
 
-        # Even Distribution 違反チェック（独立検証）
-        vtype_daily_limit = {vt["id"]: vt.get("daily_limit", 99) for vt in vehicle_types}
-        day_vtype_count: Dict[Tuple[int, str], int] = {}
-        for a in assignments:
-            key = (a["day"], a["vehicle_type"])
-            day_vtype_count[key] = day_vtype_count.get(key, 0) + 1
-
-        for (day, vtid), count in day_vtype_count.items():
-            limit = vtype_daily_limit.get(vtid, 99)
-            if count > limit:
-                iid = f"distribution_violation_{day}_{vtid}"
-                if issue_statuses.get(iid) != "ACCEPTED":
-                    issues.append({
-                        "id": iid,
-                        "severity": "WARNING",
-                        "title": f"分散ルール違反: 日{day} 車種{vtid}",
-                        "message": f"日{day}の車種{vtid}が{count}バッチ割り当てられており、上限{limit}を超えています。",
-                        "relatedContainerIds": [],
-                    })
+        # 解チェッカー（2026-09-01追加、バッチ5）: スロット重複割当・非互換ライン・稼働期間外・
+        # 分散上限/下限（distribution_exceptions考慮）・車種投入順序・割当フィールド不整合の独立検証
+        # 旧「Even Distribution 違反チェック」はdistribution_exceptionsを一切見ておらず、置き換える。
+        checker_ctxs = build_production_line_sequencing_contexts(
+            assignments, batches, slots, vehicle_types, distribution_exceptions,
+        )
+        issues.extend(run_issue_rules(
+            domain="ProductionLineSequencing", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         return issues
 

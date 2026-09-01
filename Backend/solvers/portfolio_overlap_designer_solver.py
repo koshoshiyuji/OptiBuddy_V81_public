@@ -143,8 +143,14 @@ class PortfolioOverlapDesignerSolver:
 
         overlap_matrix = self._compute_overlap_matrix(funds, pool, assignments)
 
+        from solvers.base.issue_rules import build_full_unassignment_issue, build_portfolio_overlap_designer_contexts, run_issue_rules
+
+        checker_ctxs = build_portfolio_overlap_designer_contexts(funds, assignments, overlap_matrix, worst_overlap)
+        extra_issues: List[Dict] = list(run_issue_rules(
+            domain="PortfolioOverlapDesigner", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
+
         # 全件未割当異常検知
-        from solvers.base.issue_rules import build_full_unassignment_issue
         total_expected = sum(f.get("required_count", 0) for f in funds)
         total_assigned = sum(len(v) for v in assignments.values())
         anomaly = build_full_unassignment_issue(
@@ -153,7 +159,8 @@ class PortfolioOverlapDesignerSolver:
             entity_label="銘柄割当",
             extra_hint="get_var_solution() での解抽出処理",
         )
-        extra_issues = [anomaly] if anomaly else []
+        if anomaly:
+            extra_issues.append(anomaly)
 
         return self._make_result(
             feasible=True,

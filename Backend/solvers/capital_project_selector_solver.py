@@ -24,7 +24,11 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from solvers.base.ce_limit_mip_fallback import solve_with_ce_fallback
-from solvers.base.issue_rules import build_full_unassignment_issue
+from solvers.base.issue_rules import (
+    build_full_unassignment_issue,
+    build_capital_project_selector_contexts,
+    run_issue_rules,
+)
 from solvers.base.solver_error_result import build_solver_crash_issue, solver_crash_extra_fields
 
 logger = logging.getLogger(__name__)
@@ -57,7 +61,7 @@ class CapitalProjectSelectorSolver:
             )
 
         try:
-            selected, total_value, total_weight, solve_time, is_optimal = \
+            selected, total_value, total_weight, solve_time, is_optimal, mip_check_issues = \
                 self._build_and_solve(projects, budget, config)
         except Exception as e:
             logger.error(f"[CapitalProjectSelector] mdl.solve() 例外: {e}", exc_info=True)
@@ -94,7 +98,10 @@ class CapitalProjectSelectorSolver:
                 meta=meta,
             )
 
-        issues = self._detect_issues(projects, budget, selected, total_weight, issue_statuses)
+        issues = self._detect_issues(
+            projects, budget, selected, total_weight, issue_statuses,
+            config=config, mip_check_issues=mip_check_issues,
+        )
         return self._make_result(
             feasible=True,
             selected=selected,
@@ -147,7 +154,7 @@ class CapitalProjectSelectorSolver:
         選定件数は0件から全件まで完全に自由で、予算内で期待効果合計を最大化した結果として決まる。
 
         Returns:
-            (selected, total_value, total_weight, solve_time, is_optimal)
+            (selected, total_value, total_weight, solve_time, is_optimal, mip_check_issues)
             解なし時は selected=None
         """
         from docplex.mp.model import Model
@@ -184,7 +191,19 @@ class CapitalProjectSelectorSolver:
         sol = solve_with_ce_fallback(mdl, log_output=False)
 
         if sol is None:
-            return None, 0.0, 0.0, 0.0, False
+            return None, 0.0, 0.0, 0.0, False, []
+
+        mip_check_issues: List[Dict] = []
+        if not sol.is_valid_solution(tolerance=1e-6):
+            mip_check_issues.append({
+                "id": "mip_solution_invalid",
+                "severity": "CRITICAL",
+                "category": "SOLVER",
+                "title": "解の制約充足検証に失敗（解チェッカー）",
+                "message": "CPLEX/HiGHSが返した解が、モデルに追加した制約"
+                           "（予算上限・最大選定件数）を満たしていません。",
+                "relatedContainerIds": [],
+            })
 
         is_optimal = mdl.solve_status is not None and "optimal" in str(mdl.solve_status).lower()
 
@@ -209,7 +228,7 @@ class CapitalProjectSelectorSolver:
         solve_time = float(getattr(mdl, "_solve_details", None) and
                            mdl._solve_details.time or 0.0)
 
-        return selected, total_value, total_weight, solve_time, is_optimal
+        return selected, total_value, total_weight, solve_time, is_optimal, mip_check_issues
 
     # ------------------------------------------------------------------
     # イシュー検知
@@ -222,8 +241,18 @@ class CapitalProjectSelectorSolver:
         selected: List[Dict],
         total_weight: float,
         issue_statuses: Dict,
+        config: Dict,
+        mip_check_issues: List[Dict],
     ) -> List[Dict]:
-        issues = []
+        issues = list(mip_check_issues)
+
+        checker_ctxs = build_capital_project_selector_contexts(
+            total_weight=total_weight, budget=budget,
+            selected_count=len(selected), max_projects=config.get("max_projects"),
+        )
+        issues.extend(run_issue_rules(
+            domain="CapitalProjectSelector", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         # 全件未割当異常検知（解抽出バグのセーフティネット）
         anomaly = build_full_unassignment_issue(

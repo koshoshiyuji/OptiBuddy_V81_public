@@ -236,6 +236,18 @@ class InventoryReplenishmentPlannerSolver:
         if sol is None:
             return None
 
+        mip_check_issues: List[Dict] = []
+        if not sol.is_valid_solution(tolerance=1e-6):
+            mip_check_issues.append({
+                "id": "mip_solution_invalid",
+                "severity": "CRITICAL",
+                "category": "SOLVER",
+                "title": "解の制約充足検証に失敗（解チェッカー）",
+                "message": "CPLEX/HiGHSが返した解が、モデルに追加した制約"
+                           "（在庫フロー保存則・週次供給能力上限）を満たしていません。",
+                "relatedContainerIds": [],
+            })
+
         # --- 解抽出 ---
         shipments = []
         inventories = []
@@ -284,6 +296,8 @@ class InventoryReplenishmentPlannerSolver:
             "total_cost":           obj_val,
             "center_ids":           center_ids,
             "period_ids":           period_ids,
+            "supply_capacity_per_period": supply_capacity_per_period,
+            "mip_check_issues":     mip_check_issues,
         }
 
     # -------------------------------------------------------------------------
@@ -293,11 +307,23 @@ class InventoryReplenishmentPlannerSolver:
         solution_data: Dict,
         warehouses, centers, periods, demands, config, issue_statuses,
     ) -> List[Dict]:
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue,
+            build_inventory_replenishment_planner_contexts,
+            run_issue_rules,
+        )
 
-        issues: List[Dict] = []
+        issues: List[Dict] = list(solution_data.get("mip_check_issues", []))
 
         shipments = solution_data.get("shipments", [])
+
+        checker_ctxs = build_inventory_replenishment_planner_contexts(
+            shipments=shipments, centers=centers,
+            supply_capacity_per_period=solution_data.get("supply_capacity_per_period", 0.0),
+        )
+        issues.extend(run_issue_rules(
+            domain="InventoryReplenishmentPlanner", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         # 全件未割当チェック
         shipped_count = sum(1 for s in shipments if s.get("shipped"))

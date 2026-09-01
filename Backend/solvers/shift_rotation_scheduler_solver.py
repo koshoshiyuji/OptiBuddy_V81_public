@@ -136,10 +136,10 @@ class ShiftRotationSchedulerSolver:
         # approach: 各日 i について、連続ブロックの長さを管理するのではなく
         # 「ある日 i からの同一シフトの連続長さ」を直接求めるのは困難なため、
         # 「任意の連続 (min_consec+1) 日の中に変化なしのパターンを禁止」と
-        # 「任意の連続 (max_consec+1) 日が全て同じ → 禁止」で実現する。
+        # 「任意の連続 max_consec 日が全て同じ → 禁止」で実現する。
         #
         # 実装: change[i] = 1 if shift[i] != shift[i-1] else 0（循環）
-        # - max_consec 超過禁止: 連続 (max_consec+1) 日に変化点が0なら違反
+        # - max_consec 超過禁止: 連続 max_consec 日に変化点が0なら違反
         # - min_consec 未満禁止: change[i]=1 のとき、直前 min_consec-1 日の中に
         #   変化点があってはならない（= 連続長 < min_consec を作れない）
 
@@ -151,9 +151,13 @@ class ShiftRotationSchedulerSolver:
             # change[i] = 1 iff shift[i] != shift[i-1]
             mdl.add(change[i] == (shift[wi][di] != shift[wi_prev][di_prev]))
 
-        # max_consec 超過禁止: 連続 max_consec+1 日の change 合計 >= 1
+        # max_consec 超過禁止: 連続 max_consec 日の change 合計 >= 1
+        # （2026-09-01修正: 旧コードは range(max_consec+1) になっており、window内に
+        # 境界の変化点1個があれば通ってしまうため、実際には連続 max_consec+1 日まで
+        # 超過を許してしまうoff-by-oneバグがあった。solution checkerの
+        # consecutive_run_length_violationルールがこれを検出）
         for i in range(total_days):
-            window = [change[(i + j) % total_days] for j in range(max_consec + 1)]
+            window = [change[(i + j) % total_days] for j in range(max_consec)]
             mdl.add(mdl.sum(window) >= 1)
 
         # min_consec 未満禁止: change[i]=1 のとき直前 (min_consec-1) 日に change なし
@@ -313,6 +317,17 @@ class ShiftRotationSchedulerSolver:
             },
         }
 
+        # 解チェッカー（2026-09-01追加、バッチ５）: 土日シフト一致/曜日別必要人数/
+        # シフト順序前進のみ/連続日数[min,max]/14日窓最低休日数/
+        # template↔従業員展開の対応の独立検証
+        from solvers.base.issue_rules import build_shift_rotation_scheduler_contexts, run_issue_rules
+        checker_ctxs = build_shift_rotation_scheduler_contexts(
+            solution["template_shift_ids"], employee_schedules, shifts_def, daily_reqs, constraints_cfg,
+        )
+        issues = run_issue_rules(
+            domain="ShiftRotationScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        )
+
         logger.info(
             f"[ShiftRotationScheduler] 解発見: W={W}, "
             f"working_days={total_shifts_assigned}, off_days={off_count}"
@@ -323,7 +338,7 @@ class ShiftRotationSchedulerSolver:
             "feasible":  True,
             "metadata":  {"problem_class": "ShiftRotationScheduler"},
             "solutions": [solution],
-            "issues":    [],
+            "issues":    issues,
             "_solver_version": "shift_rotation_scheduler_v1.0",
         }
 
@@ -343,6 +358,7 @@ class ShiftRotationSchedulerSolver:
         daily_reqs: List[Dict] = dsl.get("daily_requirements", [])
         constraints_cfg: Dict = dsl.get("constraints", {})
         config: Dict = dsl.get("config", {})
+        issue_statuses: Dict = dsl.get("issue_statuses", {})
 
         min_consec = int(constraints_cfg.get("min_consecutive", 2))
         max_consec = int(constraints_cfg.get("max_consecutive", 4))
@@ -380,8 +396,11 @@ class ShiftRotationSchedulerSolver:
             wi_prev, di_prev = wrap(i - 1)
             m += (change[i] == (shift[wi][di] != shift[wi_prev][di_prev]))
 
+        # max_consec 超過禁止: 連続 max_consec 日の change 合計 >= 1
+        # （2026-09-01修正: CPO側と同じoff-by-oneバグがあった。range(max_consec+1)だと
+        # 実際には連続 max_consec+1 日まで超過を許してしまう）
         for i in range(total_days):
-            window = [change[(i + j) % total_days] for j in range(max_consec + 1)]
+            window = [change[(i + j) % total_days] for j in range(max_consec)]
             m += (cp.sum(window) >= 1)
 
         if min_consec >= 2:
@@ -507,6 +526,15 @@ class ShiftRotationSchedulerSolver:
             },
         }
 
+        # 解チェッカー（2026-09-01追加、バッチ５）
+        from solvers.base.issue_rules import build_shift_rotation_scheduler_contexts, run_issue_rules
+        checker_ctxs = build_shift_rotation_scheduler_contexts(
+            solution["template_shift_ids"], employee_schedules, shifts_def, daily_reqs, constraints_cfg,
+        )
+        issues = run_issue_rules(
+            domain="ShiftRotationScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        )
+
         logger.info(
             f"[ShiftRotationScheduler][cpsat] 解発見: W={W}, "
             f"working_days={total_shifts_assigned}, off_days={off_count}"
@@ -517,7 +545,7 @@ class ShiftRotationSchedulerSolver:
             "feasible":  True,
             "metadata":  {"problem_class": "ShiftRotationScheduler"},
             "solutions": [solution],
-            "issues":    [],
+            "issues":    issues,
             "_solver_version": "shift_rotation_scheduler_v1.0",
         }
 

@@ -533,15 +533,20 @@ class EnergyCostAwareSchedulerSolver:
 
             line_start, line_end, line_present = line_vars[lid]
             if standby_power > 0:
-                power_starts.append(line_start); power_durs.append(0); power_ends.append(line_end)
-                # 待機電力: ライン稼働の全期間にわたって一定消費。cumulativeのduration
-                # 引数が可変長(line_end-line_start)であることをそのまま扱えないため、
-                # 「ライン稼働区間全体を覆う1本のpulse」として scaled定数demandを使う近似は
-                # 元のCPOモデルと同型にならないので、ここでは目的関数側のみで扱う
-                # (元のCPOモデルもpower制約には待機電力のpulseを混ぜているが、
-                #  cumulativeのduration可変長制約はCP-SAT/cpmpyでは別途end>=startのみで
-                #  表現しているため、待機電力のpower上限反映は近似的に省略しない):
-                power_starts.pop(); power_durs.pop(); power_ends.pop()
+                # 待機電力: ライン稼働の全期間(line_start〜line_end)にわたって一定消費。
+                # durationはline_end-line_start（可変長）をそのまま渡す。demandは
+                # line_presentを掛けることで、ラインが不在(=稼働なし)のときは
+                # 容量制約に影響しないようにする（他のオーダーのpulseと同じ流儀）。
+                # 2026-09-01修正: 従来はappendした直後にpop()しており、待機電力が
+                # 電力容量のCumulative制約に一切反映されていなかった
+                # （power_demands側の対応する追加も無かった）。CPOモデル側は
+                # mdl.sum(power_pulses)に待機電力のpulseを含めて容量チェックしている
+                # ため、CP-SATエンジンだけ容量チェックが甘くなっていた
+                # （DEFAULT_SOLVER_ENGINE=cpsatが既定のため本番相当の挙動）。
+                power_starts.append(line_start)
+                power_durs.append(line_end - line_start)
+                power_ends.append(line_end)
+                power_demands.append(line_present * int(round(standby_power * POWER_SCALE)))
 
             if power_starts:
                 m += Cumulative(power_starts, power_durs, power_ends, power_demands, max_power)
@@ -702,7 +707,9 @@ class EnergyCostAwareSchedulerSolver:
         issue_statuses: Dict,
         config: Dict,
     ) -> List[Dict]:
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue, build_energy_cost_aware_scheduler_contexts, run_issue_rules,
+        )
 
         issues: List[Dict] = []
 
@@ -729,6 +736,13 @@ class EnergyCostAwareSchedulerSolver:
         )
         if anomaly:
             issues.append(anomaly)
+
+        # 解チェッカー（2026-09-01追加、バッチ3）: ライン資源容量・ライン稼働区間
+        # ・オーダー重複割当の独立検証
+        checker_ctxs = build_energy_cost_aware_scheduler_contexts(schedule, line_ops, orders, lines)
+        issues.extend(run_issue_rules(
+            domain="EnergyCostAwareScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         # 未完了オーダーの警告
         priority_customers = set(config.get("priority_customer_names", []))

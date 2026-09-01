@@ -440,6 +440,14 @@ class SteelMillSlabDesignSolver:
             issues.append(anomaly)
             return issues
 
+        # 解チェッカー（2026-09-01追加、バッチ6・最終）: 注文重複割当/欠落、
+        # スラブ容量超過、スラブ内色数超過、スラブ重量集計不一致の独立検証
+        from solvers.base.issue_rules import build_steel_mill_slab_design_contexts, run_issue_rules
+        checker_ctxs = build_steel_mill_slab_design_contexts(assignments, slabs_used, orders)
+        issues.extend(run_issue_rules(
+            domain="SteelMillSlabDesign", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
+
         # 廃棄重量が大きいスラブへの警告
         for s in slabs_used:
             iid = f"high_waste_slab_{s['slab_index']}"

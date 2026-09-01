@@ -486,8 +486,16 @@ class LotSizingSchedulerSolver:
         assignments: List[Dict],
         issue_statuses: Dict[str, str],
     ) -> List[Dict]:
+        from solvers.base.issue_rules import build_lot_sizing_scheduler_contexts, run_issue_rules
+
         issues: List[Dict] = []
         assigned_ids = {a["order_id"] for a in assignments}
+
+        # 解チェッカー（2026-09-01追加、バッチ3）: 期間重複割当（all_diff）の独立検証
+        checker_ctxs = build_lot_sizing_scheduler_contexts(assignments)
+        issues.extend(run_issue_rules(
+            domain="LotSizingScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         # 未割当注文
         for o in orders:
