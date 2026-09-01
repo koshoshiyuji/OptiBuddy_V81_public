@@ -118,7 +118,7 @@ class MedicalAppointmentSequenceSchedulerSolver:
             result.update(solver_crash_extra_fields(e))
             return result
 
-        issues = self._detect_issues(sequences, scheduled, unscheduled_ids, issue_statuses)
+        issues = self._detect_issues(sequences, scheduled, unscheduled_ids, issue_statuses, resources)
 
         return self._make_result(
             feasible=len(scheduled) > 0,
@@ -781,8 +781,13 @@ class MedicalAppointmentSequenceSchedulerSolver:
         scheduled: List[Dict],
         unscheduled_ids: List[str],
         issue_statuses: Dict[str, str],
+        resources: List[Dict],
     ) -> List[Dict]:
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue,
+            build_medical_appointment_sequence_scheduler_contexts,
+            run_issue_rules,
+        )
 
         issues = []
 
@@ -797,6 +802,13 @@ class MedicalAppointmentSequenceSchedulerSolver:
         )
         if anomaly and issue_statuses.get(anomaly["id"]) != "ACCEPTED":
             issues.append(anomaly)
+
+        # 解チェッカー（2026-09-01追加、バッチ4）: 資源重複割当・稼働時間外受診・間隔制約・
+        # 継続担当制約・受診内資源時刻不整合(任意)の独立検証
+        checker_ctxs = build_medical_appointment_sequence_scheduler_contexts(scheduled, sequences, resources)
+        issues.extend(run_issue_rules(
+            domain="MedicalAppointmentSequenceScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         for sid in unscheduled_ids:
             iid = f"unscheduled_sequence_{sid}"

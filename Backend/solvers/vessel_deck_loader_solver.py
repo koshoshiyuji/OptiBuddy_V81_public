@@ -305,7 +305,7 @@ class VesselDeckLoaderSolver:
         Z_sol = msol.get_var_solution(Z)
         Z_val = int(Z_sol.get_value()) if Z_sol is not None else 0
 
-        issues = self._detect_issues(placements, Z_val, deck_width, hazard_margin, issue_statuses)
+        issues = self._detect_issues(placements, Z_val, deck_width, hazard_margin, issue_statuses, containers)
         return placements, Z_val, issues
 
     def _solve_with_cpsat(
@@ -429,7 +429,7 @@ class VesselDeckLoaderSolver:
 
         Z_val = int(Z.value()) if Z.value() is not None else 0
 
-        issues = self._detect_issues(placements, Z_val, deck_width, hazard_margin, issue_statuses)
+        issues = self._detect_issues(placements, Z_val, deck_width, hazard_margin, issue_statuses, containers)
         return placements, Z_val, issues
 
     # ------------------------------------------------------------------
@@ -443,6 +443,7 @@ class VesselDeckLoaderSolver:
         deck_width: int,
         hazard_margin: int,
         issue_statuses: Dict,
+        containers: List[Dict],
     ) -> List[Dict]:
         issues: List[Dict] = []
 
@@ -462,28 +463,18 @@ class VesselDeckLoaderSolver:
                         "relatedContainerIds": [p["container_id"]],
                     })
 
-        # 危険物間隔検証
-        hazardous = [p for p in placements if p["is_hazardous"]]
-        for i in range(len(hazardous)):
-            for j in range(i + 1, len(hazardous)):
-                pi, pj = hazardous[i], hazardous[j]
-                x_sep = (pi["x"] + pi["length"] + hazard_margin <= pj["x"] or
-                         pj["x"] + pj["length"] + hazard_margin <= pi["x"])
-                y_sep = (pi["y"] + pi["width"] + hazard_margin <= pj["y"] or
-                         pj["y"] + pj["width"] + hazard_margin <= pi["y"])
-                if not (x_sep or y_sep):
-                    iid = f"hazard_proximity_{pi['container_id']}_{pj['container_id']}"
-                    if issue_statuses.get(iid) != "ACCEPTED":
-                        issues.append({
-                            "id": iid,
-                            "severity": "CRITICAL",
-                            "title": f"危険物近接: {pi['container_name']} ⇔ {pj['container_name']}",
-                            "message": (
-                                f"危険物コンテナ「{pi['container_name']}」と「{pj['container_name']}」の間に"
-                                f"必要な隔離マージン({hazard_margin})が確保されていません。"
-                            ),
-                            "relatedContainerIds": [pi["container_id"], pj["container_id"]],
-                        })
+        # 解チェッカー（2026-09-01追加、バッチ6・最終）: コンテナ重なり（危険物マージン込み、
+        # 全ペア総当たり）・積み込み順序の支持制約・使用甲板長(Z_val)整合性・コンテナ欠落の
+        # 独立検証。旧「危険物間隔検証」(hazard_proximity、危険物ペアのみ・マージンありの
+        # 場合限定)は、container_overlap_violation（margin=0のケースも含む一般化）で置き換える。
+        from solvers.base.issue_rules import build_vessel_deck_loader_contexts, run_issue_rules
+        checker_ctxs = build_vessel_deck_loader_contexts(
+            placements, Z_val, deck_width, hazard_margin, containers,
+        )
+        issues.extend(run_issue_rules(
+            domain="VesselDeckLoader", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
+
         return issues
 
     # ------------------------------------------------------------------

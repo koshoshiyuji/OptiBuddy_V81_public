@@ -344,7 +344,11 @@ class MedicalAppointmentSchedulerSolver:
         }
 
         # 全件未割当チェック
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue,
+            build_medical_appointment_scheduler_contexts,
+            run_issue_rules,
+        )
         issues: List[Dict] = []
         anomaly = build_full_unassignment_issue(
             assigned_count=assigned_count,
@@ -354,6 +358,12 @@ class MedicalAppointmentSchedulerSolver:
         )
         if anomaly:
             issues.append(anomaly)
+
+        # 解チェッカー（2026-09-01追加、バッチ4）: 資源重複割当・資源タイプ不整合・忌避日違反の独立検証
+        checker_ctxs = build_medical_appointment_scheduler_contexts(assignments, requests, resources)
+        issues.extend(run_issue_rules(
+            domain="MedicalAppointmentScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         # 未割当受診依頼のISSUE生成
         assigned_ids = {a["request_id"] for a in assignments}
@@ -490,6 +500,7 @@ class MedicalAppointmentSchedulerSolver:
         resources: List[Dict] = self.dsl.get("resources", [])
         slots: List[Dict] = self.dsl.get("slots", [])
         config: Dict = self.dsl.get("config", {})
+        issue_statuses: Dict = self.dsl.get("issue_statuses", {})
         time_limit = int(config.get("time_limit_sec", _DEFAULT_TIME_LIMIT))
 
         if not requests:
@@ -679,7 +690,11 @@ class MedicalAppointmentSchedulerSolver:
                                    if assigned_count > 0 else 0.0,
         }
 
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue,
+            build_medical_appointment_scheduler_contexts,
+            run_issue_rules,
+        )
         issues: List[Dict] = []
         anomaly = build_full_unassignment_issue(
             assigned_count=assigned_count,
@@ -689,6 +704,12 @@ class MedicalAppointmentSchedulerSolver:
         )
         if anomaly:
             issues.append(anomaly)
+
+        # 解チェッカー（2026-09-01追加、バッチ4）: 資源重複割当・資源タイプ不整合・忌避日違反の独立検証
+        checker_ctxs = build_medical_appointment_scheduler_contexts(assignments, requests, resources)
+        issues.extend(run_issue_rules(
+            domain="MedicalAppointmentScheduler", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         assigned_ids = {a["request_id"] for a in assignments}
         for req in requests:

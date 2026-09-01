@@ -105,7 +105,7 @@ class TankAllocationPlannerSolver:
                 issues=infeasible_issues,
             )
 
-        detected_issues = self._detect_issues(
+        detected_issues, deferred_check = self._detect_issues(
             solution_data["tank_assignments"],
             solution_data["unassigned_lots"],
             lots, tanks, incompatible_pairs, issue_statuses,
@@ -121,7 +121,7 @@ class TankAllocationPlannerSolver:
         if anomaly:
             all_issues.insert(0, anomaly)
 
-        return self._make_result(
+        result = self._make_result(
             feasible=True,
             tank_assignments=solution_data["tank_assignments"],
             unassigned_lots=solution_data["unassigned_lots"],
@@ -130,6 +130,9 @@ class TankAllocationPlannerSolver:
             metrics=solution_data["metrics"],
             issues=all_issues,
         )
+        if deferred_check is not None:
+            result["_deferred_checks"] = [deferred_check]
+        return result
 
     def _solve_with_cpo(
         self,
@@ -604,45 +607,40 @@ class TankAllocationPlannerSolver:
         tanks: List[Dict],
         incompatible_pairs: List[Tuple[str, str]],
         issue_statuses: Dict[str, str],
-    ) -> List[Dict]:
-        issues = []
-        incompatible_set: Set[Tuple[str, str]] = set()
-        for a, b in incompatible_pairs:
-            incompatible_set.add((a, b))
-            incompatible_set.add((b, a))
+    ) -> Tuple[List[Dict], Optional[Dict]]:
+        issues: List[Dict] = []
 
-        for ta in tank_assignments:
-            tank_lots = ta["lots"]
-            # 相性チェック（解チェッカー）
-            for i in range(len(tank_lots)):
-                for k in range(i + 1, len(tank_lots)):
-                    ci = tank_lots[i]["category"]
-                    ck = tank_lots[k]["category"]
-                    if (ci, ck) in incompatible_set:
-                        iid = f"incompatible_{ta['tank_id']}_{tank_lots[i]['lot_id']}_{tank_lots[k]['lot_id']}"
-                        if issue_statuses.get(iid) != "ACCEPTED":
-                            issues.append({
-                                "id": iid,
-                                "severity": "CRITICAL",
-                                "title": f"相性違反（解チェッカー）: {ta['tank_name']}",
-                                "message": (
-                                    f"タンク「{ta['tank_name']}」に「{ci}」と「{ck}」の"
-                                    f"混載禁止ロットが割り当てられています（ソルバーの抽出バグの疑い）。"
-                                ),
-                                "relatedContainerIds": [],
-                            })
-            # 容量チェック（解チェッカー）
-            cap = ta["capacity"]
-            if ta["total_volume"] > cap + 1e-6:
-                iid = f"capacity_violation_{ta['tank_id']}"
-                if issue_statuses.get(iid) != "ACCEPTED":
-                    from solvers.base.solution_checker import solver_bug_issue
-                    issues.append(solver_bug_issue(
-                        iid,
-                        f"容量超過（解チェッカー）: {ta['tank_name']}",
-                        f"タンク「{ta['tank_name']}」の積載量 {ta['total_volume']:.1f} kL が"
-                        f"容量 {cap:.1f} kL を超えています（ソルバーの抽出バグの疑い）。",
-                    ))
+        # 解チェッカー（DESIGN_2026-07-21、2026-08-30カタログ化）。容量超過は
+        # タンク1件ごとの単純比較でO(n)、常に同期実行。相性違反は同一タンク内の
+        # ロット総当たりでO(n²)相当のため、solvers.base.solution_checker.
+        # run_or_defer()でインスタンス規模に応じた同期/非同期分岐を通す。
+        from solvers.base.issue_rules import (
+            run_issue_rules,
+            build_tank_allocation_capacity_contexts,
+            build_tank_allocation_incompatibility_contexts,
+        )
+        from solvers.base.solution_checker import run_or_defer, COST_O_N2
+
+        cap_ctxs = build_tank_allocation_capacity_contexts(tank_assignments)
+        issues.extend(run_issue_rules(
+            domain="TankAllocationPlanner", contexts=cap_ctxs, issue_statuses=issue_statuses,
+        ))
+
+        full_check = bool(self.dsl.get("_gate2_full_check", False))
+        total_lots = sum(len(ta["lots"]) for ta in tank_assignments)
+        incompat_issues, deferred = run_or_defer(
+            COST_O_N2,
+            total_lots,
+            lambda: run_issue_rules(
+                domain="TankAllocationPlanner",
+                contexts=build_tank_allocation_incompatibility_contexts(tank_assignments, incompatible_pairs),
+                issue_statuses=issue_statuses,
+            ),
+            full_check=full_check,
+            domain="TankAllocationPlanner",
+            check_id="incompatible_pair_violation",
+        )
+        issues.extend(incompat_issues)
 
         for ul in unassigned_lots:
             iid = f"unassigned_lot_{ul['lot_id']}"
@@ -654,7 +652,7 @@ class TankAllocationPlannerSolver:
                     "message": ul.get("reason", "タンクに割り当てられませんでした。"),
                     "relatedContainerIds": [],
                 })
-        return issues
+        return issues, deferred
 
     def _make_result(
         self,

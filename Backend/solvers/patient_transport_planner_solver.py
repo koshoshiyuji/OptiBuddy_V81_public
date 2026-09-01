@@ -754,12 +754,23 @@ class PatientTransportPlannerSolver:
         config: Dict,
         issue_statuses: Dict,
     ) -> List[Dict]:
+        from solvers.base.issue_rules import build_patient_transport_planner_contexts, run_issue_rules
+
         issues: List[Dict] = []
 
         # 全件未割当異常
         anomaly = solution_data.pop("_anomaly_issue", None)
         if anomaly:
             issues.append(anomaly)
+
+        # 解チェッカー（2026-09-01追加、バッチ4）: 車両定員超過・車両フェーズ重複・往復順序制約・
+        # 時間窓逸脱(任意)の独立検証
+        checker_ctxs = build_patient_transport_planner_contexts(
+            solution_data.get("request_results", []), requests, vehicles, config,
+        )
+        issues.extend(run_issue_rules(
+            domain="PatientTransportPlanner", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         unserved = solution_data.get("unserved_requests", [])
         if unserved:

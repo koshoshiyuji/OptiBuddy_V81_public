@@ -368,7 +368,12 @@ class NursingWorkloadBalanceSolver:
     # -------------------------------------------------------------------------
 
     def _detect_issues(self, assignments, nurses, patients, nurse_workloads, issue_statuses):
-        issues = []
+        from solvers.base.issue_rules import build_nursing_workload_balance_contexts, run_issue_rules
+
+        checker_ctxs = build_nursing_workload_balance_contexts(nurse_workloads, nurses)
+        issues = list(run_issue_rules(
+            domain="NursingWorkloadBalance", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
         assigned_patient_ids = {a["patient_id"] for a in assignments}
 
         # 未割り当て患者

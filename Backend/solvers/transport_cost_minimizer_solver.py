@@ -49,7 +49,7 @@ class TransportCostMinimizerSolver:
             )
 
         try:
-            flows, total_cost = self._build_and_solve(factories, stores, costs, config)
+            flows, total_cost, mip_check_issues = self._build_and_solve(factories, stores, costs, config)
         except Exception as e:
             logger.error(f"[TransportCostMinimizer] mdl.solve() 例外: {e}", exc_info=True)
             result = self._make_result(
@@ -77,6 +77,7 @@ class TransportCostMinimizerSolver:
             )
 
         issues = self._detect_issues(factories, stores, costs, flows)
+        issues.extend(mip_check_issues)
         return self._make_result(
             feasible=True,
             flows=flows,
@@ -139,7 +140,7 @@ class TransportCostMinimizerSolver:
         stores: List[Dict],
         costs: List[Dict],
         config: Dict,
-    ) -> Tuple[Optional[List[Dict]], float]:
+    ) -> Tuple[Optional[List[Dict]], float, List[Dict]]:
         from docplex.mp.model import Model
 
         cost_map: Dict[Tuple[str, str], float] = {}
@@ -188,7 +189,25 @@ class TransportCostMinimizerSolver:
 
         sol = solve_with_ce_fallback(mdl, log_output=False)
         if sol is None:
-            return None, 0.0
+            return None, 0.0, []
+
+        # 2026-08-30追加: 解チェッカー（DESIGN_2026-07-21 9節、StoreSiteと同一パターン）。
+        # docplex.mp（MIP）はSolveSolution.is_valid_solution()で「変数の型・範囲と
+        # 全制約の充足」を一括判定できるネイティブ機能を持つ。既存の解オブジェクトへの
+        # 評価であり追加探索を伴わないためコストは軽い（常に同期実行）。
+        mip_check_issues: List[Dict] = []
+        try:
+            if not sol.is_valid_solution(tolerance=1e-6):
+                from solvers.base.solution_checker import solver_bug_issue
+                mip_check_issues.append(solver_bug_issue(
+                    "mip_solution_invalid",
+                    "MIPソルバー解の整合性エラー",
+                    "docplex.mp の is_valid_solution() が、返ってきた解の制約充足性に"
+                    "疑義があることを検出しました。解の抽出・変換コードにバグがある"
+                    "可能性があります。",
+                ))
+        except Exception as e:
+            logger.warning(f"[TransportCostMinimizer] is_valid_solution() 呼び出しに失敗（検証スキップ）: {e}")
 
         flows: List[Dict] = []
         total_cost = 0.0
@@ -213,7 +232,7 @@ class TransportCostMinimizerSolver:
                     "line_cost":    round(line_cost, 2),
                 })
 
-        return flows, round(total_cost, 2)
+        return flows, round(total_cost, 2), mip_check_issues
 
     def _detect_issues(
         self,
@@ -236,28 +255,16 @@ class TransportCostMinimizerSolver:
         if anomaly:
             issues.append(anomaly)
 
-        # 需要未充足チェック（ソフト検証）
-        from solvers.base.issue_rules import run_issue_rules, ISSUE_RULES
-        if "TransportCostMinimizer" in ISSUE_RULES:
-            store_flow_map: Dict[str, float] = {}
-            for fl in flows:
-                store_flow_map[fl["store_id"]] = store_flow_map.get(fl["store_id"], 0.0) + fl["amount"]
-            for s in stores:
-                sid = str(s["id"])
-                demand = float(s.get("demand", 0))
-                delivered = store_flow_map.get(sid, 0.0)
-                if demand - delivered > 1e-6:
-                    issues.append({
-                        "id":       f"demand_unmet_{sid}",
-                        "severity": "CRITICAL",
-                        "category": "SOLVER",
-                        "title":    f"需要未充足: {s.get('name', sid)}",
-                        "message":  (
-                            f"店舗「{s.get('name', sid)}」の需要 {demand:.1f} に対し、"
-                            f"実際の配送量は {delivered:.1f} でした（{demand - delivered:.1f} 不足）。"
-                        ),
-                        "relatedContainerIds": [],
-                    })
+        # 解チェッカー（DESIGN_2026-07-21、2026-08-30カタログ化）。需要未充足
+        # （demand_unmet）・供給上限超過（supply_exceeded）はいずれもMIPモデル側の
+        # ハード制約だが、返ってきたflowsから独立に再計算して突き合わせる。
+        # いずれもO(n)（工場数・店舗数に比例）のため常に同期実行。
+        from solvers.base.issue_rules import run_issue_rules, build_transport_cost_minimizer_contexts
+        issue_statuses = self.dsl.get("issue_statuses", {})
+        checker_ctxs = build_transport_cost_minimizer_contexts(factories, stores, flows)
+        issues.extend(run_issue_rules(
+            domain="TransportCostMinimizer", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         return issues
 

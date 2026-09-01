@@ -94,7 +94,9 @@ class CarSequencingSolver:
         # importエラーにならないようにするため。CPLEXの無いOSS環境でCP-SAT
         # フォールバックを使う、というのが本対応の目的そのものなので、ここで
         # 無条件にdocplex.cp.model.CpoModelをimportしてしまうと本末転倒になる）。
-        from solvers.base.issue_rules import build_full_unassignment_issue
+        from solvers.base.issue_rules import (
+            build_full_unassignment_issue, build_car_sequencing_contexts, run_issue_rules,
+        )
 
         car_types: List[Dict] = self.dsl.get("car_types", [])
         options: List[Dict] = self.dsl.get("options", [])
@@ -274,6 +276,12 @@ class CarSequencingSolver:
         issues = []
         if unassigned_anomaly:
             issues.insert(0, unassigned_anomaly)
+
+        # 解チェッカー（2026-09-01追加、バッチ3）: 車種別生産台数の独立検証
+        checker_ctxs = build_car_sequencing_contexts(sequence_result, car_types)
+        issues.extend(run_issue_rules(
+            domain="CarSequencing", contexts=checker_ctxs, issue_statuses=issue_statuses,
+        ))
 
         if total_opt_viol > 0:
             worst = max(violations_detail, key=lambda x: x["violation_count"])
