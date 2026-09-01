@@ -2,21 +2,27 @@
 Backend/solvers/base/test_ce_limit_mip_fallback.py
 
 ce_limit_mip_fallback.py（CPLEX MIP無料版の上限→HiGHSフォールバック）の
-ユニットテスト。実際のdocplex.mp（cplexパッケージ）とhighspyを使う
-（CP Optimizerと違い、docplex.mp+cplexパッケージの組み合わせはpip環境だけで
-実際にソルブまで動くため、モックなしで実挙動を検証できる）。
+ユニットテスト。実際のdocplex.mp（cplexパッケージ）とortools（内蔵HiGHS
+バックエンド、model_builder.Solver("HIGHS")）を使う（CP Optimizerと違い、
+docplex.mp+cplexパッケージの組み合わせはpip環境だけで実際にソルブまで
+動くため、モックなしで実挙動を検証できる）。
+
+2026-09-01: フォールバック先を単体`highspy`パッケージからortools内蔵の
+HiGHSバックエンドへ切替（同一プロセス内で単体highspyとortools(CP-SAT等)を
+両方読み込むとネイティブ側のシンボル衝突/segfaultを起こすことが判明した
+ため。ce_limit_mip_fallback.py冒頭の【2026-09-01の変更】参照）。
 
 実行方法:
     cd Backend
     python -m pytest solvers/base/test_ce_limit_mip_fallback.py -v
 
-前提: `pip install docplex cplex highspy` が必要（無料版で十分）。
+前提: `pip install docplex cplex ortools` が必要（cplexは無料版で十分）。
 """
 
 import pytest
 
 docplex_mp = pytest.importorskip("docplex.mp.model")
-pytest.importorskip("highspy")
+pytest.importorskip("ortools.linear_solver.python.model_builder")
 
 from docplex.mp.model import Model
 
@@ -79,10 +85,13 @@ def test_oversized_model_with_hyphenated_names_recovers_correct_values():
 
     2026-08-09、MysteryShopperSchedulerで実際に発生した不具合の再現テスト:
     変数名が "x_ST001_v1_S001_2026-08-04" のようにハイフンを含む場合、
-    export_as_lp()がCPLEXのLPライターを経由する際に名前をサニタイズ/別名化する
-    ことがあり、名前ベースの解復元（旧実装）だと該当変数の値が0のまま欠落する。
-    HiGHS自身は正しい最適解（目的関数値）を見つけているにもかかわらず、
-    sol.get_value(var)が誤って0を返す、というサイレントな不具合だった。
+    （当時の実装の）export_as_lp()がCPLEXのLPライターを経由する際に名前を
+    サニタイズ/別名化することがあり、名前ベースの解復元だと該当変数の値が
+    0のまま欠落していた。HiGHS自身は正しい最適解（目的関数値）を見つけて
+    いるにもかかわらず、sol.get_value(var)が誤って0を返す、というサイレント
+    な不具合だった。2026-09-01のMPS(free format)への切替後は、この種の
+    名前サニタイズが起きないことを前提に、名前ベースの対応を主経路として
+    使っている（このテストはその前提が引き続き成立していることの確認）。
     """
     mdl = Model(name="hyphenated")
     xs = [
@@ -97,9 +106,10 @@ def test_oversized_model_with_hyphenated_names_recovers_correct_values():
     assert sol is not None
     assert sol.get_objective_value() == 500
     total = sum(sol.get_value(x) for x in xs)
-    # 旧実装のバグでは、名前不一致により var_value_map からハイフン付き変数が
-    # 欠落し total == 0 になっていた。位置ベース対応により、目的関数値と
-    # 個々の変数値抽出の合計が一致することを確認する。
+    # 旧実装（highspy+LP形式）のバグでは、名前不一致により var_value_map から
+    # ハイフン付き変数が欠落し total == 0 になっていた。MPS形式+名前ベース
+    # 対応（2026-09-01〜）により、目的関数値と個々の変数値抽出の合計が
+    # 一致することを確認する。
     assert total == 500
 
 
@@ -114,3 +124,50 @@ def test_non_ce_limit_exceptions_are_not_swallowed():
 
     with pytest.raises(ValueError, match="CE上限とは無関係"):
         solve_with_ce_fallback(_FakeModel(), log_output=False)
+
+
+def test_repeated_fallback_calls_on_same_model_with_new_variables_added_between_calls():
+    """
+    2026-08-31、MysteryShopperSchedulerで実際に発生した不具合の再現テスト:
+    同一のmdlに対してsolve_with_ce_fallback()を複数回呼び、呼び出しの間に
+    新しい制約・新しい変数を追加するケース（lexicographic多段階solveと同じ
+    使い方）でも、2回目以降の呼び出しで正しい値に復元されること。
+
+    背景: 当時の実装（highspy+LP形式、位置ベース優先・名前ベースに
+    フォールバック）の変数値復元は、docplexのiter_variables()の順序とHiGHSが
+    読み込んだLPファイルの列順序が一致している前提に依存していた。この前提が
+    崩れると「値が消える」のではなく「別の変数の値と取り違える」形の
+    サイレントな不具合になり、実機のMysteryShopperSchedulerで訪問枠の
+    重複割当という制約違反が検知されずに返っていた。2026-08-31の修正で、
+    SolveSolution構築後にis_valid_solution()で自己検証するようにした。
+    2026-09-01にフォールバック先自体をortools内蔵HiGHS+MPS形式+名前ベース
+    対応へ切り替えた後も、この自己検証は変わらず有効な安全網として残して
+    いる。このテストは、複数回のフォールバック呼び出し（間でモデルが変化する
+    ケース）でも実際に制約を満たす解が返ることを直接確認する。
+    """
+    mdl = Model(name="repeated_fallback")
+    xs = [mdl.binary_var(name=f"x{i}") for i in range(1100)]
+    mdl.add_constraint(mdl.sum(xs) <= 500)
+    mdl.maximize(mdl.sum(xs))
+
+    sol1 = solve_with_ce_fallback(mdl, log_output=False)
+    assert sol1 is not None
+    best = int(round(sol1.get_objective_value()))
+    assert best == 500
+
+    # Step2: MysteryShopperSchedulerと同じパターン（充足数を下限に固定しつつ、
+    # 新しい変数を追加してから別目的で再度フォールバックさせる）。
+    mdl.add_constraint(mdl.sum(xs) >= best, ctname="lock")
+    slack = mdl.integer_var(lb=0, ub=len(xs), name="slack")
+    mdl.add_constraint(slack >= mdl.sum(xs) - best)
+    mdl.minimize(slack)
+
+    sol2 = solve_with_ce_fallback(mdl, log_output=False)
+    assert sol2 is not None
+
+    # 制約充足を直接検証する: 割り当てられたxの合計はbest以上、
+    # slackはその超過分と一致していなければならない。
+    total_x = sum(sol2.get_value(x) for x in xs)
+    assert total_x >= best
+    assert sol2.get_value(slack) == total_x - best
+    assert sol2.is_valid_solution(tolerance=1e-6)
