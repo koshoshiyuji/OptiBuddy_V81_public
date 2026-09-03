@@ -34,6 +34,7 @@ import py_compile
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -754,6 +755,36 @@ def _check_optional_interval_absent_value(code: str, path: str) -> list[str]:
             f"（第2引数なしのstart_of(var)を使うこと）。"
         )
     return warnings
+
+
+# ─────────────────────────────────────────────────────────────
+# Gate2静的チェック（blocking）: Tier1 — MIP解の自己検証（is_valid_solution）
+#
+# 2026-09-01追加（Koshoshi合意）: MIPドメイン（docplex.mp採用）で、solve()後に
+# is_valid_solution()による自己検証をしているかを検出する。MIPソルバーの実装
+# によっては、solve()自体は成功してもソルバー内部のバグや数値誤差により
+# 制約違反のある解を返すことがまれにある（実装例: solvers/store_site_solver.py）。
+# required_gap_warningsと同じ扱い（blocking・force-apply可・非humanize）。
+# ─────────────────────────────────────────────────────────────
+
+def _check_mip_self_verification(code: str, path: str) -> list[str]:
+    """
+    docplex.mp（MIP）採用ドメインで、is_valid_solution()による解の自己検証が
+    見当たらない場合に警告する。ヒューリスティックな検出（他の_check_*関数と
+    同じ粒度）で、importの有無と呼び出し文字列の有無だけを見る。
+    """
+    scan_code = _strip_line_comments(code)
+    if not _DOCPLEX_MP_IMPORT_RE.search(scan_code):
+        return []
+    if "is_valid_solution(" in scan_code:
+        return []
+    return [
+        f"{path}: docplex.mp（MIP）を使用していますが、is_valid_solution()による解の"
+        f"自己検証が見当たりません。MIPソルバーの実装によっては、solve()自体は成功しても"
+        f"制約違反のある解をまれに返すことがあります。solve()直後に "
+        f"sol.is_valid_solution(tolerance=1e-6) を呼び出し、Falseの場合はissueとして"
+        f"報告するようにしてください（実装例: solvers/store_site_solver.py）。"
+    ]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1727,6 +1758,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
     big_m_warnings = []
     absent_value_warnings = []
     missing_in_dsl_for_solver_warnings = []
+    mip_self_check_warnings = []
     solver_by_snake:    dict[str, tuple[str, str]] = {}
     converter_by_snake: dict[str, tuple[str, str]] = {}
     scenarios_by_snake: dict[str, list] = {}
@@ -1751,6 +1783,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             warnings.extend(_check_no_overlap_without_sequence_var(code, path))
             big_m_warnings.extend(_check_big_m_objective(code, path))
             absent_value_warnings.extend(_check_optional_interval_absent_value(code, path))
+            mip_self_check_warnings.extend(_check_mip_self_verification(code, path))
 
         elif path.endswith("_converter.py") and not path.endswith("_ui_converter.py"):
             snake = Path(path).stem[: -len("_converter")]
@@ -1841,6 +1874,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
         "big_m_warnings": big_m_warnings,
         "absent_value_warnings": absent_value_warnings,
         "missing_in_dsl_for_solver_warnings": missing_in_dsl_for_solver_warnings,
+        "mip_self_check_warnings": mip_self_check_warnings,
     }
 
 
@@ -3067,6 +3101,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         big_m_warnings = _scan_result["big_m_warnings"]
         absent_value_warnings = _scan_result["absent_value_warnings"]
         missing_in_dsl_for_solver_warnings = _scan_result["missing_in_dsl_for_solver_warnings"]
+        mip_self_check_warnings = _scan_result["mip_self_check_warnings"]
     except Exception as e:
         logger.warning(f"[gate2_checks] 静的チェックをスキップ（実行エラー）: {e}", exc_info=True)
         sanitizer_warnings = []
@@ -3074,10 +3109,12 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         big_m_warnings = []
         absent_value_warnings = []
         missing_in_dsl_for_solver_warnings = []
+        mip_self_check_warnings = []
 
     required_gap_warnings: list[str] = []
     optional_gap_summary: list[str] = []
     coverage: dict | None = None
+
     _emit_stage("verifying_hearing_coverage")
     try:
         artifacts = extract_domain_artifacts_from_diffs(diffs, snake)
@@ -3299,6 +3336,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（数値のざっくり近似に関する指摘）{w}" for w in big_m_humanized]
         + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_humanized]
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
+        + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
     advisory_questions = (
         [f"（参考情報）{w}" for w in static_humanized]
@@ -3318,7 +3356,8 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         f"optional_gap_summary={len(optional_gap_summary)}件, dynamic_warnings={len(dynamic_warnings)}件, "
         f"dynamic_exception_warnings={len(dynamic_exception_warnings)}件, "
         f"tech_conformance={len(tech_conformance_warnings)}件, "
-        f"i18n_coverage={len(i18n_coverage_warnings)}件 "
+        f"i18n_coverage={len(i18n_coverage_warnings)}件, "
+        f"mip_self_check={len(mip_self_check_warnings)}件 "
         f"→ blocking={len(blocking_questions)}件, advisory={len(advisory_questions)}件"
     )
     return {

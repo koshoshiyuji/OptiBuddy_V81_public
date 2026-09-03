@@ -104,6 +104,10 @@ const CATEGORY_GUIDANCE_PREFIXES: [string, string][] = [
   ['（入力項目の反映漏れの疑い）', 'categoryGuidance_unusedInSolver'],
   ['（数値のざっくり近似に関する指摘）', 'categoryGuidance_bigM'],
   ['（特殊な条件の扱いに矛盾の疑い）', 'categoryGuidance_absentValue'],
+  // 2026-09-01追加（Koshoshi合意）: MIPドメインでis_valid_solution()による
+  // 自己検証が未実装の場合のTier1指摘（domain_generator.py側の
+  // _check_mip_self_verification()と対になる）。
+  ['（解の自己検証が未実装の疑い）', 'categoryGuidance_mipSelfCheck'],
 ];
 
 function getPresentCategoryGuidanceKeys(job: JobState | null | undefined): string[] {
