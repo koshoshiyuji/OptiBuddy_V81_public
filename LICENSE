@@ -3,61 +3,59 @@ Business Source License 1.1
 
 Parameters
 
-Licensor:             Koshoshi
+Licensor:             Yuji Ishii
 Licensed Work:        OptiBuddy（本リポジトリに含まれるソースコード一式）
-                       The Licensed Work is (c) 2026 Koshoshi
-Additional Use Grant:  あなたは、以下に列挙する無償ドメイン（以下「無償ドメイン」）に
-                       ついてのみ、Licensed Workを自らの最適化業務のために本番利用する
-                       ことができます。これには、自社インフラ上での稼働、および第三者
-                       （SI/コンサルティングパートナーを含む）があなたのために個別に
-                       導入・構築する場合を含みます。
+                       The Licensed Work is (c) 2026 Yuji Ishii
+Additional Use Grant:  あなたは、Licensed Workを、対象ドメインの種類を問わず、
+                       自らの最適化業務のために本番利用することができます。これには、自社
+                       インフラ上での稼働のほか、ご自身で定義・カスタマイズしたドメインの
+                       利用、および第三者（SI/コンサルティングパートナーを含む）があなた
+                       のために個別に導入・構築・連携作業を行う場合を含みます。
 
-                       無償ドメイン: yard, truck_dispatcher, nurse_shift_weekly_cap,
-                       car_sequencing, meeting_room, store_site,
-                       line_changeover_scheduler
+                       一方、IT/コンサルティングサービスを生業とする第三者が、Licensed
+                       Workを用いた対価を伴うサービス——第三者（複数の顧客）に対して、
+                       ドメイン定義・カスタムドメイン構築の代行、ホスティング・マネージド
+                       運用、業務システムとの連携・統合作業などを反復的・業として提供する
+                       こと——を行う場合は、事前にLicensorと相談の上、別途の商用ライセンス
+                       契約を締結する必要があります。契約条件は個別の実態に応じて協議する
+                       ものとし、本ライセンスではあらかじめ定めません。
 
-                       上記の無償ドメインに含まれないドメインについては、非本番利用
-                       （開発・検証・デモ・評価・教育目的での利用を含む）は自由に行えます
-                       が、本番利用にはLicensorとの別途の商用ライセンス契約が必要です。
+                       本Additional Use Grantに基づく利用（無償・有償を問わず）について、
+                       Licensorは動作の完全性・正確性その他いかなる保証も行わず、当該利用
+                       に起因または関連して生じたいかなる損害についても補償・賠償の責任を
+                       負いません。この点は本License末尾のTermsに定める無保証条項と同一の
+                       効力を持つことを、ここで重ねて明示します。
 
-                       いずれのドメインについても、Licensed Workの機能に実質的な価値の
-                       大部分を依拠するホスティング型・マネージド型のサービスを、Licensor
-                       との別途の商用契約なしに第三者へ提供すること（すなわち、Licensed
-                       Workを転用してLicensorと競合するホスティング事業を行うこと）は
-                       許可されません。
-
-                       「本番利用」の定義及び具体例については、本リポジトリに同梱の
-                       LICENSE-FAQ.mdを参照してください。同FAQは理解を助けるための参考
-                       情報であり、本ライセンス文書の一部を構成するものではありません。
-                       解釈に疑義が生じた場合は、本Additional Use Grantの文言が優先し
-                       ます。
+                       本条項に関するお問い合わせは、下記までご連絡ください:
+                       koshoshi@gmail.com
 
                        You may make production use of the Licensed Work for your own
-                       optimization operations only with respect to the following Free
-                       Domains, including deployment on your own infrastructure and
-                       deployment carried out on your behalf by a third party (including
-                       SI/consulting partners):
+                       optimization operations, regardless of domain, including deployment
+                       on your own infrastructure, use of domains you define or customize
+                       yourself, and deployment or integration work carried out on your
+                       behalf by a third party (including SI/consulting partners) for your
+                       specific implementation.
 
-                       Free Domains: yard, truck_dispatcher, nurse_shift_weekly_cap,
-                       car_sequencing, meeting_room, store_site,
-                       line_changeover_scheduler
+                       However, if a third party in the business of providing IT/consulting
+                       services offers, as a recurring commercial service to multiple
+                       customers, paid services built on the Licensed Work -- including but
+                       not limited to building or customizing domains on a customer's
+                       behalf, hosting or managed operation, or integration with a
+                       customer's business systems -- that party must contact Licensor in
+                       advance and enter into a separate commercial license agreement.
+                       Contract terms will be negotiated based on the specific
+                       circumstances and are not predetermined by this License.
 
-                       For any domain not listed above, non-production use (including
-                       development, testing, demonstration, evaluation, and educational
-                       use) remains freely permitted, but production use requires a
-                       separate commercial license from Licensor.
+                       Regardless of whether use under this Additional Use Grant is free or
+                       under a separate commercial agreement, Licensor makes no warranty as
+                       to the completeness or accuracy of the Licensed Work's operation and
+                       disclaims all liability for any damages arising from or related to
+                       such use. This restates, and does not limit, the warranty disclaimer
+                       in the Terms at the end of this License.
 
-                       Regardless of domain, you may not offer the Licensed Work, or any
-                       product or service whose value derives substantially from the
-                       Licensed Work's functionality, to third parties as a hosted or
-                       managed service in competition with Licensor's own hosted
-                       offering, without a separate commercial license from Licensor.
+                       For inquiries regarding this Additional Use Grant, contact:
+                       koshoshi@gmail.com
 
-                       For the definition and examples of "production use," see
-                       LICENSE-FAQ.md included in this repository. That FAQ is provided
-                       for informational purposes only and does not form part of this
-                       License; in case of any conflict, the text of this Additional Use
-                       Grant controls.
 
 Change Date:           2030年8月31日（GitHub公開予定日2026年8月31日から4年後として確定。
                        実際のpush日が数日前後した場合も、本License末尾のTerms条項にある
