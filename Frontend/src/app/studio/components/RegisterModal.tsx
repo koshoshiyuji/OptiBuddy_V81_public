@@ -184,6 +184,11 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const [checkingName, setCheckingName]     = useState(false);
   const [reconnecting, setReconnecting]     = useState(false);
   const [confirming, setConfirming]         = useState(false);
+  // 2026-09-07追加（Koshoshi合意）: 動的検証（実ソルブ）由来の指摘について、
+  // 人間が実際に確認した上で「実装バグではない」と明示判断した場合に、
+  // force_applyとは別枠で正式に登録を通すためのチェックボックス状態。
+  // Backend/app.pyのdynamic_override＋理由必須（answers）に対応する。
+  const [dynamicOverrideChecked, setDynamicOverrideChecked] = useState(false);
   const [interrupting, setInterrupting]     = useState(false);
   const [answerText, setAnswerText]         = useState('');
   const [agentAnswerText, setAgentAnswerText] = useState('');
@@ -397,7 +402,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   // （実機で発生：「結局ずっとこの画面に戻ってしまい終わらない」）。バックエンドには
   // 元々force_apply（再検証せず今の内容のまま登録する、人間が誤検知と判断した場合の
   // 脱出口）が用意されていたが、UIに出していなかったため使えなかった。
-  const handleConfirm = async (forceApply: boolean = false) => {
+  const handleConfirm = async (forceApply: boolean = false, dynamicOverride: boolean = false) => {
     if (!job) return;
     setConfirming(true);
     try {
@@ -411,6 +416,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           answers: answerText,
           job_id: jobId,
           force_apply: forceApply,
+          dynamic_override: dynamicOverride,
         }),
       });
       const data = await res.json();
@@ -810,22 +816,49 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
             </div>
 
             {hasBlockingDynamicIssue(job) && (
-              <div style={{ fontSize: '10px', color: '#ff5555', marginBottom: '4px', lineHeight: 1.6 }}>
-                {t('registerModal.forceApplyBlockedNote')}
+              <div style={{ ...card, borderColor: '#ff5555' }}>
+                <div style={{ fontSize: '10px', color: '#ff5555', marginBottom: '8px', lineHeight: 1.6 }}>
+                  {t('registerModal.forceApplyBlockedNote')}
+                </div>
+                {/* 2026-09-07追加（Koshoshi合意）: 「動的検証由来の指摘は無条件に
+                    force_applyで握りつぶせない」という原則は変えないが、人間が
+                    実際にコード・シナリオを確認した上で「実装バグではない」と
+                    明示判断した場合に正式に登録を通すルートが無かった
+                    （実務上のギャップ、2026-09-07実機テストで判明）。
+                    上のメモ欄への理由記入とこのチェックの両方が揃わないと
+                    ボタンは有効化しない。 */}
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px',
+                                fontSize: '11px', color: '#ccc', lineHeight: 1.6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={dynamicOverrideChecked}
+                    onChange={e => setDynamicOverrideChecked(e.target.checked)}
+                    style={{ marginTop: '2px' }} />
+                  {t('registerModal.dynamicOverrideCheckboxLabel')}
+                </label>
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
               <button onClick={handleCancel} style={btnGhost}>{t('registerModal.dealLater')}</button>
-              <button onClick={() => handleConfirm(true)}
-                disabled={confirming || hasBlockingDynamicIssue(job)}
-                style={{ ...btnGhost, opacity: hasBlockingDynamicIssue(job) ? 0.4 : 1,
-                         cursor: hasBlockingDynamicIssue(job) ? 'not-allowed' : undefined }}
-                title={hasBlockingDynamicIssue(job)
-                  ? t('registerModal.forceApplyBlockedHint')
-                  : t('registerModal.forceApplyHint')}>
-                {t('registerModal.forceApply')}
-              </button>
+              {hasBlockingDynamicIssue(job) ? (
+                <button onClick={() => handleConfirm(true, true)}
+                  disabled={confirming || !dynamicOverrideChecked || !answerText.trim()}
+                  style={{ ...btnGhost,
+                           opacity: (!dynamicOverrideChecked || !answerText.trim()) ? 0.4 : 1,
+                           cursor: (!dynamicOverrideChecked || !answerText.trim()) ? 'not-allowed' : undefined,
+                           borderColor: '#ff5555', color: '#ff8888' }}
+                  title={!answerText.trim()
+                    ? t('registerModal.dynamicOverrideReasonRequired')
+                    : t('registerModal.dynamicOverrideHint')}>
+                  {t('registerModal.dynamicOverrideButton')}
+                </button>
+              ) : (
+                <button onClick={() => handleConfirm(true)}
+                  disabled={confirming}
+                  style={btnGhost}
+                  title={t('registerModal.forceApplyHint')}>
+                  {t('registerModal.forceApply')}
+                </button>
+              )}
               {/* 2026-07-17: loop_exhausted（1ラウンド+Gate2再検証を終えた最終ゲート）
                   では、新しいエージェントラウンドを開始する「続行」は出さない
                   （ユーザー要望: ループは1回で終わらせる）。 */}

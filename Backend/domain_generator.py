@@ -1537,6 +1537,43 @@ _FINDING_CATEGORY_HINTS: dict[str, str] = {
 }
 
 
+def _humanize_call_with_retry(
+    system: str, user: str, expected_count: int, log_prefix: str,
+    model, max_tokens: int,
+) -> list[str] | None:
+    """
+    2026-09-07追加（Koshoshi合意）: 言い換え失敗時、従来は1回失敗しただけで
+    無言で原文（内部用語混じりの生の指摘）を業務担当者にそのまま見せていた
+    （フォールバックが起きたこと自体がログのwarningレベルでしか分からず、
+    実機で気付きにくかった。実際に2026-09-07のReviewDocument登録で、Gate2
+    lexicographic機構チェックの指摘がこのフォールバックを経由して生の技術
+    文言のまま画面に出た実績をDBログで確認済み）。ここでは同じ呼び出しを
+    最大2回試し、2回とも失敗した場合のみフォールバックとし、その場合は
+    warningではなくerrorでログに残す（表示内容自体は変わらないが、運用側が
+    失敗頻度を把握できるようにするため）。
+    """
+    from llm.llm_client import call_llm, extract_json
+
+    last_error = "不明なエラー"
+    for attempt in (1, 2):
+        try:
+            raw = call_llm(
+                [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                model=model, max_tokens=max_tokens, temperature=0,
+            )
+            result = extract_json(raw)
+            items = result.get("items", [])
+            if isinstance(items, list) and len(items) == expected_count:
+                return [str(x) for x in items]
+            last_error = f"件数不一致（出力{len(items)}件 / 入力{expected_count}件）"
+        except Exception as e:
+            last_error = str(e)
+        if attempt == 1:
+            logger.warning(f"[{log_prefix}] 1回目失敗（{last_error}）、リトライします")
+    logger.error(f"[{log_prefix}] 2回とも失敗（{last_error}）、原文のまま表示にフォールバック")
+    return None
+
+
 def humanize_technical_findings(
     findings: list[str], domain_name: str, category: str = "generic"
 ) -> list[str]:
@@ -1578,7 +1615,19 @@ def humanize_technical_findings(
         "絶対に削らずそのまま残してください（要約ではなく言い換えです）。"
         "元の指摘が持っている情報（対象・件数・深刻さ等）を削ったり意味を"
         "変えたりしてはいけません。言い換え文の最後には必ず一文、"
-        "「次に何を確認すればよいか」を具体的に明記してください。\n\n"
+        "「次に何を確認すればよいか」を具体的に明記してください。ただしこの"
+        "『次に確認すべきこと』は、プログラミングやCP最適化の知識がない業務"
+        "担当者自身が実際に答えられる内容にしてください（例:「この方針のまま"
+        "登録を進めてよいか」「ヒアリングのこの理解で合っているか」）。"
+        "『開発担当者に確認してください』『コードを見てください』のように、"
+        "業務担当者では実行できない依頼で締めくくってはいけません。\n\n"
+        "（2026-09-07追記、Koshoshi合意）『Gate2』『lexicographic』『big_m』"
+        "『Big-M』『interval_var』『presence_of』『coverage_rate』"
+        "『force_apply』『job_id』など、CP最適化やこのシステムの内部実装を"
+        "知らないと意味が分からない専門用語・識別子は、たとえ元の指摘に"
+        "含まれていても言い換え後の文には一切出さないでください（ファイル"
+        "パスやスタックトレースと同じく、業務担当者の判断材料にならない生の"
+        "プログラム表現として扱います）。\n\n"
         "（2026-08-30追記、Koshoshiの実機フィードバックを受け追加）言い換え文の"
         "さらに後ろに、改行を挟んで必ず【推奨】ブロックを1つ追加してください。"
         "【推奨】には、この指摘が実際に業務や解の正しさに影響する可能性が"
@@ -1606,21 +1655,8 @@ def humanize_technical_findings(
         f"items の件数は必ず入力と同じ{len(findings)}件、順序も入力と一致させること。"
         "各要素は必ず本文＋改行＋【推奨】ブロックの2部構成にすること。"
     )
-    try:
-        raw = call_llm(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=fast_model(), max_tokens=2000, temperature=0,
-        )
-        result = extract_json(raw)
-        items = result.get("items", [])
-        if isinstance(items, list) and len(items) == len(findings):
-            return [str(x) for x in items]
-        logger.warning(
-            f"[humanize_findings] 件数不一致（出力{len(items)}件 / 入力{len(findings)}件）のため原文のまま表示"
-        )
-    except Exception as e:
-        logger.warning(f"[humanize_findings] 言い換え失敗、原文のまま表示: {e}")
-    return findings
+    items = _humanize_call_with_retry(system, user, len(findings), "humanize_findings", fast_model(), 2000)
+    return items if items is not None else findings
 
 
 def _humanize_exception_findings(findings: list[str], domain_name: str) -> list[str]:
@@ -1662,7 +1698,18 @@ def _humanize_exception_findings(findings: list[str], domain_name: str) -> list[
         "必ず日本語で明記し、また元の指摘に含まれるPythonの例外の種類"
         "（例: KeyError, TypeError等）は、プログラムを読める担当者が原因箇所を"
         "特定する手がかりになるため、削らずそのまま残してください。対象・件数と"
-        "いった情報も削らないでください。"
+        "いった情報も削らないでください。また、言い換え文の最後は、業務担当者"
+        "自身が実際に行える判断で締めくくってください（例:「このまま登録を"
+        "保留し、修正を待つことをお勧めします」「今回は登録を見送ることを"
+        "お勧めします」）。『開発担当者に連絡してください』『コードを確認して"
+        "ください』のように、業務担当者では実行できない依頼を締めの行動として"
+        "指示しないでください（実際の修正対応は別途行われるため、ここでは"
+        "登録を進めるか保留するかの判断材料だけを伝えれば十分です）。\n"
+        "（2026-09-07追記、Koshoshi合意）『Gate2』『lexicographic』『big_m』"
+        "『Big-M』『interval_var』『presence_of』『coverage_rate』"
+        "『force_apply』『job_id』など、CP最適化やこのシステムの内部実装を"
+        "知らないと意味が分からない専門用語・識別子は、たとえ元の指摘に"
+        "含まれていても言い換え後の文には一切出さないでください。"
     )
     user = (
         f"## 業務名\n{domain_name}\n\n## 言い換え対象の指摘事項（{len(findings)}件、"
@@ -1670,21 +1717,64 @@ def _humanize_exception_findings(findings: list[str], domain_name: str) -> list[
         '出力は次のJSON形式のみ: {"items": ["言い換え後の文1", "言い換え後の文2", ...]}\n'
         f"items の件数は必ず入力と同じ{len(findings)}件、順序も入力と一致させること。"
     )
-    try:
-        raw = call_llm(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=fast_model(), max_tokens=2000, temperature=0,
-        )
-        result = extract_json(raw)
-        items = result.get("items", [])
-        if isinstance(items, list) and len(items) == len(findings):
-            return [str(x) for x in items]
-        logger.warning(
-            f"[humanize_exception_findings] 件数不一致（出力{len(items)}件 / 入力{len(findings)}件）のため原文のまま表示"
-        )
-    except Exception as e:
-        logger.warning(f"[humanize_exception_findings] 言い換え失敗、原文のまま表示: {e}")
-    return findings
+    items = _humanize_call_with_retry(system, user, len(findings), "humanize_exception_findings", fast_model(), 2000)
+    return items if items is not None else findings
+
+
+def _humanize_required_gap_findings(findings: list[str], domain_name: str) -> list[str]:
+    """
+    2026-09-06追加（Koshoshi合意）: ヒアリング必須項目が実装に反映されていない
+    （required_gap）指摘は、他のblockingカテゴリと同じく「事実を薄めない」ために
+    従来humanize_technical_findings()を通していなかった。しかしその結果、
+    ファイルパス・変数名・コード内部の表現がそのままユーザーに出てしまい、
+    業務担当者には対応不能な文面になっていた（2026-09-06 ReviewDocumentテストで
+    実機確認、Koshoshiフィードバック）。
+
+    dynamic_exception系（_humanize_exception_findings）と同様、事実（ヒアリング
+    節番号・要求内容・実装の実際の挙動）を変えないことをシステムプロンプトで
+    固定した上で、コード内部の固有名詞（ファイル名・変数名・関数名）だけを
+    機械的に取り除く、限定的な言い換えを行う。結論を最初の1文で述べ、全体を
+    2文以内に収めることを厳守させる。また、ユーザーが実行できない依頼
+    （「コードを開いて確認してください」等）で締めくくらないことを明記する。
+    """
+    if not findings:
+        return []
+    from llm.llm_client import call_llm, extract_json, fast_model
+
+    items_block = "\n".join(f"{i + 1}. {f}" for i, f in enumerate(findings))
+    system = (
+        "あなたはB2B業務システムの登録確認画面に表示する指摘事項を、"
+        "プログラミングの知識がない業務担当者にも読んで判断できる平易な"
+        "日本語に言い換えるアシスタントです。ここで渡される指摘は、"
+        "ヒアリングで確定した必須要件が、生成された実装に正しく反映されて"
+        "いるか確認が必要な箇所です。\n\n"
+        "厳守事項:\n"
+        "1. 事実（ヒアリングの節番号、要求されていた内容、実装が実際にどう"
+        "   振る舞うか）は一切変えない・削らない。\n"
+        "2. ファイルパス・変数名・関数名・「制約」等のコード内部の固有名詞、"
+        "   および「Gate2」「lexicographic」「big_m」「interval_var」"
+        "   「presence_of」「coverage_rate」等のCP最適化・システム内部の"
+        "   専門用語も、すべて取り除き業務的な言葉に置き換える。\n"
+        "3. 出力は必ず2文以内。1文目は結論（このまま登録して問題なさそうか、"
+        "   確認が必要そうか）を述べ、2文目（必要な場合のみ）に、ヒアリングの"
+        "   節番号と具体的な条件・数値を交えた根拠を簡潔に書く。\n"
+        "4. 『ファイルを開いて確認してください』『コードを確認してください』"
+        "   のような、プログラムを読めない担当者には実行不可能な依頼で"
+        "   締めくくらない。判断に迷う場合は、ヒアリング内容の意図を確認する"
+        "   問いかけ（例:「この理解で合っていますか？」）に留める。\n"
+        "5. 断定的な結論を出す場合も、実際にコードを実行して確認したもの"
+        "   ではなく静的な解析に基づく判断であることが伝わる言い回しにする"
+        "   （例:「〜と考えられます」「〜と判断します」）。"
+    )
+    user = (
+        f"## 業務名\n{domain_name}\n\n"
+        f"## 言い換え対象の指摘事項（{len(findings)}件、いずれもヒアリング必須項目の"
+        f"実装反映確認）\n{items_block}\n\n"
+        '出力は次のJSON形式のみ: {"items": ["言い換え後の文1", "言い換え後の文2", ...]}\n'
+        f"items の件数は必ず入力と同じ{len(findings)}件、順序も入力と一致させること。"
+    )
+    items = _humanize_call_with_retry(system, user, len(findings), "humanize_required_gap", fast_model(), 1200)
+    return items if items is not None else findings
 
 
 def scan_diffs_for_warnings(diffs: list) -> dict:
@@ -3285,6 +3375,14 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         logger.warning(f"[gate2_checks] missing_in_dsl_for_solver指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         missing_in_dsl_for_solver_humanized = missing_in_dsl_for_solver_warnings
 
+    # 2026-09-06追加: required_gapも他のblockingカテゴリ同様、事実を薄めない
+    # 限定的な言い換え（_humanize_required_gap_findings）を通す。
+    try:
+        required_gap_humanized = _humanize_required_gap_findings(required_gap_warnings, domain_name)
+    except Exception as e:
+        logger.warning(f"[gate2_checks] required_gap指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
+        required_gap_humanized = required_gap_warnings
+
     # 2026-08-28追記（Koshoshi合意）: 接頭辞を生の技術用語（Big-M近似／optional
     # interval absent値／ネストキー等）からプレーンな日本語ラベルに変更。
     # ただし先頭2つ（実装エラーの疑い／実行検証）は Backend/app.py の
@@ -3294,7 +3392,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     blocking_questions = (
         [f"（プログラムのエラーで停止・要修正）{w}" for w in dynamic_exception_humanized]
         + [f"（実際に解いてみた結果が想定と違いました）{w}" for w in dynamic_humanized]
-        + [f"（ヒアリング内容が未反映）{w}" for w in required_gap_warnings]
+        + [f"（ヒアリング内容が未反映）{w}" for w in required_gap_humanized]
         + [f"（入力項目の反映漏れの疑い）{w}" for w in unused_in_solver_humanized]
         + [f"（数値のざっくり近似に関する指摘）{w}" for w in big_m_humanized]
         + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_humanized]
@@ -3640,7 +3738,7 @@ JSON のみを返してください。前置き・説明不要。
 {
   "match_type": "existing_domain | base_problem | new_domain",
   "base_domain": "TruckDispatcher | NurseShiftWeeklyCap | YardPlanning | LineChangeoverScheduler | (ユーザーメッセージの「追加候補ドメイン一覧」に記載された正式名称) | null",
-  "reason": "分類理由1〜2文",
+  "reason": "分類理由1〜2文。プログラミングやCP最適化の知識がない業務担当者にも分かる言葉で書くこと。『Family A』『Family C』のような内部分類ラベルや、メイクスパン・資源制約スケジューリング等のCP/OR専門用語は一切使わないこと。既存の実装で対応できない場合は、業務的にどのような特徴があるため専用に作る必要があるかを説明すること。",
   "confidence": 0.0〜1.0,
   "scenario_name_jp": "日本語シナリオ名",
   "scenario_description_jp": "シナリオ説明2〜3行",
