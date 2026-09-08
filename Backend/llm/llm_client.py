@@ -408,6 +408,25 @@ def _repair_object_partial_keys(text: str):
 # ── 統一メッセージ形式 ────────────────────────────────────
 # messages は OpenAI 互換: [{"role": "system"|"user"|"assistant", "content": "..."}]
 
+def _extract_text_from_content(content_blocks) -> str:
+    """
+    2026-09-06追加（Koshoshi合意）: claude-sonnet-5系モデルへの切り替えに伴い、
+    レスポンスの`content`に思考過程のブロック（ThinkingBlock、`.text`属性を
+    持たない）が本文ブロックより前に入るようになったことが判明した
+    （`'ThinkingBlock' object has no attribute 'text'`エラーで発覚）。
+    従来の`resp.content[0].text`という決め打ちの読み方は、先頭が思考ブロックの
+    場合に壊れる。ここでは`content`の各ブロックを見て、実際にテキストを持つ
+    ブロック（type=="text"、または`.text`属性を持つブロック）だけを連結して
+    返す（思考ブロック等は無視する）。
+    """
+    parts = []
+    for block in content_blocks:
+        text = getattr(block, "text", None)
+        if text:
+            parts.append(text)
+    return "".join(parts)
+
+
 def _cacheable_system(system_prompt) -> list | str:
     """
     2026-07-23追記: Anthropicのprompt cachingを、systemプロンプトを渡す
@@ -438,8 +457,25 @@ def _cacheable_system(system_prompt) -> list | str:
     return [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
 
 
-def _call_anthropic(messages: list, model: str, temperature: float, max_tokens: int) -> str:
-    """Anthropic Messages API を呼び出してテキストを返す"""
+def _call_anthropic(
+    messages: list, model: str, temperature: float, max_tokens: int,
+    effort: str | None = None,
+) -> str:
+    """Anthropic Messages API を呼び出してテキストを返す
+
+    2026-09-06追加（Koshoshi合意）: claude-sonnet-5系モデルはadaptive thinkingを
+    持ち、思考にかけたトークンもmax_tokens予算から消費される（従来の
+    extended thinkingのbudget_tokensのような別枠ではない）。これにより、
+    従来モデル向けに設定していたmax_tokensのままだと、思考だけで予算を
+    使い切り本文が0文字になる事故が発生した（実機確認: max_tokens=2048の
+    呼び出しでoutput=2048ちょうど・本文空、というbackend.logの実測に基づく）。
+
+    effortはNoneのままにしておけば、thinking/output_configを一切kwargsに
+    追加しない（＝現行の.env設定モデルや将来のtemperature非対応と同様の
+    非対応モデルでも安全に動く）。呼び出し元が明示的にeffort="low"/"high"を
+    渡した場合のみ、そのタスクの複雑さに応じたeffort設定を付与する
+    （呼び出し元のmax_tokensは合わせて底上げ済みであることが前提）。
+    """
     system_prompt = ""
     user_messages = []
     for m in messages:
@@ -456,14 +492,41 @@ def _call_anthropic(messages: list, model: str, temperature: float, max_tokens: 
     )
     if system_prompt:
         kwargs["system"] = _cacheable_system(system_prompt)
+    if effort is not None:
+        # 2026-09-06追加（実機確認・Koshoshi合意）: thinkingを有効にすると、
+        # Anthropic APIは「temperatureはthinking有効時は1のみ許可
+        # （'temperature' may only be set to 1 when thinking is enabled or
+        # in adaptive mode）」という制約を課す。呼び出し元は判定タスクの
+        # 決定性を保つためtemperature=0を渡していることが多いため、そのまま
+        # 送るとエラーになる。thinking有効時はAPI側のデフォルト（実質1相当）に
+        # 委ね、temperatureキー自体を送らないようにする。
+        kwargs.pop("temperature", None)
+        kwargs["thinking"] = {"type": "adaptive"}
+        kwargs["output_config"] = {"effort": effort}
 
-    # ストリーミング経由で呼び出す（非ストリーミングだとmax_tokensが大きい場合に
-    # 「Streaming is required for operations that may take longer than 10 minutes」
-    # というSDK側のガードでリクエスト自体が拒否されるため）
-    with _anthropic_client.messages.stream(**kwargs) as stream:
-        resp = stream.get_final_message()
+    # 2026-09-06追加（Koshoshi合意）: claude-sonnet-5系モデルへの切り替えに伴い、
+    # 「`temperature` is deprecated for this model」という400エラーが判明した
+    # （新世代モデルではサンプリング温度ではなくadaptive thinking/effortで制御する
+    # 方針に変わったと見られる）。model名をハードコードで分岐すると将来の新モデルで
+    # また同じ修正が必要になるため、まず`temperature`ありで呼び、この特定のエラー
+    # だけを検知したら`temperature`無しで1回だけ再試行する方式にする（後方互換:
+    # 従来モデルはtemperatureありのまま動く）。
+    try:
+        with _anthropic_client.messages.stream(**kwargs) as stream:
+            resp = stream.get_final_message()
+    except Exception as e:
+        if "temperature" in str(e) and "deprecated" in str(e):
+            logger.warning(
+                f"[_call_anthropic] model={model} は temperature 未対応のため、"
+                f"temperature無しで再試行します: {e}"
+            )
+            kwargs_no_temp = {k: v for k, v in kwargs.items() if k != "temperature"}
+            with _anthropic_client.messages.stream(**kwargs_no_temp) as stream:
+                resp = stream.get_final_message()
+        else:
+            raise
     _log_usage(f"_call_anthropic:{model}", resp.usage)
-    return resp.content[0].text
+    return _extract_text_from_content(resp.content)
 
 
 def _call_openai(messages: list, model: str, temperature: float, max_tokens: int) -> str:
@@ -520,10 +583,13 @@ def call_llm(
     model: str | None = None,
     temperature: float = 1.0,
     max_tokens: int = 1024,
+    effort: str | None = None,
 ) -> str:
     """
     現在のプロバイダーでテキストを返す統一関数。
     model=None のとき default_model() を使用。
+    effort: "low"/"high"等（Anthropic限定・2026-09-06追加）。Noneなら従来通り
+    thinking/output_configを付与しない。openai/geminiプロバイダーでは無視される。
     """
     if not is_available():
         raise RuntimeError(
@@ -534,7 +600,7 @@ def call_llm(
     m = model or default_model()
 
     if LLM_PROVIDER == "anthropic":
-        return _call_anthropic(messages, m, temperature, max_tokens)
+        return _call_anthropic(messages, m, temperature, max_tokens, effort=effort)
     if LLM_PROVIDER == "openai":
         return _call_openai(messages, m, temperature, max_tokens)
     if LLM_PROVIDER == "gemini":
@@ -548,12 +614,13 @@ def call_llm_json(
     model: str | None = None,
     temperature: float = 1.0,
     max_tokens: int = 1024,
+    effort: str | None = None,
 ):
     """
     call_llm の結果を JSON パースして返す。
     llm_interface.py / relax_interface.py の call_llm_json の置き換え。
     """
-    text = call_llm(messages, model=model, temperature=temperature, max_tokens=max_tokens)
+    text = call_llm(messages, model=model, temperature=temperature, max_tokens=max_tokens, effort=effort)
     return extract_json(text)
 
 
@@ -813,13 +880,15 @@ def call_llm_with_file(
     file_id: str,
     system: str = "",
     max_tokens: int = 4096,
+    effort: str | None = None,
 ) -> str:
     """
     Anthropic Files API の file_id を添付してLLMを呼び出す。
     file_id が空の場合は通常の call_llm にフォールバック。
+    effort: "low"/"high"等（2026-09-06追加）。Noneなら従来通り付与しない。
     """
     if LLM_PROVIDER != "anthropic" or not file_id:
-        return call_llm(messages, max_tokens=max_tokens)
+        return call_llm(messages, max_tokens=max_tokens, effort=effort)
 
     import anthropic
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -853,6 +922,9 @@ def call_llm_with_file(
         "messages": augmented,
         "betas": ["files-api-2025-04-14"],
     }
+    if effort is not None:
+        kwargs["thinking"] = {"type": "adaptive"}
+        kwargs["output_config"] = {"effort": effort}
     if system:
         # 2026-07-23追記: 添付ファイル(doc_block)側は既にcache_control済みだったが、
         # systemプロンプト自体はキャッシュ対象外だったため、_call_anthropicと
@@ -863,4 +935,4 @@ def call_llm_with_file(
     with client.beta.messages.stream(**kwargs) as stream:
         response = stream.get_final_message()
     _log_usage("call_llm_with_file(Stage2+repomix)", response.usage)
-    return response.content[0].text
+    return _extract_text_from_content(response.content)

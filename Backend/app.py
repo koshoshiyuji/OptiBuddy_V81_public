@@ -678,10 +678,20 @@ def _advance_after_agent_round(job_id: str, domain_name: str, pending: dict, age
         # 選択自体を出さない）。「聞く必要のないことは1箇所（ここ）で
         # 解決し、業務ユーザーには内部の仕組み（ターン数・verify_gate2等）を
         # 見せない」というKoshoshiの方針。
-        gate2_warnings.append(
-            "✅ 自動チェックの結果、この内容のままお使いいただけます。"
-            "特にご対応いただくことはありません。"
-        )
+        # 2026-09-07修正（Koshoshi合意・実機で矛盾表示を確認）: この直後、
+        # gate2_result["advisory_questions"]（静的チェックの参考情報。それぞれ
+        # 独自の【推奨】判定を持つ）も同じgate2_warningsに追加される。advisory_
+        # questionsが残っている場合にもこの「特に対応不要」という一般論を無条件に
+        # 出すと、「対応不要」と「（参考情報側の）修正をお勧めします」が同じ画面に
+        # 同時に表示され、結局どちらに従えばよいか分からない矛盾表示になる
+        # （2026-09-07実機確認: instance_name/note未使用の指摘と共存した実例）。
+        # advisory_questionsが他に残っている場合は、この一言を出さず、各advisory
+        # 項目自身の【推奨】判定に判断を委ねる。
+        if not gate2_result["advisory_questions"]:
+            gate2_warnings.append(
+                "✅ 自動チェックの結果、この内容のままお使いいただけます。"
+                "特にご対応いただくことはありません。"
+            )
 
     needs_human_gate = bool(gate2_result["blocking_questions"]) or bool(agent_needs_human_decision)
 
@@ -878,7 +888,7 @@ _DYNAMIC_STRUCTURAL_PREFIXES = (
 
 
 def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: list, answers: str,
-                      force_apply: bool = False) -> None:
+                      force_apply: bool = False, dynamic_override: bool = False) -> None:
     """
     /api/domain/confirm の実体。_run_domain_job と同じ設計方針で
     バックグラウンドスレッドとして実行し、フロントの接続状態と完全に切り離す。
@@ -978,22 +988,39 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
                 if isinstance(q, str) and q.startswith(_DYNAMIC_STRUCTURAL_PREFIXES)
             ]
             if _blocked_dynamic:
-                logger.warning(
-                    f"[confirm_job:{job_id}] force_apply=True だが、Gate2動的検証由来の"
-                    f"指摘が{len(_blocked_dynamic)}件残っているため拒否しました: {_blocked_dynamic}"
-                )
-                _job_set(job_id, stage="needs_confirmation", loop_exhausted=True,
-                    questions=questions, force_apply_blocked=True,
-                    pending={"diffs": pending.get("diffs", []), "patches": pending.get("patches", []),
-                             "scenario_registrations": pending.get("scenario_registrations", []),
-                             "hearing_texts": pending.get("hearing_texts", []),
-                             "snake": pending.get("snake") or _to_snake(domain_name),
-                             "written_paths": pending.get("written_paths", []),
-                             # 2026-08-11追加: ここで拒否されても引き続きpendingを
-                             # 引き継ぐループが続くため、advisory_questionsを
-                             # 落とさず持ち越す。
-                             "advisory_questions": pending.get("advisory_questions", [])})
-                return  # まだ完了ではない（取りやめのみ選択可能）
+                # 2026-09-07追加（Koshoshi合意）: 「動的検証由来の指摘は無条件に
+                # force_applyで握りつぶせない」という非交渉の原則そのものは変えない。
+                # ただし、人間が実際にコード・シナリオを確認した上で「これは実装
+                # バグではなく誤検知/設計上許容できる」と明示的に判断したケースに、
+                # 正式に登録を通すルートが存在しなかった（実務上のギャップとして
+                # 2026-09-07に実機テストで判明）。force_apply単体では従来通り通さず、
+                # 別フラグdynamic_overrideと、理由（answers、空文字不可）の両方が
+                # 揃った場合のみ、人間の個別・明示判断として通す。理由はGate2再検証を
+                # スキップした事実と共に監査ログ・完了画面に必ず残す（隠さない）。
+                if dynamic_override and answers.strip():
+                    logger.warning(
+                        f"[confirm_job:{job_id}] dynamic_override=True: 動的検証由来の"
+                        f"指摘{len(_blocked_dynamic)}件について、人間が個別に確認・"
+                        f"承認した上で登録します。理由: {answers.strip()!r} / 指摘内容: {_blocked_dynamic}"
+                    )
+                else:
+                    logger.warning(
+                        f"[confirm_job:{job_id}] force_apply=True だが、Gate2動的検証由来の"
+                        f"指摘が{len(_blocked_dynamic)}件残っているため拒否しました"
+                        f"（dynamic_override={dynamic_override}, 理由記入={bool(answers.strip())}）: {_blocked_dynamic}"
+                    )
+                    _job_set(job_id, stage="needs_confirmation", loop_exhausted=True,
+                        questions=questions, force_apply_blocked=True,
+                        pending={"diffs": pending.get("diffs", []), "patches": pending.get("patches", []),
+                                 "scenario_registrations": pending.get("scenario_registrations", []),
+                                 "hearing_texts": pending.get("hearing_texts", []),
+                                 "snake": pending.get("snake") or _to_snake(domain_name),
+                                 "written_paths": pending.get("written_paths", []),
+                                 # 2026-08-11追加: ここで拒否されても引き続きpendingを
+                                 # 引き継ぐループが続くため、advisory_questionsを
+                                 # 落とさず持ち越す。
+                                 "advisory_questions": pending.get("advisory_questions", [])})
+                    return  # まだ完了ではない（取りやめのみ選択可能）
 
             _job_set(job_id, stage="applying_files")
             logger.warning(
@@ -1991,6 +2018,9 @@ def domain_confirm():
         questions   = data.get("questions", [])
         answers     = data.get("answers", "")
         force_apply = bool(data.get("force_apply", False))
+        # 2026-09-07追加（Koshoshi合意）: 動的検証由来の指摘を、force_applyとは
+        # 別の明示フラグ＋理由必須で正式に通すためのオーバーライド。
+        dynamic_override = bool(data.get("dynamic_override", False))
         job_id      = data.get("job_id", "") or uuid.uuid4().hex
 
         if not domain_name:
@@ -2002,7 +2032,7 @@ def domain_confirm():
 
         thread = threading.Thread(
             target=_run_confirm_job,
-            args=(job_id, domain_name, pending, questions, answers, force_apply),
+            args=(job_id, domain_name, pending, questions, answers, force_apply, dynamic_override),
             daemon=True,
         )
         thread.start()
