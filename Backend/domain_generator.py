@@ -2993,7 +2993,7 @@ def run_post_registration_fix(snake: str, domain_name: str, warnings: list,
         domain_name=domain_name,
         hearing_texts=hearing_texts or [],
         snake_name=snake,
-        max_turns=5,
+        max_turns=7,
         should_stop=should_stop,
         # 2026-08-10: 段階B A/Bテストでトークン-19%・所要時間-5%を確認
         # （Koshoshi承認、詳細はENGINEERING_LOG.md 2026-08-10追記4）。
