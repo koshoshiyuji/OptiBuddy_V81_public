@@ -404,7 +404,7 @@ def run_debug_agent(
     hearing_texts: list[str],
     snake_name: str,
     human_notes: str = "",
-    max_turns: int = 5,
+    max_turns: int = 7,
     should_stop: Optional[Callable[[], bool]] = None,
     resume_state: Optional[dict] = None,
     human_answer: Optional[str] = None,
@@ -436,6 +436,13 @@ def run_debug_agent(
       必須化したため、「write_file→verify_gate2→(必要ならさらにwrite_file→
       verify_gate2)→report_done」という往復が最低でも2〜3ターン増える。旧既定の3では
       1回の修正サイクルすら収まらない恐れがあるため引き上げた。
+      2026-09-08再変更（既定5→7、Koshoshi承認）: 実機ログ7件を確認したところ、
+      読み込みだけで3ターン消費するのが常態化しており、5では
+      「write_file/edit_file→verify_gate2→report_done」の1サイクルすら
+      収まらず、直した箇所を一度も検証できないまま、または検証はできても
+      report_doneする1ターンが無いまま打ち切られるケースが大半だった
+      （ENGINEERING_LOG.mdにも同種の実例が複数あり）。2ターン積み増して
+      余裕を持たせた。
 
     human_notes: 前回のラウンド（このモジュールの旧設計。今はask_humanに置き換わり
       基本的には使わないが、下位互換のため残す）でエージェントが「業務上の判断が
