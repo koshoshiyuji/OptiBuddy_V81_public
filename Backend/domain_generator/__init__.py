@@ -116,7 +116,13 @@ EXISTING_DOMAINS: dict[str, str | None] = {
     # 旧実装CapacitatedVehicleRoutingProblemはTruckDispatcher（CP Optimizer化された新実装）に
     # 置き換え済みのため2026-07-09に削除（delete_old_cvrp.py実行、詳細はcleanup_legacy_domains系
     # スクリプトを参照）。ここへの再追加は不要（BASE_PROBLEM_MAPのCVRPは既にTruckDispatcherを指す）。
-    "TruckDispatcher":                       str(_SCENARIOS_DIR / "truck_dispatcher_baseline.json"),
+    # 2026-09-09: 他ドメインと違いTruckDispatcherは_baseline.json命名規則より前から
+    # 存在するドメインのため、その名前のシナリオファイルは登録以来一度も存在せず
+    # （_get_schema_example()がPath.exists()チェックで黙って"{}"にフォールバックする
+    # ため実行時エラーにはならないが、TruckDispatcher流用の新規ドメイン登録時に
+    # LLMへ渡るスキーマ例が常に空だった）。実在する登録済みシナリオのうち、
+    # 構造がシンプルで綺麗なpromo_demoをスキーマ例として使う。
+    "TruckDispatcher":                       str(_SCENARIOS_DIR / "truck_dispatcher_promo_demo.json"),
     # 2026-07-11: 基底パターンをTruckDispatcher/NurseShiftの2枚看板に整理する方針により、
     # GhostKitchen/ProjectPlanner/BinPacking/KubernetesScheduler/EventStaffing/StoreSite/
     # HospitalShiftPlanner/ProductionLotSchedulerは削除済み（YardPlanningのみ現状維持）。

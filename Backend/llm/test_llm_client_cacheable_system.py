@@ -24,7 +24,7 @@ def test_string_system_prompt_gets_wrapped_with_cache_control():
         {
             "type": "text",
             "text": "あなたはOptiBuddyの開発アシスタントです。",
-            "cache_control": {"type": "ephemeral"},
+            "cache_control": {"type": "ephemeral", "ttl": "1h"},
         }
     ]
 

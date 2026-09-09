@@ -73,10 +73,16 @@ def build(solver_input, config):
 
 
 def test_truck_dispatcher_real_files_have_no_false_positive():
+    # 2026-09-09: TruckDispatcherは他ドメインと違い_baseline/_infeasibleの命名規則
+    # 以前から存在するため、その名前のシナリオファイルは無い（登録以来一度も
+    # 存在したことがなく、domain_generator.EXISTING_DOMAINS側でも同じ問題が
+    # あった）。本テストの目的（実運用データでのフィールド突き合わせの
+    # 誤検知が無いこと）に対してfeasible/infeasibleの区別自体は無関係なので、
+    # 実在する2つの登録済みシナリオを使う。
     backend = Path(__file__).parent
     scenarios = [
-        json.loads((backend / "dsl_repository" / "scenarios" / "truck_dispatcher_baseline.json").read_text(encoding="utf-8")),
-        json.loads((backend / "dsl_repository" / "scenarios" / "truck_dispatcher_infeasible.json").read_text(encoding="utf-8")),
+        json.loads((backend / "dsl_repository" / "scenarios" / "truck_dispatcher_promo_demo.json").read_text(encoding="utf-8")),
+        json.loads((backend / "dsl_repository" / "scenarios" / "truck_dispatcher_csplib_en22k4.json").read_text(encoding="utf-8")),
     ]
     solver_code = (backend / "solvers" / "truck_dispatcher_solver.py").read_text(encoding="utf-8")
     converter_code = (backend / "dsl_transformer" / "truck_dispatcher_converter.py").read_text(encoding="utf-8")

@@ -538,6 +538,16 @@ _FIELD_CHECK_IGNORE_KEYS = {
     #     実行時フラグのため）。_gate2_full_check/_deferred_checksと同種の
     #     「ドメインDSLフィールドではない、フレームワーク内部の配管キー」。
     "_lns_used",
+    # 2026-09-09追加: _lns_usedと全く同じ理由で見落とされていたキー。
+    #   _engine_used: truck_dispatcher_solver.py自身が result["_engine_used"] = ...
+    #     というsubscript代入でエンジン選択結果（docplex_cpo/cpsat/
+    #     savings_2opt_fallback）を記録し、同じ関数内で
+    #     result.get("_engine_used", ...) と読み返すだけの内部フラグ。
+    #     DSLにもconverterにも一度も現れない（正当にそうあるべき）。
+    #     test_dsl_solver_field_consistency.py::test_truck_dispatcher_real_files_have_no_false_positive
+    #     が実在するシナリオファイルを初めて読めるようになったことで誤検知が
+    #     表面化した（それ以前はファイル欠落でこのassertに到達すらしていなかった）。
+    "_engine_used",
 }
 
 

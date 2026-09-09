@@ -16,6 +16,8 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pytest
+
 from solvers.truck_dispatcher_solver import TruckDispatcherSolver, _CPO_AVAILABLE
 
 
@@ -38,10 +40,16 @@ def _base_locations_and_dist():
 
 
 def test_cpsat_fallback_engages_when_docplex_unavailable():
-    """config.solver_engine未指定時は既定でcpsatが使われること
-    （本サンドボックスにはdocplexも無いため、二重の意味でcpsat経路になる）。"""
-    assert _CPO_AVAILABLE is False, "このテストはdocplex未インストール環境を前提にしている"
+    """config.solver_engine未指定時は既定でcpsatが使われること。
 
+    2026-08-13のengine_select.py方針変更で、既定エンジンはdocplexの有無に
+    関わらずハードコードで"cpsat"になった（Koshoshiとの相談で決定、CPLEXが
+    無い環境でも必ず動くことを優先）。そのため本テストの実体（config未指定→
+    cpsatが使われ、結果が構造的に正しいこと）はdocplex有無と無関係に成立する。
+    以前はここで_CPO_AVAILABLE is Falseを前提としていたが、それは自動判定で
+    決めていた旧設計（この方針変更以前）の名残であり、docplexがある環境
+    （例: Koshoshiの実機）で不必要に失敗していたため削除した。
+    """
     locations, dist_matrix = _base_locations_and_dist()
     vehicles = [
         {"id": "V1", "type": "truck", "capacity_kg": 1000, "max_duty_min": 600},
@@ -181,12 +189,11 @@ def test_explicit_cpsat_engine_selected():
     assert result["solutions"][0]["solver_engine"] == "cpsat"
 
 
+@pytest.mark.skipif(_CPO_AVAILABLE, reason="docplex未インストール環境専用のテスト（docplexがある環境ではcpo明示指定が普通に解けてしまい、本テストの前提自体が成立しない）")
 def test_explicit_cpo_without_docplex_returns_clear_error():
     """config.solver_engine="cpo"を明示指定したのにdocplexが無い場合は、
     黙ってcpsatにフォールバックしたりせず、はっきりエラーを返すこと
     （他ドメインのdocplex未インストール時の扱いと同じ）。"""
-    assert _CPO_AVAILABLE is False, "このテストはdocplex未インストール環境を前提にしている"
-
     locations, dist_matrix = _base_locations_and_dist()
     vehicles = [{"id": "V1", "type": "truck", "capacity_kg": 5000, "max_duty_min": 600}]
     customers = [
