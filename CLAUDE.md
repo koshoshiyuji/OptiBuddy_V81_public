@@ -4,21 +4,12 @@
 > ここは次セッションが同じ罠を再び踏まずに済むための要点だけに絞る。
 > 業務ロジック・DSL設計は `docs/OptiBuddy_Development_Guide.md` を参照。
 
-## リポジトリ構成（3リポジトリ、一方向チェーン）
+## リポジトリ構成（単一リポジトリ、GitHub直push）
 
-`optibuddy_test_root`（直接編集してよい唯一のルート）→ `OptiBuddy_V81_public` →
-`OptiBuddy_V81` → GitHub。commit `fd68833`以降V81/V81_publicの履歴が分岐しているため
-merge/pull不可。伝搬は次の手順で確実（2026-08-30実証済み）:
-
-```bash
-git format-patch -1 <hash> --stdout > /tmp/fix.patch
-# 各リポジトリで
-git apply --check /tmp/fix.patch && git am /tmp/fix.patch
-```
-
-3リポジトリで別々のコミットハッシュになるが内容が同一なら正しい。GitHubへの
-`git push`はサンドボックスからは不可（`device_bash`に`github.com`への到達性なし）。
-Koshoshi自身の端末で行う運用。詳細: ENGINEERING_LOG.md 2026-08-30追記4。
+`optibuddy_test_root` が唯一の開発リポジトリ。originはGitHub `koshoshiyuji/OptiBuddy_V81_public`
+を直接指す（2026-09-09にリポジトリ構成を変更。旧`OptiBuddy_V81_public`・`OptiBuddy_V81`ローカル
+リポジトリは廃止・削除予定）。GitHubへの`git push`はサンドボックスからは不可
+（`device_bash`に`github.com`への到達性なし）。Koshoshi自身の端末で行う運用。
 
 ## クラウドサンドボックス（Cowork経由・device_bash）限定の注意点
 

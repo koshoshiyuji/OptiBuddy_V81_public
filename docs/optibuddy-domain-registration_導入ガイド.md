@@ -54,7 +54,7 @@ Claude Code（CLI）またはこのリポジトリを開いたCoworkセッショ
 
 依頼例:
 - 「ヒアリングシート(添付)でOptiBuddyにドメイン登録して。プロジェクトルートは
-  `~/work/OptiBuddy_V81_public` で」
+  `~/work/optibuddy_test_root` で」
 - 「PopUpBoothSchedulerを登録して」（既にヒアリングシートを渡している場合）
 
 必須の入力（揃っていなければClaudeから確認が入る）:
