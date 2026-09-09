@@ -50,7 +50,7 @@ def test_not_applicable_for_unknown_domain():
 def test_missing_baseline_when_scenario_file_absent(monkeypatch, tmp_path):
     # _CE_LIMIT_STRESS_INFLATE_FIELDに登録済みだが、_SCENARIOS_DIRを空のtmp_pathに
     # 差し替えることでbaseline未検出パスを検証する。
-    monkeypatch.setattr(dg, "_SCENARIOS_DIR", tmp_path)
+    monkeypatch.setattr(dg.gate2, "_SCENARIOS_DIR", tmp_path)
     result = dg.run_gate2_ce_limit_stress_check(
         "meeting_room", None, None, require_cp_engine=False
     )
@@ -61,7 +61,7 @@ def test_engine_unavailable_short_circuits_without_solving(monkeypatch, tmp_path
     # cpoptimizerバイナリが無い環境（require_cp_engine=True、既定）では、
     # baselineの有無に関わらず即座にengine_unavailableで返り、
     # 一切solve()を試みないこと（実機で発覚したハングの再発防止）。
-    monkeypatch.setattr(dg, "_SCENARIOS_DIR", tmp_path)
+    monkeypatch.setattr(dg.gate2, "_SCENARIOS_DIR", tmp_path)
     monkeypatch.setattr(dg.shutil, "which", lambda name: None)
     _write_meeting_room_baseline(tmp_path)
 
@@ -114,7 +114,7 @@ def _write_meeting_room_baseline(tmp_path):
 
 
 def test_graceful_no_adapter_status_when_no_decompose_meta(monkeypatch, tmp_path):
-    monkeypatch.setattr(dg, "_SCENARIOS_DIR", tmp_path)
+    monkeypatch.setattr(dg.gate2, "_SCENARIOS_DIR", tmp_path)
     _write_meeting_room_baseline(tmp_path)
 
     result = dg.run_gate2_ce_limit_stress_check(
@@ -127,7 +127,7 @@ def test_graceful_no_adapter_status_when_no_decompose_meta(monkeypatch, tmp_path
 
 
 def test_fallback_succeeded_status_when_decompose_meta_present(monkeypatch, tmp_path):
-    monkeypatch.setattr(dg, "_SCENARIOS_DIR", tmp_path)
+    monkeypatch.setattr(dg.gate2, "_SCENARIOS_DIR", tmp_path)
     _write_meeting_room_baseline(tmp_path)
 
     result = dg.run_gate2_ce_limit_stress_check(
@@ -147,7 +147,7 @@ class _FakeSolverNeverTriggers:
 
 
 def test_ce_limit_not_triggered_when_fake_solver_never_fails(monkeypatch, tmp_path):
-    monkeypatch.setattr(dg, "_SCENARIOS_DIR", tmp_path)
+    monkeypatch.setattr(dg.gate2, "_SCENARIOS_DIR", tmp_path)
     _write_meeting_room_baseline(tmp_path)
 
     result = dg.run_gate2_ce_limit_stress_check(
@@ -167,7 +167,7 @@ class _FakeSolverRaisesUnrelatedException:
 
 
 def test_exception_status_propagates_traceback_info(monkeypatch, tmp_path):
-    monkeypatch.setattr(dg, "_SCENARIOS_DIR", tmp_path)
+    monkeypatch.setattr(dg.gate2, "_SCENARIOS_DIR", tmp_path)
     _write_meeting_room_baseline(tmp_path)
 
     result = dg.run_gate2_ce_limit_stress_check(

@@ -81,9 +81,11 @@ def test_ce_limit_exceeded_returns_graceful_issue_without_batching():
     assert "solver_exception" not in issue_ids
 
 
-def test_non_ce_limit_exception_falls_back_to_generic_solver_exception():
+def test_non_ce_limit_exception_falls_back_to_generic_solve_failed():
     """CE上限以外の例外は、solve()の外側except（既存の握り潰し）で
-    "solver_exception" issueに変換される既存の挙動を維持すること。"""
+    id="solve_failed"のissueに変換される既存の挙動を維持すること
+    （2026-07-28: 独自idにすると制約見直しタブがFeasible誤判定するため、
+    idはsolve_failedに統一されている。solvers/car_sequencing_solver.py参照）。"""
     def _fake_solve(self, **kwargs):
         raise RuntimeError("some unrelated docplex error")
 
@@ -91,7 +93,7 @@ def test_non_ce_limit_exception_falls_back_to_generic_solver_exception():
         result = CarSequencingSolver(_scenario()).solve()
 
     issue_ids = {i["id"] for i in result["issues"]}
-    assert "solver_exception" in issue_ids
+    assert "solve_failed" in issue_ids
     assert "ce_limit_unresolvable" not in issue_ids
 
 

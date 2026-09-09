@@ -312,6 +312,7 @@
     "categoryGuidance_missingInDslForSolver": "Some field you provided may not be used in the actual calculation. Please check which of your hearing sheet items the field name in the finding corresponds to.",
     "categoryGuidance_unusedInSolver": "Some field you provided may not be referenced by the actual calculation.",
     "categoryGuidance_bigM": "This is about how multiple objectives are prioritized in the calculation. Please check whether the priority order and the numbers in the finding match your intent.",
-    "categoryGuidance_absentValue": "This is a calculation-logic finding about how candidates that weren't selected are handled."
+    "categoryGuidance_absentValue": "This is a calculation-logic finding about how candidates that weren't selected are handled.",
+    "categoryGuidance_mipSelfCheck": "This flags that the generated code appears to be missing a step that self-verifies whether the solution satisfies its constraints. Due to quirks in solver implementations, a constraint-violating solution can rarely be returned, so please check the actual output."
   }
 }

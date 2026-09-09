@@ -68,10 +68,10 @@ def test_new_scenario_is_created():
 
         import dsl_repository.repository as repo_module
         orig_repo_cls = repo_module.DslRepository
-        orig_resolve = domain_generator._resolve_path
+        orig_resolve = domain_generator.registry_patch._resolve_path
         try:
             repo_module.DslRepository = lambda: fake_repo
-            domain_generator._resolve_path = lambda p: Path(file_path)
+            domain_generator.registry_patch._resolve_path = lambda p: Path(file_path)
 
             result = domain_generator._register_scenarios([
                 {"name": "新規シナリオ", "file": "dummy", "description": "", "tag": "X",
@@ -79,7 +79,7 @@ def test_new_scenario_is_created():
             ])
         finally:
             repo_module.DslRepository = orig_repo_cls
-            domain_generator._resolve_path = orig_resolve
+            domain_generator.registry_patch._resolve_path = orig_resolve
 
         assert result[0]["status"] == "created"
         assert fake_repo.create_calls == ["新規シナリオ"]
@@ -98,10 +98,10 @@ def test_duplicate_with_identical_content_is_skipped_without_write():
 
         import dsl_repository.repository as repo_module
         orig_repo_cls = repo_module.DslRepository
-        orig_resolve = domain_generator._resolve_path
+        orig_resolve = domain_generator.registry_patch._resolve_path
         try:
             repo_module.DslRepository = lambda: fake_repo
-            domain_generator._resolve_path = lambda p: Path(file_path)
+            domain_generator.registry_patch._resolve_path = lambda p: Path(file_path)
 
             result = domain_generator._register_scenarios([
                 {"name": "MeetingRoom - 標準", "file": "dummy", "description": "", "tag": "X",
@@ -109,7 +109,7 @@ def test_duplicate_with_identical_content_is_skipped_without_write():
             ])
         finally:
             repo_module.DslRepository = orig_repo_cls
-            domain_generator._resolve_path = orig_resolve
+            domain_generator.registry_patch._resolve_path = orig_resolve
 
         assert result[0]["status"] == "skipped_duplicate"
         assert fake_repo.update_calls == []
@@ -134,10 +134,10 @@ def test_duplicate_with_stale_db_content_gets_synced_from_file():
 
         import dsl_repository.repository as repo_module
         orig_repo_cls = repo_module.DslRepository
-        orig_resolve = domain_generator._resolve_path
+        orig_resolve = domain_generator.registry_patch._resolve_path
         try:
             repo_module.DslRepository = lambda: fake_repo
-            domain_generator._resolve_path = lambda p: Path(file_path)
+            domain_generator.registry_patch._resolve_path = lambda p: Path(file_path)
 
             result = domain_generator._register_scenarios([
                 {"name": "MeetingRoom - 標準", "file": "dummy", "description": "", "tag": "X",
@@ -145,7 +145,7 @@ def test_duplicate_with_stale_db_content_gets_synced_from_file():
             ])
         finally:
             repo_module.DslRepository = orig_repo_cls
-            domain_generator._resolve_path = orig_resolve
+            domain_generator.registry_patch._resolve_path = orig_resolve
 
         assert result[0]["status"] == "synced_from_file"
         assert result[0]["id"] == 156
