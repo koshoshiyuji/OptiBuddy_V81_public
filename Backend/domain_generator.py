@@ -6088,6 +6088,26 @@ def apply_scenarios(scenarios: dict, domain_name: str, scenario_registrations: l
 def apply_domain_files(approved_diffs, approved_patches, scenario_registrations) -> dict:
     written, errors = [], []
 
+    # 2026-09-09追加: solvers/base/issue_rules.py は Backend/solvers/base/issue_rules/
+    # パッケージへ分割済み（単一ファイルはもう存在しない）。現行のStage2テンプレートは
+    # このパスへのPATCHを生成しないが、テンプレート指示なしでもLLMが自発的に旧パスへ
+    # PATCHを出力した前例がある（2026-08-08 MedicalAppointmentScheduler登録時の事故。
+    # 当時は単一ファイルが実在したため黙って末尾に追記され、無関係な5ドメインの
+    # ソルバー登録が巻き添えで壊れた）。分割後は abs_path.exists() が False になり
+    # 素のままなら「ファイルが存在しません」で即ロールバックされるだけだが（8月8日より
+    # 安全な壊れ方ではある）、それでもPATCH自体は失われてしまう。実体である__init__.py
+    # へここで一元的にリダイレクトしておけば、以降の_snapshot/written/pycheck/
+    # importcheckが全て同じ実パスを参照するようになり、バックアップとロールバックの
+    # 整合性も保たれる（このリダイレクトを個々のPATCH適用ループ内だけで行うと、
+    # 冒頭の_snapshotが旧パスのままバックアップを取ってしまい、ロールバック時に
+    # 実際の変更先（__init__.py）が復元されないというバグになるため、必ず
+    # _snapshot/_backup構築より前、関数の先頭でapproved_patches自体を書き換える）。
+    _LEGACY_ISSUE_RULES_PATH  = "Backend/solvers/base/issue_rules.py"
+    _ISSUE_RULES_PACKAGE_INIT = "Backend/solvers/base/issue_rules/__init__.py"
+    for patch in approved_patches:
+        if patch.get("path") == _LEGACY_ISSUE_RULES_PATH:
+            patch["path"] = _ISSUE_RULES_PACKAGE_INIT
+
     # 論点1-2: 書き込み前に対象ファイルの原状態を退避しておく。Frontend配下の
     # tsc検証に失敗した場合、ここに保存した内容で今回の適用を丸ごと元に戻す。
     _backup: dict[str, str | None] = {}
