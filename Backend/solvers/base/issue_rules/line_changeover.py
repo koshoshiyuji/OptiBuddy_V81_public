@@ -43,7 +43,11 @@ _LINE_CHANGEOVER_RULES: List[IssueRule] = [
 
     _rule(
         "resource_capacity_violation",
-        condition=lambda ctx: ctx["peak"] > ctx["capacity"],
+        # 2026-09-09追記: 許容誤差を追加（solver本体は容量をint、amountもint変換して
+        # 制約を組んでいるが、この検算側は元々amountをint変換していなかった＝下の
+        # build_line_changeover_resource_contexts側の修正と対の変更。境界上の正しい
+        # 解を丸め誤差で誤検知しないよう他の容量超過チェックと同じ1e-6を採用）。
+        condition=lambda ctx: ctx["peak"] > ctx["capacity"] + 1e-6,
         build=lambda ctx: solver_bug_issue(
             f"resource_capacity_violation_{ctx['resource_id']}",
             f"資源容量超過: {ctx['resource_name']}",
@@ -105,7 +109,11 @@ def build_line_changeover_resource_contexts(
             for rr in s.get("resource_requirements", []):
                 if str(rr.get("resource_id")) != rid:
                     continue
-                amount = rr.get("amount", 1)
+                # 2026-09-09修正: solver本体（line_changeover_scheduler_solver.py）は
+                # int(rreq.get("amount", 1))で必ずint変換してから容量制約を組んでいる
+                # （328行目・498行目）。ここも同じint変換を行い、DSLのamountが小数の
+                # 場合でもsolverが実際に守っている制約と検算内容を一致させる。
+                amount = int(rr.get("amount", 1))
                 events.append((s["start"], amount))
                 events.append((s["end"], -amount))
         if not events:

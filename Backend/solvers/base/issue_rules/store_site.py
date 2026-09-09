@@ -39,7 +39,11 @@ _STORE_SITE_RULES: List[IssueRule] = [
 
     _rule(
         "store_distance_violation",
-        condition=lambda ctx: ctx["distance_km"] > ctx["max_distance_km"],
+        # 2026-09-09追記: distance_kmはdistance_fn()でその場で再計算した実数値であり、
+        # solver本体側の距離計算と別のPythonコードパスのため、丸め誤差だけで境界上の
+        # 正しい解を「距離超過」と誤検知しないよう許容誤差を追加（他の容量超過チェック
+        # （inventory_replenishment_planner.py等）と同じ1e-6を採用）。
+        condition=lambda ctx: ctx["distance_km"] > ctx["max_distance_km"] + 1e-6,
         build=lambda ctx: solver_bug_issue(
             f"store_distance_violation_{ctx['area_id']}_{ctx['store']['candidate_id']}",
             f"到達可能距離超過: {ctx['area_id']} → {ctx['store']['name']}",
