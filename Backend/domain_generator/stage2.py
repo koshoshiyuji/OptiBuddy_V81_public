@@ -1050,9 +1050,18 @@ def generate_domain_files(domain_def: dict, attachment_overrides: dict = None) -
     # 2026-08-05追記12参照）。converter/solver/ui_converterのファイル本体を出力し切った後に
     # SCENARIOSブロックが来る出力順のため、打ち切りは静かな「一部ファイルだけ書き込まれ、
     # 登録は完了しない」という気づきにくい不具合になる。
-    if LLM_PROVIDER == "anthropic" and repomix_path and Path(repomix_path).exists():
-        file_id = upload_repomix_if_changed()
-        raw = call_llm_with_file(messages, file_id, system=system, max_tokens=24000)
+    # 2026-09-09変更: プロバイダー分岐をllm_client.call_llm_with_file側に集約した。
+    # 従来はAnthropic以外だとrepomix添付が丸ごと無視されていたが、Anthropic以外でも
+    # repomix_pathを渡せば（Files API相当が無い分は）インライン添付にフォールバック
+    # してコードベースのコンテキストを渡すようになった。ただしそのXML自体の再生成
+    # （repomix実行）は引き続きAnthropic時にしか行われない（Koshoshi合意: 現状
+    # Anthropic以外は実運用で使っていないため許容し、実際に切り替える段になったら
+    # そのベンダー向けに作り込む）。
+    if repomix_path and Path(repomix_path).exists():
+        file_id = upload_repomix_if_changed()  # Anthropic以外では""が返る想定通りの挙動
+        raw = call_llm_with_file(
+            messages, file_id, system=system, max_tokens=24000, repomix_path=repomix_path
+        )
     else:
         raw = call_llm([{"role": "system", "content": system}] + messages, max_tokens=24000)
 

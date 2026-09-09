@@ -962,19 +962,63 @@ def upload_repomix_if_changed() -> str:
     return file_id
 
 
+def _inline_prepend_attachment(messages: list, attachment_text: str) -> list:
+    """
+    2026-09-09追加。Anthropic Files API相当の添付機構を持たないプロバイダー
+    （OpenAI/Gemini）向けに、添付テキスト（repomix出力等）を先頭のuserメッセージに
+    インラインで前置する。既存のcontentが文字列でもブロックリストでも対応する
+    （call_llm_with_fileのAnthropic経路が同じ役割をFiles API添付で行っているのと
+    同じ考え方）。重複排除やキャッシュは行わない（呼び出しのたびに全文を送る）。
+    """
+    augmented = []
+    block = f"<attached_reference_code>\n{attachment_text}\n</attached_reference_code>\n\n"
+    for i, msg in enumerate(messages):
+        if i == 0 and msg["role"] == "user":
+            existing_content = msg["content"]
+            if isinstance(existing_content, list):
+                augmented.append({
+                    "role": "user",
+                    "content": [{"type": "text", "text": block}] + existing_content,
+                })
+            else:
+                augmented.append({"role": "user", "content": block + existing_content})
+        else:
+            augmented.append(msg)
+    return augmented
+
+
 def call_llm_with_file(
     messages: list,
     file_id: str,
     system: str = "",
     max_tokens: int = 4096,
     effort: str | None = None,
+    repomix_path: str | None = None,
 ) -> str:
     """
     Anthropic Files API の file_id を添付してLLMを呼び出す。
-    file_id が空の場合は通常の call_llm にフォールバック。
+
+    file_id が空、またはプロバイダーがanthropic以外の場合:
+      - repomix_pathが指定され、かつファイルが存在すれば、その内容をテキストとして
+        インライン添付してからcall_llmを呼ぶ（2026-09-09追加）。従来はここで
+        コードベース全体のコンテキストが丸ごと失われていた（Anthropic専用の
+        Files API添付だけに頼っていたため）。Files API相当の重複排除・キャッシュは
+        無いので毎回全文を送ることになり、コストは上がる。また、このXMLファイル
+        自体の再生成（repomix実行）は引き続きAnthropic時にしか行われないため、
+        Anthropic以外に切り替えた場合はコードベースが変わっても最新化されない
+        （Koshoshiの判断: 現時点でAnthropic以外は実運用で使っていないため許容し、
+        実際にベンダーを切り替える段になったらそのベンダー向けに作り込む）。
+      - repomix_pathも無ければ、従来通り添付なしのcall_llmにフォールバック。
+
     effort: "low"/"high"等（2026-09-06追加）。Noneなら従来通り付与しない。
     """
     if LLM_PROVIDER != "anthropic" or not file_id:
+        if repomix_path and os.path.exists(repomix_path):
+            with open(repomix_path, "r", encoding="utf-8") as f:
+                attachment_text = f.read()
+            augmented = _inline_prepend_attachment(messages, attachment_text)
+            full_messages = ([{"role": "system", "content": system}] if system else []) + augmented
+            return call_llm(full_messages, max_tokens=max_tokens, effort=effort)
         return call_llm(messages, max_tokens=max_tokens, effort=effort)
 
     import anthropic
