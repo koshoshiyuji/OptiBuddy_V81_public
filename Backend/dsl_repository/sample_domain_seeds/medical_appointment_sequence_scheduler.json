@@ -1,0 +1,408 @@
+{
+  "domain_key": "medical_appointment_sequence_scheduler",
+  "problem_class": "MedicalAppointmentSequenceScheduler",
+  "exported_at": "2026-08-11T19:11:38.547929+00:00",
+  "dsl_definition": {
+    "problem_class": "MedicalAppointmentSequenceScheduler",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "sequences": [
+        {
+          "id": "str",
+          "patient_name": "str",
+          "visits": [
+            "dict"
+          ],
+          "interval_rules": [
+            "dict"
+          ],
+          "same_resource_rules": [
+            "dict"
+          ],
+          "blackout_slots": []
+        }
+      ],
+      "resources": [
+        {
+          "id": "str",
+          "name": "str",
+          "type": "str",
+          "available_slots": [
+            "dict"
+          ]
+        }
+      ],
+      "config": {
+        "time_limit_sec": "int",
+        "horizon_min": "int"
+      }
+    },
+    "description": "MedicalAppointmentSequenceSchedulerの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "MedicalAppointmentSequenceScheduler — 標準",
+      "description": "MedicalAppointmentSequenceSchedulerの標準シナリオ",
+      "tag": "MEDICA",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "MedicalAppointmentSequenceScheduler",
+        "domain": "medical_appointment_sequence_scheduler",
+        "meta": {
+          "instance_name": "MedicalAppointmentSequenceScheduler シナリオ #1",
+          "note": "【設計意図】標準的な外来診療スケジューリング条件を狙って作成。3患者×2〜3回受診、医師3名+検査室2室の構成。全系列がスケジュール可能な余裕のある条件。"
+        },
+        "sequences": [
+          {
+            "id": "seq_001",
+            "patient_name": "田中 太郎",
+            "visits": [
+              {
+                "id": "seq_001_v0",
+                "required_resources": [
+                  {
+                    "type": "physician",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 30,
+                "order": 0
+              },
+              {
+                "id": "seq_001_v1",
+                "required_resources": [
+                  {
+                    "type": "lab",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 45,
+                "order": 1
+              },
+              {
+                "id": "seq_001_v2",
+                "required_resources": [
+                  {
+                    "type": "physician",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 30,
+                "order": 2
+              }
+            ],
+            "interval_rules": [
+              {
+                "from_visit": 0,
+                "to_visit": 1,
+                "min_gap": 0,
+                "max_gap": 60,
+                "unit": "min"
+              },
+              {
+                "from_visit": 1,
+                "to_visit": 2,
+                "min_gap": 30,
+                "max_gap": 1440,
+                "unit": "min"
+              }
+            ],
+            "same_resource_rules": [
+              {
+                "visit_a": 0,
+                "visit_b": 2
+              }
+            ],
+            "blackout_slots": []
+          },
+          {
+            "id": "seq_002",
+            "patient_name": "山田 花子",
+            "visits": [
+              {
+                "id": "seq_002_v0",
+                "required_resources": [
+                  {
+                    "type": "lab",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 60,
+                "order": 0
+              },
+              {
+                "id": "seq_002_v1",
+                "required_resources": [
+                  {
+                    "type": "physician",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 30,
+                "order": 1
+              }
+            ],
+            "interval_rules": [
+              {
+                "from_visit": 0,
+                "to_visit": 1,
+                "min_gap": 0,
+                "max_gap": 120,
+                "unit": "min"
+              }
+            ],
+            "same_resource_rules": [],
+            "blackout_slots": [
+              {
+                "start_min": 540,
+                "end_min": 720
+              }
+            ]
+          },
+          {
+            "id": "seq_003",
+            "patient_name": "鈴木 一郎",
+            "visits": [
+              {
+                "id": "seq_003_v0",
+                "required_resources": [
+                  {
+                    "type": "physician",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 20,
+                "order": 0
+              },
+              {
+                "id": "seq_003_v1",
+                "required_resources": [
+                  {
+                    "type": "physician",
+                    "count": 1
+                  },
+                  {
+                    "type": "lab",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 90,
+                "order": 1
+              }
+            ],
+            "interval_rules": [
+              {
+                "from_visit": 0,
+                "to_visit": 1,
+                "min_gap": 1440,
+                "max_gap": 2880,
+                "unit": "min"
+              }
+            ],
+            "same_resource_rules": [],
+            "blackout_slots": []
+          }
+        ],
+        "resources": [
+          {
+            "id": "dr_yamamoto",
+            "name": "山本 医師",
+            "type": "physician",
+            "available_slots": [
+              {
+                "start_min": 480,
+                "end_min": 720
+              },
+              {
+                "start_min": 780,
+                "end_min": 1020
+              },
+              {
+                "start_min": 1920,
+                "end_min": 2160
+              },
+              {
+                "start_min": 2220,
+                "end_min": 2460
+              }
+            ]
+          },
+          {
+            "id": "dr_tanaka",
+            "name": "田中 医師",
+            "type": "physician",
+            "available_slots": [
+              {
+                "start_min": 480,
+                "end_min": 720
+              },
+              {
+                "start_min": 780,
+                "end_min": 1020
+              },
+              {
+                "start_min": 1920,
+                "end_min": 2160
+              }
+            ]
+          },
+          {
+            "id": "dr_suzuki",
+            "name": "鈴木 医師",
+            "type": "physician",
+            "available_slots": [
+              {
+                "start_min": 540,
+                "end_min": 720
+              },
+              {
+                "start_min": 800,
+                "end_min": 1000
+              },
+              {
+                "start_min": 2000,
+                "end_min": 2200
+              }
+            ]
+          },
+          {
+            "id": "lab_a",
+            "name": "検査室A",
+            "type": "lab",
+            "available_slots": [
+              {
+                "start_min": 480,
+                "end_min": 1020
+              },
+              {
+                "start_min": 1920,
+                "end_min": 2460
+              }
+            ]
+          },
+          {
+            "id": "lab_b",
+            "name": "検査室B",
+            "type": "lab",
+            "available_slots": [
+              {
+                "start_min": 480,
+                "end_min": 1020
+              },
+              {
+                "start_min": 1920,
+                "end_min": 2460
+              }
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 20,
+          "horizon_min": 2880
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "MedicalAppointmentSequenceScheduler — 解なし",
+      "description": "MedicalAppointmentSequenceSchedulerのInfeasibleシナリオ",
+      "tag": "MEDICA",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "MedicalAppointmentSequenceScheduler",
+        "domain": "medical_appointment_sequence_scheduler",
+        "meta": {
+          "instance_name": "MedicalAppointmentSequenceScheduler シナリオ #2",
+          "note": "【設計意図】資源不足・間隔ルール矛盾による解なし条件を狙って作成。受診に必要な資源タイプが稼働時間ゼロ（利用不可）の状態と、不可能な間隔ルール（最大間隔より最小間隔が大きい）を組み合わせ、全系列が割り当て不可能になることを狙う。"
+        },
+        "sequences": [
+          {
+            "id": "seq_infeas_001",
+            "patient_name": "解なし患者A",
+            "visits": [
+              {
+                "id": "seq_infeas_001_v0",
+                "required_resources": [
+                  {
+                    "type": "mri",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 60,
+                "order": 0
+              },
+              {
+                "id": "seq_infeas_001_v1",
+                "required_resources": [
+                  {
+                    "type": "mri",
+                    "count": 1
+                  }
+                ],
+                "duration_min": 60,
+                "order": 1
+              }
+            ],
+            "interval_rules": [
+              {
+                "from_visit": 0,
+                "to_visit": 1,
+                "min_gap": 1000,
+                "max_gap": 10,
+                "unit": "min"
+              }
+            ],
+            "same_resource_rules": [],
+            "blackout_slots": []
+          },
+          {
+            "id": "seq_infeas_002",
+            "patient_name": "解なし患者B",
+            "visits": [
+              {
+                "id": "seq_infeas_002_v0",
+                "required_resources": [
+                  {
+                    "type": "ct",
+                    "count": 2
+                  }
+                ],
+                "duration_min": 45,
+                "order": 0
+              }
+            ],
+            "interval_rules": [],
+            "same_resource_rules": [],
+            "blackout_slots": []
+          }
+        ],
+        "resources": [
+          {
+            "id": "physician_only",
+            "name": "内科医師",
+            "type": "physician",
+            "available_slots": [
+              {
+                "start_min": 480,
+                "end_min": 720
+              }
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 10,
+          "horizon_min": 1440
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

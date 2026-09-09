@@ -1,0 +1,527 @@
+{
+  "domain_key": "production_line_sequencing",
+  "problem_class": "ProductionLineSequencing",
+  "exported_at": "2026-08-11T19:11:38.825954+00:00",
+  "dsl_definition": {
+    "problem_class": "ProductionLineSequencing",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "lines": [
+        {
+          "id": "str",
+          "name": "str"
+        }
+      ],
+      "vehicle_types": [
+        {
+          "id": "str",
+          "name": "str",
+          "daily_limit": "int",
+          "priority_order": "int"
+        }
+      ],
+      "slots": [
+        {
+          "id": "str",
+          "line_id": "str",
+          "line_name": "str",
+          "day": "int",
+          "start_hour": "int"
+        }
+      ],
+      "batches": [
+        {
+          "id": "str",
+          "name": "str",
+          "compatible_lines": "NoneType",
+          "line_on_day": "int",
+          "line_off_day": "int",
+          "vehicle_type": "str"
+        }
+      ],
+      "distribution_exceptions": [],
+      "config": {
+        "time_limit_sec": "int"
+      }
+    },
+    "description": "ProductionLineSequencingの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "ProductionLineSequencing — 標準",
+      "description": "ProductionLineSequencingの標準シナリオ",
+      "tag": "PRODUC",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "ProductionLineSequencing",
+        "domain": "production_line_sequencing",
+        "meta": {
+          "instance_name": "自動車組立ライン生産順序 シナリオ #1",
+          "note": "【設計意図】2ライン×3日・20バッチの標準的な生産条件を狙って作成。全車種の分散ルールと Batting Order 制約を含む。"
+        },
+        "lines": [
+          {
+            "id": "L1",
+            "name": "組立ライン1"
+          },
+          {
+            "id": "L2",
+            "name": "組立ライン2"
+          }
+        ],
+        "vehicle_types": [
+          {
+            "id": "SEDAN",
+            "name": "セダン",
+            "daily_limit": 3,
+            "priority_order": 1
+          },
+          {
+            "id": "SUV",
+            "name": "SUV",
+            "daily_limit": 2,
+            "priority_order": 2
+          },
+          {
+            "id": "EV",
+            "name": "EV",
+            "daily_limit": 2,
+            "priority_order": 3
+          }
+        ],
+        "slots": [
+          {
+            "id": "L1_d1_h8",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 1,
+            "start_hour": 8
+          },
+          {
+            "id": "L1_d1_h9",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 1,
+            "start_hour": 9
+          },
+          {
+            "id": "L1_d1_h10",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 1,
+            "start_hour": 10
+          },
+          {
+            "id": "L2_d1_h8",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 1,
+            "start_hour": 8
+          },
+          {
+            "id": "L2_d1_h9",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 1,
+            "start_hour": 9
+          },
+          {
+            "id": "L2_d1_h10",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 1,
+            "start_hour": 10
+          },
+          {
+            "id": "L1_d2_h8",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 2,
+            "start_hour": 8
+          },
+          {
+            "id": "L1_d2_h9",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 2,
+            "start_hour": 9
+          },
+          {
+            "id": "L1_d2_h10",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 2,
+            "start_hour": 10
+          },
+          {
+            "id": "L2_d2_h8",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 2,
+            "start_hour": 8
+          },
+          {
+            "id": "L2_d2_h9",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 2,
+            "start_hour": 9
+          },
+          {
+            "id": "L2_d2_h10",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 2,
+            "start_hour": 10
+          },
+          {
+            "id": "L1_d3_h8",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 3,
+            "start_hour": 8
+          },
+          {
+            "id": "L1_d3_h9",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 3,
+            "start_hour": 9
+          },
+          {
+            "id": "L1_d3_h10",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 3,
+            "start_hour": 10
+          },
+          {
+            "id": "L2_d3_h8",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 3,
+            "start_hour": 8
+          },
+          {
+            "id": "L2_d3_h9",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 3,
+            "start_hour": 9
+          },
+          {
+            "id": "L2_d3_h10",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 3,
+            "start_hour": 10
+          },
+          {
+            "id": "L1_d4_h8",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 4,
+            "start_hour": 8
+          },
+          {
+            "id": "L2_d4_h8",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 4,
+            "start_hour": 8
+          }
+        ],
+        "batches": [
+          {
+            "id": "B01",
+            "name": "セダン-001",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B02",
+            "name": "セダン-002",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B03",
+            "name": "セダン-003",
+            "compatible_lines": [
+              "L1"
+            ],
+            "line_on_day": 1,
+            "line_off_day": 2,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B04",
+            "name": "セダン-004",
+            "compatible_lines": null,
+            "line_on_day": 2,
+            "line_off_day": 4,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B05",
+            "name": "セダン-005",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B06",
+            "name": "セダン-006",
+            "compatible_lines": [
+              "L2"
+            ],
+            "line_on_day": 1,
+            "line_off_day": 3,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B07",
+            "name": "SUV-001",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B08",
+            "name": "SUV-002",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B09",
+            "name": "SUV-003",
+            "compatible_lines": [
+              "L1"
+            ],
+            "line_on_day": 2,
+            "line_off_day": 4,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B10",
+            "name": "SUV-004",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 3,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B11",
+            "name": "SUV-005",
+            "compatible_lines": null,
+            "line_on_day": 2,
+            "line_off_day": 4,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B12",
+            "name": "SUV-006",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B13",
+            "name": "EV-001",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "EV"
+          },
+          {
+            "id": "B14",
+            "name": "EV-002",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "EV"
+          },
+          {
+            "id": "B15",
+            "name": "EV-003",
+            "compatible_lines": [
+              "L2"
+            ],
+            "line_on_day": 2,
+            "line_off_day": 4,
+            "vehicle_type": "EV"
+          },
+          {
+            "id": "B16",
+            "name": "EV-004",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 3,
+            "vehicle_type": "EV"
+          },
+          {
+            "id": "B17",
+            "name": "EV-005",
+            "compatible_lines": null,
+            "line_on_day": 2,
+            "line_off_day": 4,
+            "vehicle_type": "EV"
+          },
+          {
+            "id": "B18",
+            "name": "EV-006",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 4,
+            "vehicle_type": "EV"
+          },
+          {
+            "id": "B19",
+            "name": "セダン-007",
+            "compatible_lines": null,
+            "line_on_day": 3,
+            "line_off_day": 4,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B20",
+            "name": "SUV-007",
+            "compatible_lines": null,
+            "line_on_day": 3,
+            "line_off_day": 4,
+            "vehicle_type": "SUV"
+          }
+        ],
+        "distribution_exceptions": [],
+        "config": {
+          "time_limit_sec": 30
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "ProductionLineSequencing — 解なし",
+      "description": "ProductionLineSequencingのInfeasibleシナリオ",
+      "tag": "PRODUC",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "ProductionLineSequencing",
+        "domain": "production_line_sequencing",
+        "meta": {
+          "instance_name": "自動車組立ライン生産順序 シナリオ #2（解なし）",
+          "note": "【設計意図】バッチ数がスロット数を大幅に超えており、all-different制約のもとで全バッチを割り当てることが数学的に不可能な構成を狙って作成。"
+        },
+        "lines": [
+          {
+            "id": "L1",
+            "name": "組立ライン1"
+          },
+          {
+            "id": "L2",
+            "name": "組立ライン2"
+          }
+        ],
+        "vehicle_types": [
+          {
+            "id": "SEDAN",
+            "name": "セダン",
+            "daily_limit": 1,
+            "priority_order": 1
+          },
+          {
+            "id": "SUV",
+            "name": "SUV",
+            "daily_limit": 1,
+            "priority_order": 2
+          },
+          {
+            "id": "EV",
+            "name": "EV",
+            "daily_limit": 1,
+            "priority_order": 3
+          }
+        ],
+        "slots": [
+          {
+            "id": "L1_d1_h8",
+            "line_id": "L1",
+            "line_name": "組立ライン1",
+            "day": 1,
+            "start_hour": 8
+          },
+          {
+            "id": "L2_d1_h8",
+            "line_id": "L2",
+            "line_name": "組立ライン2",
+            "day": 1,
+            "start_hour": 8
+          }
+        ],
+        "batches": [
+          {
+            "id": "B01",
+            "name": "セダン-001",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 1,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B02",
+            "name": "セダン-002",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 1,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B03",
+            "name": "セダン-003",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 1,
+            "vehicle_type": "SEDAN"
+          },
+          {
+            "id": "B04",
+            "name": "SUV-001",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 1,
+            "vehicle_type": "SUV"
+          },
+          {
+            "id": "B05",
+            "name": "EV-001",
+            "compatible_lines": null,
+            "line_on_day": 1,
+            "line_off_day": 1,
+            "vehicle_type": "EV"
+          }
+        ],
+        "distribution_exceptions": [],
+        "config": {
+          "time_limit_sec": 10
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

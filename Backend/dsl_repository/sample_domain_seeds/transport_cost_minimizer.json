@@ -1,0 +1,219 @@
+{
+  "domain_key": "transport_cost_minimizer",
+  "problem_class": "TransportCostMinimizer",
+  "exported_at": "2026-08-11T19:11:39.035953+00:00",
+  "dsl_definition": {
+    "problem_class": "TransportCostMinimizer",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "factories": [
+        {
+          "id": "str",
+          "name": "str",
+          "supply": "int"
+        }
+      ],
+      "stores": [
+        {
+          "id": "str",
+          "name": "str",
+          "demand": "int"
+        }
+      ],
+      "costs": [
+        {
+          "factory_id": "str",
+          "store_id": "str",
+          "cost_per_unit": "float"
+        }
+      ],
+      "config": {
+        "time_limit_sec": "int"
+      }
+    },
+    "description": "TransportCostMinimizerの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "TransportCostMinimizer — 標準",
+      "description": "TransportCostMinimizerの標準シナリオ",
+      "tag": "TRANSP",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "TransportCostMinimizer",
+        "domain": "transport_cost_minimizer",
+        "meta": {
+          "instance_name": "TransportCostMinimizer シナリオ #1",
+          "note": "【設計意図】ヒアリングシート「登録用シナリオデータ」節に記載された実数値をそのまま使用（2工場・3店舗）。総供給量700が総需要量600を上回る不均衡輸送問題。scipy.optimize.linprogで裏取り済みの最適解: 総コスト1620（工場1→a:50/b:200/c:0、工場2→a:150/b:0/c:200）。"
+        },
+        "factories": [
+          {
+            "id": "F1",
+            "name": "工場1",
+            "supply": 250
+          },
+          {
+            "id": "F2",
+            "name": "工場2",
+            "supply": 450
+          }
+        ],
+        "stores": [
+          {
+            "id": "Sa",
+            "name": "店舗a",
+            "demand": 200
+          },
+          {
+            "id": "Sb",
+            "name": "店舗b",
+            "demand": 200
+          },
+          {
+            "id": "Sc",
+            "name": "店舗c",
+            "demand": 200
+          }
+        ],
+        "costs": [
+          {
+            "factory_id": "F1",
+            "store_id": "Sa",
+            "cost_per_unit": 3.4
+          },
+          {
+            "factory_id": "F1",
+            "store_id": "Sb",
+            "cost_per_unit": 2.2
+          },
+          {
+            "factory_id": "F1",
+            "store_id": "Sc",
+            "cost_per_unit": 2.9
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "Sa",
+            "cost_per_unit": 3.4
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "Sb",
+            "cost_per_unit": 2.4
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "Sc",
+            "cost_per_unit": 2.5
+          }
+        ],
+        "config": {
+          "time_limit_sec": 30
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "TransportCostMinimizer — 解なし",
+      "description": "TransportCostMinimizerのInfeasibleシナリオ",
+      "tag": "TRANSP",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "TransportCostMinimizer",
+        "domain": "transport_cost_minimizer",
+        "meta": {
+          "instance_name": "TransportCostMinimizer シナリオ #2",
+          "note": "【設計意図】総供給量（80）が総需要量（230）を大幅に下回る構成。全店舗の需要を満たすことが物理的に不可能なため、実行不可能（infeasible）になることを狙う。"
+        },
+        "factories": [
+          {
+            "id": "F1",
+            "name": "工場A（東京）",
+            "supply": 50
+          },
+          {
+            "id": "F2",
+            "name": "工場B（大阪）",
+            "supply": 30
+          }
+        ],
+        "stores": [
+          {
+            "id": "S1",
+            "name": "店舗1（横浜）",
+            "demand": 70
+          },
+          {
+            "id": "S2",
+            "name": "店舗2（名古屋）",
+            "demand": 50
+          },
+          {
+            "id": "S3",
+            "name": "店舗3（神戸）",
+            "demand": 60
+          },
+          {
+            "id": "S4",
+            "name": "店舗4（北九州）",
+            "demand": 50
+          }
+        ],
+        "costs": [
+          {
+            "factory_id": "F1",
+            "store_id": "S1",
+            "cost_per_unit": 2.0
+          },
+          {
+            "factory_id": "F1",
+            "store_id": "S2",
+            "cost_per_unit": 3.0
+          },
+          {
+            "factory_id": "F1",
+            "store_id": "S3",
+            "cost_per_unit": 5.0
+          },
+          {
+            "factory_id": "F1",
+            "store_id": "S4",
+            "cost_per_unit": 9.0
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "S1",
+            "cost_per_unit": 4.0
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "S2",
+            "cost_per_unit": 1.5
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "S3",
+            "cost_per_unit": 2.5
+          },
+          {
+            "factory_id": "F2",
+            "store_id": "S4",
+            "cost_per_unit": 6.0
+          }
+        ],
+        "config": {
+          "time_limit_sec": 30
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

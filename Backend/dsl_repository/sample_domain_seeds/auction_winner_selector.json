@@ -1,0 +1,266 @@
+{
+  "domain_key": "auction_winner_selector",
+  "problem_class": "AuctionWinnerSelector",
+  "exported_at": "2026-08-11T19:11:38.109928+00:00",
+  "dsl_definition": {
+    "problem_class": "AuctionWinnerSelector",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "items": [
+        {
+          "id": "str",
+          "name": "str",
+          "description": "str"
+        }
+      ],
+      "bids": [
+        {
+          "id": "str",
+          "name": "str",
+          "price": "int",
+          "item_ids": [
+            "str"
+          ]
+        }
+      ],
+      "config": {
+        "time_limit_sec": "int",
+        "min_revenue": "int"
+      }
+    },
+    "description": "AuctionWinnerSelectorの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "AuctionWinnerSelector — 標準",
+      "description": "AuctionWinnerSelectorの標準シナリオ",
+      "tag": "AUCTIO",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "AuctionWinnerSelector",
+        "domain": "auction_winner_selector",
+        "meta": {
+          "instance_name": "AuctionWinnerSelector シナリオ #1",
+          "note": "【設計意図】中古工作機械オークションの標準的な規模を想定。8件の商品ロット、12件の入札（単品入札・組合せ入札混在）。競合する入札が複数あり、最適な落札者組み合わせが自明でないケースを狙って作成。"
+        },
+        "items": [
+          {
+            "id": "L001",
+            "name": "旋盤A（1990年製）",
+            "description": "汎用旋盤、動作確認済み"
+          },
+          {
+            "id": "L002",
+            "name": "旋盤B（1985年製）",
+            "description": "汎用旋盤、要修理"
+          },
+          {
+            "id": "M001",
+            "name": "マシニングセンタ（2001年製）",
+            "description": "縦型MC、工具付き"
+          },
+          {
+            "id": "M002",
+            "name": "フライス盤（1995年製）",
+            "description": "汎用フライス盤"
+          },
+          {
+            "id": "P001",
+            "name": "プレス機100t",
+            "description": "油圧プレス"
+          },
+          {
+            "id": "P002",
+            "name": "プレス機50t",
+            "description": "油圧プレス、小型"
+          },
+          {
+            "id": "G001",
+            "name": "研削盤（円筒）",
+            "description": "円筒研削盤"
+          },
+          {
+            "id": "G002",
+            "name": "研削盤（平面）",
+            "description": "平面研削盤"
+          }
+        ],
+        "bids": [
+          {
+            "id": "B01",
+            "name": "鈴木工業",
+            "price": 1500000,
+            "item_ids": [
+              "L001"
+            ]
+          },
+          {
+            "id": "B02",
+            "name": "田中製作所",
+            "price": 800000,
+            "item_ids": [
+              "L002"
+            ]
+          },
+          {
+            "id": "B03",
+            "name": "山田機械",
+            "price": 2200000,
+            "item_ids": [
+              "M001"
+            ]
+          },
+          {
+            "id": "B04",
+            "name": "佐藤精機",
+            "price": 1200000,
+            "item_ids": [
+              "M002"
+            ]
+          },
+          {
+            "id": "B05",
+            "name": "中村プレス",
+            "price": 3000000,
+            "item_ids": [
+              "P001",
+              "P002"
+            ]
+          },
+          {
+            "id": "B06",
+            "name": "高橋工業",
+            "price": 1800000,
+            "item_ids": [
+              "P001"
+            ]
+          },
+          {
+            "id": "B07",
+            "name": "伊藤製作所",
+            "price": 1100000,
+            "item_ids": [
+              "P002"
+            ]
+          },
+          {
+            "id": "B08",
+            "name": "渡辺精機",
+            "price": 900000,
+            "item_ids": [
+              "G001"
+            ]
+          },
+          {
+            "id": "B09",
+            "name": "小林機工",
+            "price": 700000,
+            "item_ids": [
+              "G002"
+            ]
+          },
+          {
+            "id": "B10",
+            "name": "加藤商事",
+            "price": 3500000,
+            "item_ids": [
+              "L001",
+              "M001"
+            ]
+          },
+          {
+            "id": "B11",
+            "name": "吉田工業",
+            "price": 2800000,
+            "item_ids": [
+              "G001",
+              "G002"
+            ]
+          },
+          {
+            "id": "B12",
+            "name": "山本機械センター",
+            "price": 7000000,
+            "item_ids": [
+              "L001",
+              "L002",
+              "M001",
+              "M002"
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 30,
+          "min_revenue": 0
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "AuctionWinnerSelector — 解なし",
+      "description": "AuctionWinnerSelectorのInfeasibleシナリオ",
+      "tag": "AUCTIO",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "AuctionWinnerSelector",
+        "domain": "auction_winner_selector",
+        "meta": {
+          "instance_name": "AuctionWinnerSelector シナリオ #2",
+          "note": "【設計意図・2026-08-02改訂】min_revenue（最低落札総額）を、実現可能な最大落札総額（T01+T02＝2,000,000円）よりわずかに高く設定することで、いかなる入札の組み合わせでも制約を満たせないInfeasibleを狙う。旧版はmin_revenueを50,000,000円（実現可能最大の25倍）に設定しており、Gate2チェックで規模感の乖離が指摘された（登録時は許容して登録）。実現可能最大に対して妥当な近接値（2,500,000円、実現可能最大の1.25倍）に調整し、「僅かに届かない」現実的な着地点を再探索できる緩和提案が生成されるようにした。"
+        },
+        "items": [
+          {
+            "id": "X001",
+            "name": "テスト機器A",
+            "description": "小型精密機器"
+          },
+          {
+            "id": "X002",
+            "name": "テスト機器B",
+            "description": "小型精密機器"
+          }
+        ],
+        "bids": [
+          {
+            "id": "T01",
+            "name": "入札者A",
+            "price": 1000000,
+            "item_ids": [
+              "X001"
+            ]
+          },
+          {
+            "id": "T02",
+            "name": "入札者B",
+            "price": 1000000,
+            "item_ids": [
+              "X002"
+            ]
+          },
+          {
+            "id": "T03",
+            "name": "入札者C",
+            "price": 1500000,
+            "item_ids": [
+              "X001",
+              "X002"
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 10,
+          "min_revenue": 2500000
+        }
+      },
+      "is_active": true
+    }
+  ]
+}

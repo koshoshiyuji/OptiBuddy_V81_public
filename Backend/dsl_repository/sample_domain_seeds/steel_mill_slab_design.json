@@ -1,0 +1,214 @@
+{
+  "domain_key": "steel_mill_slab_design",
+  "problem_class": "SteelMillSlabDesign",
+  "exported_at": "2026-08-11T19:11:38.938494+00:00",
+  "dsl_definition": {
+    "problem_class": "SteelMillSlabDesign",
+    "version": "1.0",
+    "extensions": [],
+    "schema_json": {
+      "problem_class": "str",
+      "domain": "str",
+      "meta": {
+        "instance_name": "str",
+        "note": "str"
+      },
+      "slab_capacity": "int",
+      "orders": [
+        {
+          "id": "str",
+          "name": "str",
+          "weight": "int",
+          "colors": [
+            "str"
+          ],
+          "customer": "str"
+        }
+      ],
+      "config": {
+        "time_limit_sec": "int",
+        "max_slabs": "int",
+        "operation_date": "str"
+      }
+    },
+    "description": "SteelMillSlabDesignの標準シナリオ"
+  },
+  "extensions": [],
+  "scenarios": [
+    {
+      "name": "SteelMillSlabDesign — 標準",
+      "description": "SteelMillSlabDesignの標準シナリオ",
+      "tag": "STEELM",
+      "tag_color": "#8b5cf6",
+      "dsl_json": {
+        "problem_class": "SteelMillSlabDesign",
+        "domain": "steel_mill_slab_design",
+        "meta": {
+          "instance_name": "SteelMillSlabDesign シナリオ #1",
+          "note": "【設計意図】標準的な注文セット（12注文、4色、単一規格20t）を狙って作成。廃棄重量の最小化とスラブ個数の最小化が二段階で動作することを確認する。"
+        },
+        "slab_capacity": 20,
+        "orders": [
+          {
+            "id": "O01",
+            "name": "注文A1",
+            "weight": 4,
+            "colors": [
+              "red"
+            ],
+            "customer": "得意先A"
+          },
+          {
+            "id": "O02",
+            "name": "注文A2",
+            "weight": 7,
+            "colors": [
+              "red"
+            ],
+            "customer": "得意先A"
+          },
+          {
+            "id": "O03",
+            "name": "注文B1",
+            "weight": 3,
+            "colors": [
+              "blue"
+            ],
+            "customer": "得意先B"
+          },
+          {
+            "id": "O04",
+            "name": "注文B2",
+            "weight": 5,
+            "colors": [
+              "blue"
+            ],
+            "customer": "得意先B"
+          },
+          {
+            "id": "O05",
+            "name": "注文C1",
+            "weight": 6,
+            "colors": [
+              "green"
+            ],
+            "customer": "得意先C"
+          },
+          {
+            "id": "O06",
+            "name": "注文C2",
+            "weight": 4,
+            "colors": [
+              "green"
+            ],
+            "customer": "得意先C"
+          },
+          {
+            "id": "O07",
+            "name": "注文D1",
+            "weight": 8,
+            "colors": [
+              "yellow"
+            ],
+            "customer": "得意先D"
+          },
+          {
+            "id": "O08",
+            "name": "注文AB1",
+            "weight": 3,
+            "colors": [
+              "red",
+              "blue"
+            ],
+            "customer": "得意先A"
+          },
+          {
+            "id": "O09",
+            "name": "注文BC1",
+            "weight": 5,
+            "colors": [
+              "blue",
+              "green"
+            ],
+            "customer": "得意先B"
+          },
+          {
+            "id": "O10",
+            "name": "注文RG1",
+            "weight": 2,
+            "colors": [
+              "red",
+              "green"
+            ],
+            "customer": "得意先C"
+          },
+          {
+            "id": "O11",
+            "name": "注文Y2",
+            "weight": 9,
+            "colors": [
+              "yellow"
+            ],
+            "customer": "得意先D"
+          },
+          {
+            "id": "O12",
+            "name": "注文G3",
+            "weight": 6,
+            "colors": [
+              "green"
+            ],
+            "customer": "得意先E"
+          }
+        ],
+        "config": {
+          "time_limit_sec": 30,
+          "max_slabs": 12,
+          "operation_date": "2026-08-01"
+        }
+      },
+      "is_active": true
+    },
+    {
+      "name": "SteelMillSlabDesign — 解なし",
+      "description": "SteelMillSlabDesignのInfeasibleシナリオ",
+      "tag": "STEELM",
+      "tag_color": "#ef4444",
+      "dsl_json": {
+        "problem_class": "SteelMillSlabDesign",
+        "domain": "steel_mill_slab_design",
+        "meta": {
+          "instance_name": "SteelMillSlabDesign シナリオ #2",
+          "note": "【設計意図】単一スラブしか許可しない（max_slabs=1）が、全注文の合計重量がどの規格の最大容量をも超えるように設定し、解なし状態を狙う。単一注文が規格最大重量（12t）を超える重さ（15t）を持つため、max_slabs=1では物理的に割り付け不能。"
+        },
+        "slab_capacities": [
+          12
+        ],
+        "orders": [
+          {
+            "id": "O01",
+            "name": "巨大注文X",
+            "weight": 15,
+            "colors": [
+              "red"
+            ]
+          },
+          {
+            "id": "O02",
+            "name": "注文Y",
+            "weight": 3,
+            "colors": [
+              "blue"
+            ]
+          }
+        ],
+        "config": {
+          "time_limit_sec": 10,
+          "max_slabs": 1,
+          "operation_date": "2026-08-01"
+        }
+      },
+      "is_active": true
+    }
+  ]
+}
