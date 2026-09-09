@@ -457,6 +457,101 @@ def _cacheable_system(system_prompt) -> list | str:
     return [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
 
 
+# ── 非対応パラメータの汎用フォールバック ──────────────────────
+# 2026-09-09追加: 2026-09-06のtemperature対応は「temperature」という1つの
+# パラメータ名だけを決め打ちで見る場当たり的な実装だった。モデル/ベンダーを
+# 容易に切り替えられるようにするという目的上、今後も新モデルへの切替のたびに
+# 同じ形のパラメータ非対応が起きる前提で、パラメータ名を決め打ちしない汎用的な
+# フォールバック機構に一般化する。対象はまずAnthropicのみ（実際に発生実績が
+# あるのはここだけのため）。OpenAI/Geminiで同様の問題が起きた場合も、同じ
+# ヘルパーに載せるだけで対応できる。
+
+# 非対応パラメータのエラーメッセージによくある兆候語。この単語がエラー文言に
+# 含まれていれば「このパラメータは今回のモデル/APIバージョンでは送れない」と
+# 判断する。
+_UNSUPPORTED_PARAM_HINTS = (
+    "deprecated",
+    "not permitted",
+    "not supported",
+    "unsupported",
+    "may only be set",
+    "unexpected keyword",
+    "unrecognized",
+    "invalid",
+)
+
+# 「外しても呼び出しの意味が壊れない」パラメータ名だけを対象にする。
+# model/messages/max_tokens/system/tools/tool_choice/betas等は呼び出しの構造
+# そのものを担うため対象にしない。これは安全のためだけでなく実利用上も必須:
+# 例えば「temperature is deprecated for this model」のような、ごく普通の
+# エラー文中には英単語としての"model"がほぼ必ず含まれる。候補をtemperature等
+# の実際に着脱可能なパラメータ名だけに絞らないと、"model"というキー名を持つ
+# kwargs（＝呼び出しに必須のモデル名）を誤って非対応パラメータと判定し、外して
+# しまう（実際にドライランテストでこの誤検知が発生し、この絞り込みで修正した）。
+_DROPPABLE_PARAM_NAMES = frozenset({"temperature", "top_p", "top_k", "thinking", "output_config"})
+
+
+def _find_offending_param(error_text: str, candidate_keys) -> str | None:
+    """
+    APIエラーメッセージ本文から、現在送信中のkwargsのキーのうち、今回の
+    モデル/APIバージョンで非対応と思われるものを1つ特定する。
+
+    判定方法: エラーメッセージ中に_UNSUPPORTED_PARAM_HINTSのいずれかの語
+    （非対応を示す典型的な言い回し）が含まれ、かつ同じメッセージ中に
+    _DROPPABLE_PARAM_NAMES（外しても呼び出しの意味が壊れないパラメータ名の
+    ホワイトリスト）に含まれるキー名も現れていれば、そのキーを非対応と判断
+    する。candidate_keysのうち_DROPPABLE_PARAM_NAMESに無いキー（model等）は
+    たとえエラー文中に名前が出てきても対象にしない。
+
+    見つからなければNoneを返す（＝この機構では対処できないエラーであり、
+    呼び出し元はそのまま例外を送出すべき、という意味）。
+    """
+    lowered = error_text.lower()
+    if not any(hint in lowered for hint in _UNSUPPORTED_PARAM_HINTS):
+        return None
+    for key in candidate_keys:
+        if key not in _DROPPABLE_PARAM_NAMES:
+            continue
+        if key in error_text:
+            return key
+    return None
+
+
+def _call_with_param_fallback(call_fn, kwargs: dict, max_retries: int = 2):
+    """
+    call_fn(**kwargs) を呼び出し、非対応パラメータが原因と思われる例外が
+    出た場合は、そのパラメータをkwargsから外して再試行する汎用ヘルパー。
+
+    2026-09-06にclaude-sonnet-5への切替でtemperatureが非対応になった際の
+    対応（該当エラー文字列を決め打ちで検知し、temperatureだけを外して1回
+    再試行）を一般化したもの。「temperature」という特定の名前や「1回だけ」
+    という回数を決め打ちにせず、その時点でkwargsに入っている任意のキーが
+    対象になり得るようにすることで、次に別のパラメータが別のモデルで非対応に
+    なっても、このヘルパーを使っている呼び出し元は追加のコード変更なしで
+    吸収できる（複数のパラメータが連鎖して非対応と分かるケースに備え、
+    max_retries回まで繰り返す）。
+
+    非対応パラメータを特定できない例外はそのまま送出する（＝本来のエラーを
+    握りつぶさない）。
+    """
+    attempt_kwargs = dict(kwargs)
+    last_err: Exception | None = None
+    for _ in range(max_retries + 1):
+        try:
+            return call_fn(**attempt_kwargs)
+        except Exception as e:
+            last_err = e
+            offending = _find_offending_param(str(e), list(attempt_kwargs.keys()))
+            if offending is None:
+                raise
+            logger.warning(
+                f"[_call_with_param_fallback] パラメータ'{offending}'が非対応の"
+                f"ため外して再試行します: {e}"
+            )
+            attempt_kwargs.pop(offending, None)
+    raise last_err
+
+
 def _call_anthropic(
     messages: list, model: str, temperature: float, max_tokens: int,
     effort: str | None = None,
@@ -504,27 +599,19 @@ def _call_anthropic(
         kwargs["thinking"] = {"type": "adaptive"}
         kwargs["output_config"] = {"effort": effort}
 
-    # 2026-09-06追加（Koshoshi合意）: claude-sonnet-5系モデルへの切り替えに伴い、
-    # 「`temperature` is deprecated for this model」という400エラーが判明した
-    # （新世代モデルではサンプリング温度ではなくadaptive thinking/effortで制御する
-    # 方針に変わったと見られる）。model名をハードコードで分岐すると将来の新モデルで
-    # また同じ修正が必要になるため、まず`temperature`ありで呼び、この特定のエラー
-    # だけを検知したら`temperature`無しで1回だけ再試行する方式にする（後方互換:
-    # 従来モデルはtemperatureありのまま動く）。
-    try:
-        with _anthropic_client.messages.stream(**kwargs) as stream:
-            resp = stream.get_final_message()
-    except Exception as e:
-        if "temperature" in str(e) and "deprecated" in str(e):
-            logger.warning(
-                f"[_call_anthropic] model={model} は temperature 未対応のため、"
-                f"temperature無しで再試行します: {e}"
-            )
-            kwargs_no_temp = {k: v for k, v in kwargs.items() if k != "temperature"}
-            with _anthropic_client.messages.stream(**kwargs_no_temp) as stream:
-                resp = stream.get_final_message()
-        else:
-            raise
+    # 2026-09-06追加（Koshoshi合意）、2026-09-09一般化: claude-sonnet-5系モデルへの
+    # 切り替えに伴い、「`temperature` is deprecated for this model」という400エラーが
+    # 判明した（新世代モデルではサンプリング温度ではなくadaptive thinking/effortで
+    # 制御する方針に変わったと見られる）。model名をハードコードで分岐すると将来の
+    # 新モデルでまた同じ修正が必要になるため、まずkwargsそのままで呼び、非対応と
+    # 判断できるパラメータがあればそれを外して再試行する汎用機構
+    # （_call_with_param_fallback）に委ねる（後方互換: 従来モデルはtemperatureあり
+    # のまま動く）。
+    def _stream_call(**kw):
+        with _anthropic_client.messages.stream(**kw) as stream:
+            return stream.get_final_message()
+
+    resp = _call_with_param_fallback(_stream_call, kwargs)
     _log_usage(f"_call_anthropic:{model}", resp.usage)
     return _extract_text_from_content(resp.content)
 
@@ -931,8 +1018,13 @@ def call_llm_with_file(
         # 同じ_cacheable_system()を適用する。
         kwargs["system"] = _cacheable_system(system)
 
-    # ストリーミング経由で呼び出す（_call_anthropic と同じ理由）
-    with client.beta.messages.stream(**kwargs) as stream:
-        response = stream.get_final_message()
+    # ストリーミング経由で呼び出す（_call_anthropic と同じ理由）。
+    # 2026-09-09追加: _call_anthropicと同じ非対応パラメータ・フォールバック機構を
+    # 適用する（従来はここに一切保護が無かった）。
+    def _stream_call(**kw):
+        with client.beta.messages.stream(**kw) as stream:
+            return stream.get_final_message()
+
+    response = _call_with_param_fallback(_stream_call, kwargs)
     _log_usage("call_llm_with_file(Stage2+repomix)", response.usage)
     return _extract_text_from_content(response.content)
