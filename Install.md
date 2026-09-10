@@ -16,7 +16,7 @@ OptiBuddy は「業務担当者が AI と対話しながら最適化問題を定
 
 | ソフトウェア | バージョン | 備考 |
 |---|---|---|
-| Python | 3.10以上 | |
+| Python | 3.11以上 | |
 | Node.js | 18以上 | |
 
 > **CPLEXのインストールは、通常は不要です。** OptiBuddy本体からCPLEX/docplexは完全に分離されており、最適化エンジンの既定値がGoogle OR-Tools CP-SAT（Apache 2.0・無料・モデルサイズ上限なし）のため、`requirements.txt`だけの`pip install`で27ドメイン中25ドメインが動作します。CPLEX/docplexが必須なのは`yard`（設計上CP Optimizer専用）と`store_site`（MIP、docplex.mp必須）の2ドメインのみです。この2つを試す場合、または他ドメインで明示的にCPLEXエンジン（`config.solver_engine="cpo"`）を使いたい場合のみ、`requirements.txt`に加えて`requirements-cplex.txt`を追加でインストールしてください（手順2参照）。IBM CPLEX Optimization Studioを別途インストールする必要はありません（`cplex`パッケージ同梱のCommunity Edition評価版を使います）。
