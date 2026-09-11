@@ -8,7 +8,7 @@ OptiBuddy は「業務担当者が AI と対話しながら最適化問題を定
 - **バックエンド**: Python + Flask（最適化エンジン）
 - **最適化エンジン**: Google OR-Tools CP-SAT（Apache 2.0、追加インストール不要）が既定。IBM CPLEX CP Optimizer／CPLEX MIP（`docplex`経由）は明示指定時のみ使用し、上限超過時はHiGHS（MIP、OSS）にも自動フォールバック
 
-本リポジトリは Business Source License 1.1（BSL 1.1）で公開しています（詳細はリポジトリルートの `LICENSE` を参照）。無償で本番利用できるのは `yard` / `truck_dispatcher` / `nurse_shift_weekly_cap` / `car_sequencing` / `meeting_room` / `store_site` / `line_changeover_scheduler` の7ドメインのみです。それ以外のドメインはコードを閲覧・検証目的で利用できますが、本番利用には別途商用ライセンスが必要です（「本番利用」の定義は `LICENSE-FAQ.md` を参照）。
+本リポジトリは Business Source License 1.1（BSL 1.1）で公開しています（詳細はリポジトリルートの `LICENSE` を参照）。既存のどのドメイン・自分で定義したドメインを問わず、自社の業務のための本番利用はどなたでも無償です。制限がかかるのは、IT/コンサルティングサービスを生業とする第三者が複数の顧客に反復的に有償サービスを提供する場合のみで、その場合は事前にLicensorとの商用ライセンス契約が必要です（詳細は `LICENSE-FAQ.md` を参照）。
 
 ---
 
@@ -19,7 +19,7 @@ OptiBuddy は「業務担当者が AI と対話しながら最適化問題を定
 | Python | 3.11以上 | |
 | Node.js | 18以上 | |
 
-> **CPLEXのインストールは、通常は不要です。** OptiBuddy本体からCPLEX/docplexは完全に分離されており、最適化エンジンの既定値がGoogle OR-Tools CP-SAT（Apache 2.0・無料・モデルサイズ上限なし）のため、`requirements.txt`だけの`pip install`で27ドメイン中25ドメインが動作します。CPLEX/docplexが必須なのは`yard`（設計上CP Optimizer専用）と`store_site`（MIP、docplex.mp必須）の2ドメインのみです。この2つを試す場合、または他ドメインで明示的にCPLEXエンジン（`config.solver_engine="cpo"`）を使いたい場合のみ、`requirements.txt`に加えて`requirements-cplex.txt`を追加でインストールしてください（手順2参照）。IBM CPLEX Optimization Studioを別途インストールする必要はありません（`cplex`パッケージ同梱のCommunity Edition評価版を使います）。
+> **CPLEXのインストールは、通常は不要です。** OptiBuddy本体からCPLEX/docplexは完全に分離されており、最適化エンジンの既定値がGoogle OR-Tools CP-SAT（Apache 2.0・無料・モデルサイズ上限なし）のため、`requirements.txt`だけの`pip install`でほとんどのドメインが動作します。CPLEX/docplexが必須なのは`yard`（設計上CP Optimizer専用）と`store_site`（MIP、docplex.mp必須）の2ドメインのみです。この2つを試す場合、または他ドメインで明示的にCPLEXエンジン（`config.solver_engine="cpo"`）を使いたい場合のみ、`requirements.txt`に加えて`requirements-cplex.txt`を追加でインストールしてください（手順2参照）。IBM CPLEX Optimization Studioを別途インストールする必要はありません（`cplex`パッケージ同梱のCommunity Edition評価版を使います）。
 
 ### OS別の補足
 
@@ -53,7 +53,7 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 
-# 上記だけで、27ドメイン中25ドメイン（yard・store_siteを除く全て）が
+# 上記だけで、yard・store_siteを除くほぼ全てのドメインが
 # CPLEXなしで動作します（既定エンジンがCP-SATのため）。
 #
 # yard・store_siteを試す場合、または他ドメインで明示的にCPLEXエンジン
@@ -102,7 +102,7 @@ cp .env.customer.example .env
 
 ### 5. サンプルデータ（シナリオ）の投入
 
-このリポジトリには**全27ドメイン分**のソルバーコードが含まれていますが、公開用サンプルデータ（`sample_domain_seeds/`）として同梱しているのは、**無償で本番利用できる7ドメインのみ**です。それ以外のドメインもコードは同梱されており閲覧・検証目的では自由に利用できますが、本番利用には別途商用ライセンスが必要です（詳細は`LICENSE`・`LICENSE-FAQ.md`参照）。
+このリポジトリには**全ドメイン分**のソルバーコードとサンプルデータ（`sample_domain_seeds/`）が同梱されています。既存のどのドメイン・自分で定義したドメインを問わず、自社の業務のための本番利用はどなたでも無償です（詳細は`LICENSE`・`LICENSE-FAQ.md`参照）。
 
 > ℹ️ サンプルデータはすべて架空データ、または CVRPLIB・INRC 等の公開ベンチマークデータのみで構成されています（実在の顧客データは一切含まれません）。
 
@@ -112,7 +112,7 @@ cd Backend/dsl_repository
 # 例: TruckDispatcherと看護師シフト編成の2ドメインを試す場合
 python3 import_domain.py --seed-dir sample_domain_seeds truck_dispatcher nurse_shift_weekly_cap
 
-# 同梱されている無償7ドメインをまとめて投入する場合
+# 同梱されている全ドメインをまとめて投入する場合
 python3 import_domain.py --seed-dir sample_domain_seeds $(ls sample_domain_seeds | sed 's/\.json$//')
 
 cd ..   # Backend/直下に戻る（後続の「起動方法」節はBackend/直下からの実行を想定）
@@ -122,44 +122,39 @@ cd ..   # Backend/直下に戻る（後続の「起動方法」節はBackend/直
 
 初回実行時、`Backend/dsl_repository/optibuddy.db`が存在しなければ自動的に新規作成されます（`schema.sql`適用）。このコマンドは何度実行しても安全です（非破壊・追記のみ。同じドメインを再指定しても重複投入されません）。
 
-投入可能なドメイン一覧（`sample_domain_seeds/`のファイル名 = ドメイン名。**無償・本番利用可**）:
-
-| ドメイン名 | 内容 |
-|---|---|
-| `yard` | コンテナターミナルのヤード（コンテナ配置）計画 |
-| `truck_dispatcher` | トラックの車両割当・配送ルート最適化（CVRP-TW） |
-| `nurse_shift_weekly_cap` | 看護師シフト編成（週間夜勤回数上限つき） |
-| `meeting_room` | 会議室の予約割当 |
-| `store_site` | 店舗など拠点の立地選定 |
-| `line_changeover_scheduler` | 工場ラインの切替スケジューリング |
-| `car_sequencing` | 自動車組立ラインの車両生産順序決定 |
-
-上記以外に、コードは本リポジトリに同梱されているものの公開用サンプルデータは含まれていないドメイン（**非本番利用は自由。本番利用には別途商用ライセンスが必要**）:
+投入可能なドメイン一覧（`sample_domain_seeds/`のファイル名 = ドメイン名）:
 
 | ドメイン名 | 内容 |
 |---|---|
 | `auction_winner_selector` | オークションの落札者選定 |
 | `capital_project_selector` | 設備投資案件選定（0-1ナップサック型） |
+| `car_sequencing` | 自動車組立ラインの車両生産順序決定 |
 | `crew_duty_scheduler` | 乗務員（クルー）の勤務スケジューリング |
 | `depot_route_planner` | デポ発着の配送ルート計画 |
 | `energy_cost_aware_scheduler` | 電力コストを考慮した生産スケジューリング |
 | `inventory_replenishment_planner` | 在庫補充計画 |
+| `line_changeover_scheduler` | 工場ラインの切替スケジューリング |
 | `lot_sizing_scheduler` | ロットサイズ決定・生産スケジューリング |
 | `medical_appointment_scheduler` | 医療予約スケジューリング（医師・処置室の割当） |
 | `medical_appointment_sequence_scheduler` | 医療予約の順序決定 |
+| `meeting_room` | 会議室の予約割当 |
 | `mystery_shopper_scheduler` | 覆面調査員の訪問スケジューリング |
+| `nurse_shift_weekly_cap` | 看護師シフト編成（週間夜勤回数上限つき） |
 | `nursing_workload_balance` | 看護師間の患者負荷（アキュイティ）バランス調整 |
 | `patient_transport_planner` | 患者搬送計画 |
 | `portfolio_overlap_designer` | ポートフォリオ構成の最適化 |
 | `production_line_sequencing` | 生産ラインの製造順序決定 |
+| `rideshare_matching_planner` | ライドシェアの乗客・ドライバーマッチング最適化 |
 | `shift_rotation_scheduler` | シフトローテーション編成 |
 | `steel_mill_slab_design` | 製鋼スラブ設計 |
+| `store_site` | 店舗など拠点の立地選定 |
 | `tank_allocation_planner` | タンクへの液体ロット割当 |
 | `transport_cost_minimizer` | 輸送コスト最小化 |
+| `truck_dispatcher` | トラックの車両割当・配送ルート最適化（CVRP-TW） |
 | `vessel_deck_loader` | 船舶甲板へのコンテナ積み付け最適化 |
-| `rideshare_matching_planner` | ライドシェアの乗客・ドライバーマッチング最適化 |
+| `yard` | コンテナターミナルのヤード（コンテナ配置）計画 |
 
-> 存在しないドメイン名を指定した場合は「⚠️ シードファイルが見つかりません」と表示され、他の指定ドメインの投入は続行されます。無償ドメイン以外を試す場合は、自身でシナリオデータを用意するか、「新規業務登録」のヒアリング機能をご利用ください。本番投入をご検討の場合は、事前に商用ライセンスについてご相談ください。
+> 存在しないドメイン名を指定した場合は「⚠️ シードファイルが見つかりません」と表示され、他の指定ドメインの投入は続行されます。
 
 ---
 
@@ -306,6 +301,6 @@ optibuddy/
 
 ## ライセンス・注意事項
 
-- OptiBuddy本体はBusiness Source License 1.1（BSL 1.1）で公開しています（リポジトリルートの`LICENSE`参照）。無償7ドメイン（`yard`/`truck_dispatcher`/`nurse_shift_weekly_cap`/`car_sequencing`/`meeting_room`/`store_site`/`line_changeover_scheduler`）は本番利用も無償です。それ以外のドメインは、非本番利用（開発・検証・評価目的）は自由ですが、本番利用には別途商用ライセンス契約が必要です。「本番利用」の定義は`LICENSE-FAQ.md`を参照してください。BSL 1.1は`LICENSE`記載のChange Dateをもって、Licensed Work全体がApache License 2.0へ自動的に切り替わります。
+- OptiBuddy本体はBusiness Source License 1.1（BSL 1.1）で公開しています（リポジトリルートの`LICENSE`参照）。既存のどのドメイン・自分で定義したドメインを問わず、自社の業務のための本番利用はどなたでも無償です。制限がかかるのは、IT/コンサルティングサービスを生業とする第三者が複数の顧客に反復的に有償サービスを提供する場合のみで、その場合は事前にLicensorとの商用ライセンス契約が必要です。詳細は`LICENSE-FAQ.md`を参照してください。BSL 1.1は`LICENSE`記載のChange Dateをもって、Licensed Work全体がApache License 2.0へ自動的に切り替わります。
 - IBM CPLEX/CP Optimizer（`cplex`/`docplex`、`requirements-cplex.txt`）はOptiBuddy本体とは別のライセンスです。商用利用の場合はIBMとの契約を確認してください。
 - Anthropic API（AIチャット機能）の利用には別途APIキーと課金が必要です。
