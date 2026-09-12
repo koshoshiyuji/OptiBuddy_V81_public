@@ -91,6 +91,11 @@ networkx==3.4.2
 # highspyは依存関係から除外済み)。
 numpy==2.4.6
 openai==1.108.2
+# 2026-09-12追記: samples/dsl_excel_helper.py の excel_to_dsl() が
+# pandas.read_excel(..., engine="openpyxl") で明示的にopenpyxlエンジンを
+# 指定しているため、読み込み側の依存として追加。書き込み側(dsl_to_excel())は
+# 既存のxlsxwriterのみで完結する。
+openpyxl==3.1.5
 packaging==25.0
 pillow==11.3.0
 platformdirs==4.4.0
