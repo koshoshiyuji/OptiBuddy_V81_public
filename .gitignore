@@ -110,3 +110,8 @@ Backend/dsl_repository/scenarios/truck_dispatcher_baseline.json
 Backend/dsl_repository/*.db-journal.trash.*
 # 顧客固有のインストール手順書（公開リポジトリでは常に管理外にする方針）
 docs/INSTALL_customer_*.md
+
+# --- 2026-09-12: dsl_excel_helper.py のデモ実行で生成される成果物 ---
+# python samples/dsl_excel_helper.py を実行すると往復変換の動作確認用に
+# 生成される。ソースではなくビルド成果物なのでコミット対象外にする。
+samples/sample_dsl_roundtrip.xlsx
