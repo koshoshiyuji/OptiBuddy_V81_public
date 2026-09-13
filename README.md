@@ -51,6 +51,11 @@
 - [OptiBuddy_Development_Guide.md](./docs/OptiBuddy_Development_Guide.md) — 開発者向け（アーキテクチャ・DSL設計・extensionsの仕組み）
 - [CSPLIB_REFERENCE.md](./docs/CSPLIB_REFERENCE.md) — 各ドメインが基づく数理的な基底問題の参照
 
+## 関連記事
+
+- [なぜLLMに最適化コードを書かせず、DSLを書かせるのか](https://zenn.dev/koshoshi/articles/609309957766e9)（Zenn）
+- [LLMに数理最適化モデルを書かせるときの「もっともらしい間違い」をどう検出するか](https://qiita.com/koshoshiyuji/items/af3eb69e3e81e586b0c6)（Qiita）
+
 ## ライセンス
 
 OptiBuddy本体は [Business Source License 1.1](./LICENSE)（BSL 1.1）で公開しています。既存のどのドメイン・自分で定義したドメインを問わず、自社の業務のための本番利用はどなたでも無償です。制限がかかるのは、IT/コンサルティングサービスを生業とする第三者が複数の顧客に反復的に有償サービス（ドメイン構築代行・ホスティング・システム連携など）を提供する場合のみで、その場合は事前にLicensorとの商用ライセンス契約が必要です。具体例・早見表は [LICENSE-FAQ.md](./LICENSE-FAQ.md) を参照してください。BSL 1.1は`LICENSE`記載のChange Dateをもって、Licensed Work全体がApache License 2.0へ自動的に切り替わります。
