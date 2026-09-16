@@ -234,6 +234,7 @@ def collect_deletion_targets(domain_name: str, fuzzy: bool = False) -> Dict[str,
     scenarios_dir = Path(__file__).parent / "scenarios"
     solvers_dir = backend_root / "solvers"
     transformer_dir = backend_root / "dsl_transformer"
+    i18n_dir = backend_root / "i18n"
     frontend_views = project_root / "Frontend" / "src" / "app" / "studio" / "views"
     business_to_solver_path = transformer_dir / "business_to_solver.py"
     solver_to_ui_path = transformer_dir / "solver_to_ui.py"
@@ -309,6 +310,7 @@ def collect_deletion_targets(domain_name: str, fuzzy: bool = False) -> Dict[str,
         transformer_dir / f"{snake}_converter.py",
         transformer_dir / f"{snake}_ui_converter.py",
         frontend_views / f"{pascal}View.tsx",
+        i18n_dir / f"{snake}_messages.py",
     ]
     candidate_files += _safe_scenario_json_files(scenarios_dir, snake, conn)
 
@@ -362,6 +364,7 @@ def delete_domain_api(domain_name: str, fuzzy: bool = False) -> Dict[str, any]:
     scenarios_dir = Path(__file__).parent / "scenarios"
     solvers_dir = backend_root / "solvers"
     transformer_dir = backend_root / "dsl_transformer"
+    i18n_dir = backend_root / "i18n"
     frontend_views = project_root / "Frontend" / "src" / "app" / "studio" / "views"
     business_to_solver_path = transformer_dir / "business_to_solver.py"
     solver_to_ui_path = transformer_dir / "solver_to_ui.py"
@@ -450,6 +453,7 @@ def delete_domain_api(domain_name: str, fuzzy: bool = False) -> Dict[str, any]:
             transformer_dir / f"{snake}_converter.py",
             transformer_dir / f"{snake}_ui_converter.py",
             frontend_views / f"{pascal}View.tsx",
+            i18n_dir / f"{snake}_messages.py",
         ]
         candidate_files += _safe_scenario_json_files(scenarios_dir, snake, conn)
 

@@ -84,14 +84,35 @@ if targets["files"]:
 else:
     yellow("削除対象ファイルなし")
 
+# ── extensions ───────────────────────────────────────────────
+if targets["extensions"]:
+    head("[DB] extensions テーブル")
+    for e in targets["extensions"]:
+        red(f"extensions[{e['id']}] category={e['category']}  name={e['name']}")
+
+# ── dispatch patch / TAG_MAP ────────────────────────────────
+if targets["dispatch_patches"]:
+    head("[PATCH] ディスパッチブロック")
+    for d in targets["dispatch_patches"]:
+        red(f"{d['file']} の if problem_class == \"{d['problem_class']}\": ブロック")
+
+if targets["tag_map_entries"]:
+    head("[PATCH] TAG_MAPエントリ")
+    for t in targets["tag_map_entries"]:
+        red(f"{t['file']} の {t['problem_class']} エントリ")
+
 # ── サマリ ───────────────────────────────────────────────────
 head("=== 削除サマリ ===")
 print(f"  scenarios レコード:     {len(targets['scenarios'])} 件")
 print(f"  dsl_definitions レコード: {len(targets['dsl_definitions'])} 件")
 print(f"  evolution_logs レコード:  {len(targets['evolution_logs'])} 件")
+print(f"  extensions レコード:     {len(targets['extensions'])} 件")
 print(f"  ファイル:               {len(targets['files'])} 件")
+print(f"  dispatch patch:         {len(targets['dispatch_patches'])} 件")
+print(f"  TAG_MAPエントリ:         {len(targets['tag_map_entries'])} 件")
 
-if not targets["scenarios"] and not targets["dsl_definitions"] and not targets["files"]:
+if not any([targets["scenarios"], targets["dsl_definitions"], targets["files"],
+            targets["extensions"], targets["dispatch_patches"], targets["tag_map_entries"]]):
     print("\n削除対象なし。終了します。")
     sys.exit(0)
 
@@ -116,8 +137,13 @@ result = delete_domain_api(SNAKE)
 green(f"scenarios {result['scenarios']} 件削除")
 green(f"dsl_definitions {result['dsl_definitions']} 件削除")
 green(f"dsl_evolution_log {result['evolution_logs']} 件削除")
+green(f"extensions {result['extensions']} 件削除")
 for f in result["files"]:
     green(f)
+for d in result["dispatch_patches"]:
+    green(f"dispatch patch除去: {d}")
+for t in result["tag_map_entries"]:
+    green(f"TAG_MAPエントリ除去: {t}")
 
 head("=== 完了 ===")
 print(f"  ドメイン '{SNAKE}' の削除が完了しました。")
