@@ -85,7 +85,7 @@ class DslRepository:
             cursor = conn.execute(
                 """
                 SELECT id, problem_class, version, extensions, schema_json, 
-                       description, created_at, updated_at
+                       description, ask_system_prompt, created_at, updated_at
                 FROM dsl_definitions
                 WHERE problem_class = ? AND version = ?
                 """,
@@ -103,6 +103,7 @@ class DslRepository:
                 "extensions": json.loads(row["extensions"]),
                 "schema_json": json.loads(row["schema_json"]),
                 "description": row["description"],
+                "ask_system_prompt": row["ask_system_prompt"],
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"],
             }
@@ -185,6 +186,34 @@ class DslRepository:
                 WHERE problem_class = ? AND version = ?
                 """,
                 (json.dumps(schema_json), problem_class, version),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def update_dsl_definition_ask_prompt(
+        self, problem_class: str, version: str, ask_system_prompt: str
+    ) -> bool:
+        """
+        既存のDSL定義のask_system_promptだけを更新する。
+
+        「チャットで相談する」機能(/ask エンドポイント → ask_about_dsl())が使う
+        ドメイン別のシステムプロンプトをキャッシュする列。2026-09-16追加:
+        従来はコンテナターミナル専用のプロンプトが全ドメイン共通でハードコードされて
+        おり、他ドメイン(MatchingOptimization等)では「回答範囲外」を返すだけだった
+        不具合を受けて追加。初回リクエスト時にLLMで生成しここに保存する
+        （遅延生成キャッシュ、schema_json同様update専用パスが必要）。
+
+        Returns:
+            更新できた場合True、該当行が無い場合False
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE dsl_definitions
+                SET ask_system_prompt = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE problem_class = ? AND version = ?
+                """,
+                (ask_system_prompt, problem_class, version),
             )
             conn.commit()
             return cursor.rowcount > 0

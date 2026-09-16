@@ -470,6 +470,52 @@ _TABLE_SECTIONS_KEY_ASSIGN_RE = re.compile(
 )
 
 
+# ─────────────────────────────────────────────────────────────
+# Gate2静的チェック: KPIカード配線チェック
+#
+# 背景（2026-09-16追加）: MatchingOptimizationのsolve_time_sec（求解時間）で
+# 実際に発覚した不具合。solver.py側は metrics に値を計算して詰めており、
+# i18n/{snake}_messages.py にも "kpi.solve_time.label"/"kpi.solve_time.unit"
+# という翻訳キーまで用意されていたが、{snake}_ui_converter.py の kpi_cards
+# リストにカード自体を追加し忘れており、画面には一切表示されないまま
+# 登録されていた。_check_table_sections_wiring と同じ「計算・翻訳キーまで
+# 用意されているのに配線されていない」パターンをKPIカードについても検出する。
+# i18nにkpi.<name>.labelが定義されている＝表示する意図があった強いシグナルと
+# みなし、対応するidのカードがui_converter.py側に存在するかを突き合わせる
+# （ヒューリスティックであり厳密な構文解析はしない。誤検知はあり得るが
+# advisoryであり登録をブロックしない）。
+# ─────────────────────────────────────────────────────────────
+
+_KPI_LABEL_KEY_RE = re.compile(r'"kpi\.([a-zA-Z0-9_]+)\.label"')
+
+
+def _check_kpi_card_coverage(ui_converter_code: str, i18n_code: str, snake: str) -> list[str]:
+    """
+    i18n/{snake}_messages.py に定義された kpi.<name>.label キーのうち、
+    {snake}_ui_converter.py 側に対応する "id": "<name>" のkpi_cardが
+    見つからないものを検知する。
+    """
+    if not ui_converter_code or not i18n_code:
+        return []
+
+    label_names = sorted(set(_KPI_LABEL_KEY_RE.findall(i18n_code)))
+    if not label_names:
+        return []
+
+    scan_code = _strip_line_comments(ui_converter_code)
+    warnings: list[str] = []
+    for name in label_names:
+        id_re = re.compile(r'"id"\s*:\s*"' + re.escape(name) + r'"')
+        if not id_re.search(scan_code):
+            warnings.append(
+                f"i18n/{snake}_messages.py: 'kpi.{name}.label' という翻訳キーが定義されていますが、"
+                f"{snake}_ui_converter.py のkpi_cardsに id='{name}' のカードが見つかりませんでした。"
+                f"solver側で計算・翻訳キーまで用意されているのに、画面には表示されないまま登録される"
+                f"疑いがあります（意図的に非表示にしている場合は無視して構いません）。"
+            )
+    return warnings
+
+
 def _check_table_sections_wiring(code: str, path: str) -> list[str]:
     """
     build_table_section()/build_table_sections_from_issues() を呼んでいるのに、

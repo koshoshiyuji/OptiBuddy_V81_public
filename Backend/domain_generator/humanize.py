@@ -20,6 +20,7 @@ from .build_checks import (
 )
 from .static_checks import (
     _check_big_m_objective,
+    _check_kpi_card_coverage,
     _check_mip_self_verification,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
@@ -363,9 +364,11 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
     absent_value_warnings = []
     missing_in_dsl_for_solver_warnings = []
     mip_self_check_warnings = []
-    solver_by_snake:    dict[str, tuple[str, str]] = {}
-    converter_by_snake: dict[str, tuple[str, str]] = {}
-    scenarios_by_snake: dict[str, list] = {}
+    solver_by_snake:       dict[str, tuple[str, str]] = {}
+    converter_by_snake:    dict[str, tuple[str, str]] = {}
+    ui_converter_by_snake: dict[str, tuple[str, str]] = {}
+    i18n_messages_by_snake: dict[str, tuple[str, str]] = {}
+    scenarios_by_snake:    dict[str, list] = {}
 
     _scenario_re = re.compile(r"(?:^|/)dsl_repository/scenarios/(.+)_(baseline|infeasible)\.json$")
 
@@ -394,7 +397,13 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             converter_by_snake[snake] = (path, code)
 
         elif path.endswith("_ui_converter.py"):
+            ui_snake = Path(path).stem[: -len("_ui_converter")]
+            ui_converter_by_snake[ui_snake] = (path, code)
             warnings.extend(_check_table_sections_wiring(code, path))
+
+        elif re.search(r"(?:^|/)i18n/(.+)_messages\.py$", path):
+            i18n_snake = re.search(r"(?:^|/)i18n/(.+)_messages\.py$", path).group(1)
+            i18n_messages_by_snake[i18n_snake] = (path, code)
 
         else:
             m = _scenario_re.search(path)
@@ -471,6 +480,15 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
                 f"（converterがパススルーするネスト構造でキー名が食い違っている疑いがあります。"
                 f"実行時は常にデフォルト値化し、対応する制約が一度もモデルに追加されない可能性があります）"
             )
+
+    # Gate2静的チェック（2026-09-16追加）: KPIカード配線チェック
+    # （ui_converterとi18nメッセージファイルが両方揃うドメインのみ。
+    #  _check_table_sections_wiringと同じadvisory・ヒューリスティック扱い）
+    for snake, (ui_converter_path, ui_converter_code) in ui_converter_by_snake.items():
+        if snake not in i18n_messages_by_snake:
+            continue
+        _, i18n_code = i18n_messages_by_snake[snake]
+        warnings.extend(_check_kpi_card_coverage(ui_converter_code, i18n_code, snake))
 
     return {
         "warnings": warnings,

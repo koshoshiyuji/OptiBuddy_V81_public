@@ -9,7 +9,7 @@ try:
 except Exception as e:
     print(f"Warning: .env の読み込みに失敗しました: {e}")
 
-from llm.llm_client import call_llm_json, call_stage1_tool, default_model, fast_model, extract_json, is_available, get_provider
+from llm.llm_client import call_llm, call_llm_json, call_stage1_tool, default_model, fast_model, extract_json, is_available, get_provider
 
 MODEL = default_model()  # 後方互換のためモジュールレベルで保持
 
@@ -214,6 +214,117 @@ DSL_EXPERT_SYSTEM_PROMPT = """
 
 
 # -------------------------------------------------------
+# 2026-09-16追加: ドメイン別 /ask システムプロンプトの動的生成・解決
+#
+# 背景: 上のDSL_EXPERT_SYSTEM_PROMPTはコンテナターミナル専用にハードコードされて
+# おり（yard/ship権限区分・IS_YARD/IS_SHIP等の用語）、ask_about_dsl()は常にこれ
+# だけを使っていた。マルチドメイン生成に対応した後もこの機能だけ取り残され、
+# MatchingOptimization等の別ドメインでは「回答範囲外です」としか答えられない
+# 不具合があった。コンテナ側のdsl payloadは problem_class フィールドを持たない
+# （containers/tasks/issues/relations構造）ため、problem_classの有無で新旧を
+# 判定し、コンテナ側の挙動は一切変えず新ドメインだけ動的プロンプトに切り替える。
+# 生成は初回リクエスト時に1回だけ行い、dsl_definitions.ask_system_promptに
+# キャッシュする（schema_json同様、登録フロー自体には手を入れない遅延生成）。
+# -------------------------------------------------------
+
+def _generate_ask_system_prompt(problem_class: str, description: str) -> str:
+    """
+    指定ドメインの実装コード（converter.py/solver.py）を根拠に、/ask用の
+    システムプロンプトをLLMで生成する。schema_jsonは型定義のみで編集可否・
+    緩和提案の出し方までは含まないため、実コードを直接読ませて正確性を担保する。
+    """
+    from domain_generator import _to_snake, _BACKEND_ROOT  # 遅延import（循環参照回避）
+
+    snake = _to_snake(problem_class)
+    code_parts = []
+    for role, rel_path in (
+        ("converter", f"dsl_transformer/{snake}_converter.py"),
+        ("solver",    f"solvers/{snake}_solver.py"),
+    ):
+        fpath = _BACKEND_ROOT / rel_path
+        if fpath.exists():
+            try:
+                code_parts.append(f"### {role}: {rel_path}\n```python\n{fpath.read_text(encoding='utf-8')}\n```")
+            except Exception as e:
+                print(f"[_generate_ask_system_prompt] {rel_path} 読み込み失敗: {e}")
+    code_context = "\n\n".join(code_parts) or "(実装コード取得不可)"
+
+    gen_prompt = f"""以下は最適化ドメイン「{problem_class}」の実装コードです。この実装をもとに、
+ユーザーからの質問にDSL（入力データ）と最適化結果を踏まえて回答するAIアシスタント用の
+システムプロンプトを日本語で書いてください。
+
+## ドメインの説明
+{description or "(説明なし)"}
+
+## 実装コード
+{code_context}
+
+## 生成するシステムプロンプトに必ず含めること
+1. 「あなたは『{problem_class}』の最適化AI『OptiBuddy』です」という自己紹介。
+2. DSL（入力データ）の主要フィールドの説明。
+3. 最適化結果（solution）の構造の説明。
+4. どのフィールドが「ユーザーが調整可能な設定値」で、どのフィールドが
+   「変更不可の入力データ（対象者・レコードそのもの）」かの区分。
+5. 解なし（infeasible）の場合、原因となっている制約を特定し、どの値をどこまで
+   緩和すれば解決するか、実データから計算した具体的な数値を伴う緩和案を
+   提案できること（これは特に重要な機能なので、曖昧な提案ではなく必ず
+   具体的な数値を示すよう明記すること）。
+6. 必ずJSON形式のみで回答すること: explanation（日本語説明）/ dsl_patch（JSON Patch
+   形式、提案がなければ空配列）/ can_optimize（再最適化で改善できる変更かどうか）/
+   root_cause（根本原因を1行で）。
+
+システムプロンプトの本文だけを出力してください（前置きや説明は不要です）。"""
+
+    fallback = (
+        f"あなたは『{problem_class}』の最適化AI「OptiBuddy」です。"
+        f"提供されたDSLと最適化結果を参照し、質問に日本語で回答してください。"
+        f"必ずJSON形式（explanation/dsl_patch/can_optimize/root_cause）で返してください。"
+    )
+    try:
+        text = call_llm([{"role": "user", "content": gen_prompt}], model=MODEL, temperature=0.3, max_tokens=3000)
+        text = (text or "").strip()
+        return text if text else fallback
+    except Exception as e:
+        print(f"[_generate_ask_system_prompt] {problem_class} の生成に失敗、簡易フォールバックを使用: {e}")
+        return fallback
+
+
+def _resolve_ask_system_prompt(dsl: dict) -> str:
+    """
+    dslのproblem_classから、そのドメイン用のシステムプロンプトを解決する。
+    problem_classが無ければ（＝従来のコンテナターミナル用DSL）既存動作を維持する。
+    途中で何か失敗した場合も必ずコンテナ用プロンプトにフォールバックし、
+    /ask 自体が失敗することは無いようにする。
+    """
+    problem_class = (dsl or {}).get("problem_class")
+    if not problem_class:
+        return DSL_EXPERT_SYSTEM_PROMPT
+
+    try:
+        from dsl_repository.repository import DslRepository
+        repo = DslRepository()
+        version = repo.get_latest_dsl_version(problem_class)
+        if not version:
+            print(f"[_resolve_ask_system_prompt] '{problem_class}' がDB未登録のためコンテナ用にフォールバック")
+            return DSL_EXPERT_SYSTEM_PROMPT
+
+        definition = repo.get_dsl_definition(problem_class, version) or {}
+        cached = definition.get("ask_system_prompt")
+        if cached:
+            return cached
+
+        generated = _generate_ask_system_prompt(problem_class, definition.get("description", ""))
+        try:
+            repo.update_dsl_definition_ask_prompt(problem_class, version, generated)
+        except Exception as e:
+            print(f"[_resolve_ask_system_prompt] '{problem_class}' 用プロンプトのキャッシュ保存に失敗（今回分の生成結果はそのまま使用）: {e}")
+        return generated
+    except Exception as e:
+        print(f"[_resolve_ask_system_prompt] '{problem_class}' 用プロンプト解決に失敗、コンテナ用にフォールバック: {e}")
+        return DSL_EXPERT_SYSTEM_PROMPT
+
+
+# -------------------------------------------------------
 # V7: 2段階呼び出し版 ask_about_dsl
 # Stage 1 (Haiku): 質問を解析して必要なタスクデータを特定
 # Stage 2 (Sonnet): 絞り込んだデータで回答生成
@@ -321,8 +432,10 @@ def ask_about_dsl(question: str, dsl: dict, solution: dict, history: list = []) 
             },
         }
 
+        system_prompt = _resolve_ask_system_prompt(dsl)
+
         messages = [
-            {"role": "system", "content": DSL_EXPERT_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {
                 "role": "user",
                 "content": (

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS dsl_definitions (
     extensions JSON NOT NULL,
     schema_json JSON NOT NULL,
     description TEXT,
+    ask_system_prompt TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
