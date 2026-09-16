@@ -404,7 +404,7 @@ def run_debug_agent(
     hearing_texts: list[str],
     snake_name: str,
     human_notes: str = "",
-    max_turns: int = 7,
+    max_turns: int = 8,
     should_stop: Optional[Callable[[], bool]] = None,
     resume_state: Optional[dict] = None,
     human_answer: Optional[str] = None,

@@ -195,6 +195,8 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const [dynamicOverrideChecked, setDynamicOverrideChecked] = useState(false);
   const [interrupting, setInterrupting]     = useState(false);
   const [answerText, setAnswerText]         = useState('');
+  const [copiedIdx, setCopiedIdx]             = useState<number | null>(null);
+  const [expandedIdx, setExpandedIdx]         = useState<Set<number>>(new Set());
   const [agentAnswerText, setAgentAnswerText] = useState('');
   const [forceNewDomain, setForceNewDomain] = useState(false);
   // 2026-07-18f追加: 登録完了後の「今すぐ直す」ジョブが実行中かどうか。
@@ -802,14 +804,50 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', marginBottom: '10px' }}>
                 {t('registerModal.pointsToReview', { count: (job.questions ?? []).length })}
               </div>
-              {(job.questions ?? []).map((q, i) => (
+              {(job.questions ?? []).map((q, i) => {
+                const isExpanded = expandedIdx.has(i);
+                const firstLine = q.split('\n').find(l => l.trim().length > 0) ?? q;
+                const hasMore = q.trim() !== firstLine.trim();
+                return (
                 <div key={i} style={{ fontSize: '12px', color: '#eee', padding: '8px 10px',
                                       marginBottom: '6px', borderRadius: '6px',
                                       background: '#1a1208', border: '0.5px solid #f9731644',
-                                      whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                  {q}
+                                      display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <div style={{ flex: 1, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                    {isExpanded ? q : firstLine}
+                    {hasMore && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedIdx(prev => {
+                          const next = new Set(prev);
+                          if (next.has(i)) next.delete(i); else next.add(i);
+                          return next;
+                        })}
+                        style={{ marginLeft: '8px', fontSize: '10px', color: '#f97316',
+                                 background: 'none', border: 'none', cursor: 'pointer',
+                                 textDecoration: 'underline', padding: 0 }}
+                      >
+                        {isExpanded ? t('registerModal.collapse') : t('registerModal.expand')}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(q);
+                      setCopiedIdx(i);
+                      setTimeout(() => setCopiedIdx(cur => (cur === i ? null : cur)), 1500);
+                    }}
+                    title={t('registerModal.copyQuestionTitle')}
+                    style={{ flexShrink: 0, fontSize: '10px', padding: '3px 8px', borderRadius: '4px',
+                             background: '#2a2010', border: '0.5px solid #f9731666', color: '#f97316',
+                             cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {copiedIdx === i ? t('registerModal.copied') : t('registerModal.copyButton')}
+                  </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={card}>

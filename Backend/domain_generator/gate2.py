@@ -753,7 +753,7 @@ def run_post_registration_fix(snake: str, domain_name: str, warnings: list,
         domain_name=domain_name,
         hearing_texts=hearing_texts or [],
         snake_name=snake,
-        max_turns=7,
+        max_turns=8,
         should_stop=should_stop,
         # 2026-08-10: 段階B A/Bテストでトークン-19%・所要時間-5%を確認
         # （Koshoshi承認、詳細はENGINEERING_LOG.md 2026-08-10追記4）。
@@ -799,6 +799,13 @@ def run_post_registration_fix(snake: str, domain_name: str, warnings: list,
         dyn_report = run_gate2_dynamic_verification(snake)
         for w in dyn_report.get("warnings", []):
             new_warnings.append(f"[動的検証] {w}")
+        for suffix, entry in dyn_report.get("scenarios", {}).items():
+            if entry.get("status") == "exception":
+                tb_text = entry.get("traceback") or ""
+                last_line = tb_text.strip().splitlines()[-1] if tb_text.strip() else "不明なエラー"
+                new_warnings.append(
+                    f"（実装のバグの疑い）{suffix}シナリオの実行中に例外が発生しました: {last_line}"
+                )
     except Exception as e:
         new_warnings.append(f"修正後の動的検証実行に失敗: {e}")
 
