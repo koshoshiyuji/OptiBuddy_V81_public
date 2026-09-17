@@ -947,10 +947,20 @@ INSTRUCTION: convert_solver_to_ui の 4DSLドメイン分岐ブロックに {nam
 ===END===
 
 {dsl4_patches}
+[2026-09-18追加] 次のSCENARIOSブロックの各シナリオの "description" は、名前の反復
+（プレースホルダー）ではなく、この業務が実際に何を扱うか（対象・制約・目的）を1〜2文で
+要約した実質的な説明にすること。後日、別の新規ドメイン登録時にこの説明文だけを見て
+「既存ドメインとして流用できるか」を判定する仕組みがあり、名前を繰り返しただけの説明では
+正しい判定ができない（PatientTransportPlannerがRideshareMatchingPlannerの空同然の
+説明文のせいで誤って同一視された実例がある）。
+NG例: "description": "{name}の標準シナリオ"
+OK例: "description": "約20件の送迎依頼を4台の車両に割り当て、乗車定員内での相乗りを許可しつつ
+往復ペア・対応区分を考慮して配車するシナリオ"（実際の業務内容に即して書くこと。この例文を
+そのまま使い回さないこと）
 ===SCENARIOS===
 [
-  {{"name": "{name} — 標準",   "description": "{name}の標準シナリオ", "tag": "{name[:6].upper()}", "tag_color": "#8b5cf6", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_baseline.json"}},
-  {{"name": "{name} — 解なし", "description": "{name}のInfeasibleシナリオ", "tag": "{name[:6].upper()}", "tag_color": "#ef4444", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_infeasible.json"}}
+  {{"name": "{name} — 標準",   "description": "（この業務の対象・制約・目的を1〜2文で要約すること。上記OK例参照）", "tag": "{name[:6].upper()}", "tag_color": "#8b5cf6", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_baseline.json"}},
+  {{"name": "{name} — 解なし", "description": "（同上。実行不可能になる具体的な理由を含めること）", "tag": "{name[:6].upper()}", "tag_color": "#ef4444", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_infeasible.json"}}
 ]
 ===END===
 """
