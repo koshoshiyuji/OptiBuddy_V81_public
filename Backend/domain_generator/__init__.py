@@ -376,6 +376,7 @@ from .static_checks import (
     _check_big_m_objective,
     _check_i18n_message_coverage,
     _check_mip_self_verification,
+    _check_no_overlap_cumulative_conflict,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
     _check_optional_interval_absent_value,

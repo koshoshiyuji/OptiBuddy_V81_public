@@ -251,6 +251,40 @@ mdl.add(mdl.logical_or([
 ]))
 ```
 
+### ❌ 禁止パターン12: 時間帯によって単価・コストが変わる場合に、目的関数側だけ平均値で近似する
+```python
+# NG: ヒアリングシートが「電力の単価は時間帯によって変わる」ことを明示的に
+# 要求しているのに、目的関数（最適化の意思決定に使われる側）では
+# 時間帯別単価テーブルを平均した定数を使ってしまっている。
+# KPI表示用の別関数（_compute_energy_cost_for_orderのような正確な
+# 時間帯積分計算）が同じファイル内に既に存在していても、それが目的関数
+# 側の意思決定には一切使われず事後表示にしか使われていない場合、
+# ソルバーは実質的に時間帯を見ずにスケジューリングしてしまう
+# （2026-09-17 EnergyCostAwareScheduler実機投入前レビューで発覚。
+# 物理的な実行可能性は常に満たされるため、Gate2の動的検証や独立解
+# チェッカーでは検出されない）。
+def _average_tariff(tariff_table):
+    return sum(tariff_table) / len(tariff_table)
+
+avg_cost_per_kwh = _average_tariff(tariff_table)
+for lid, itv in order_itvs[oid].items():
+    cost_terms.append(mdl.presence_of(itv) * dur * req_power * avg_cost_per_kwh)
+```
+```python
+# OK: 開始時刻の候補ごとに正確なコストを事前計算し、element()で
+# 開始時刻（決定変数）からその値を引く。目的関数自体が時間帯を
+# 正しく考慮した上で最適化されるようになる。
+max_start = end_latest - dur
+cost_by_offset = [
+    int(round(_compute_energy_cost_for_order(t, t + dur, req_power, tariff_table, slot_min) * 100))
+    for t in range(earliest, max_start + 1)
+]
+for lid, itv in order_itvs[oid].items():
+    offset_expr = mdl.start_of(itv, absentValue=earliest) - earliest
+    energy_cost_expr = mdl.element(cost_by_offset, offset_expr)
+    cost_terms.append(mdl.presence_of(itv) * energy_cost_expr)
+```
+
 ## 数量要件（hard/soft）の実装ルール（必ず守ること）
 
 ヒアリングシート§4-1「人数・数量に関するルールの扱い」（a=解なし扱い=hard /

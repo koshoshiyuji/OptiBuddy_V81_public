@@ -93,6 +93,53 @@ def _check_no_overlap_without_sequence_var(code: str, path: str) -> list[str]:
     return warnings
 
 
+# 禁止パターン7: 同一ファイル内で no_overlap系（完全排他の順序制約）と
+# pulse/cumulative系（上限付き同時使用の容量制約）の両方が使われている場合、
+# 同じ資源に対して二重に排他制御をかけていないか要確認、という警告を出す。
+#
+# [2026-09-17] PatientTransportPlannerで実際に発生したバグが動機:
+# 各送迎車に対して sequence_var + no_overlap（同一車両上のフェーズは
+# 時間的に一切重ならない、という完全排他制約）と、pulse合計 <= 定員の
+# cumulative容量制約の両方が課されており、no_overlapが常にcumulativeより
+# 厳しく効くため、定員2以上の車両でも相乗り（同時に複数フェーズが走ること）
+# が構造的に一度も起こり得なかった（cumulative制約が事実上のデッドコードに
+# なっていた）。ヒアリングシート9節が「上限付きで複数」（相乗り可）を明示的に
+# 要求していたにもかかわらず、この二重制約により実現不可能になっていた。
+#
+# 本チェックは同じファイル内で両方のパターンが検出された場合に警告する
+# （どちらか一方のみの使用は正当なユースケースなので対象外）。
+# BaseConstraintApplier（9節a/bの排他選択を一元管理する共通コード）に
+# 実装を委譲しているファイルは、そちら側でa/bが排他的に選ばれるため対象外。
+_NO_OVERLAP_ANY_RE = re.compile(r'\b(?:mdl\.no_overlap|cp\.NoOverlap(?:Optional)?)\s*\(')
+_PULSE_OR_CUMULATIVE_RE = re.compile(r'\b(?:mdl\.pulse|cp\.Cumulative)\s*\(')
+_CONSTRAINT_APPLIER_USAGE_RE = re.compile(r'\bBaseConstraintApplier\b')
+
+
+def _check_no_overlap_cumulative_conflict(code: str, path: str) -> list[str]:
+    scan_code = _strip_line_comments(code)
+    if _CONSTRAINT_APPLIER_USAGE_RE.search(scan_code):
+        # BaseConstraintApplierに委譲している場合はそちら側でa/bの排他が
+        # 管理されるため対象外
+        return []
+    has_no_overlap = bool(_NO_OVERLAP_ANY_RE.search(scan_code))
+    has_cumulative = bool(_PULSE_OR_CUMULATIVE_RE.search(scan_code))
+    if has_no_overlap and has_cumulative:
+        return [
+            f"{path}: no_overlap系（sequence_var+no_overlap または "
+            f"cp.NoOverlapOptional）と pulse/cumulative系（mdl.pulse または "
+            f"cp.Cumulative）の両方が同一ファイル内で使われています（禁止パターン7）。"
+            f"同じ資源に対して両方を課すと、no_overlapの完全排他制約が常に"
+            f"cumulativeの容量制約より厳しく効くため、容量制約側が実質的に"
+            f"デッドコード化し、本来許容されるべき「上限付きで複数同時使用"
+            f"（相乗り等）」が構造的に不可能になります"
+            f"（PatientTransportPlannerで実際に発生: 2026-09-17）。"
+            f"両方が本当に別々の資源に対する制約であれば問題ありませんが、"
+            f"同一資源に対するものであれば、no_overlapを削除しcumulativeのみに"
+            f"統一するか、BaseConstraintApplierのa/b排他選択に委譲してください。"
+        ]
+    return []
+
+
 def _strip_line_comments(code: str) -> str:
     """各行の最初の '#' 以降を雑に除去する（コード中で言及・説明しているだけの
     コメント行を、実際の違反コードと誤検知しないようにするための簡易前処理）。

@@ -22,6 +22,7 @@ from .static_checks import (
     _check_big_m_objective,
     _check_kpi_card_coverage,
     _check_mip_self_verification,
+    _check_no_overlap_cumulative_conflict,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
     _check_optional_interval_absent_value,
@@ -388,6 +389,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             warnings.extend(_check_unwrapped_minimize(code, path))
             warnings.extend(_check_unnamed_expr_get_value(code, path))
             warnings.extend(_check_no_overlap_without_sequence_var(code, path))
+            warnings.extend(_check_no_overlap_cumulative_conflict(code, path))
             big_m_warnings.extend(_check_big_m_objective(code, path))
             absent_value_warnings.extend(_check_optional_interval_absent_value(code, path))
             mip_self_check_warnings.extend(_check_mip_self_verification(code, path))
