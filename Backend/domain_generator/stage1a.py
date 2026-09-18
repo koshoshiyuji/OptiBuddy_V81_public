@@ -331,6 +331,155 @@ def classify_problem(domain_name: str, hearing_texts: list) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
+# Stage 1a.3: 構造(DSL)類似度チェック（専用LLM呼び出し、2026-09-18新設）
+#
+# 背景: PatientTransportPlanner登録時の誤分類事故（既存ドメイン
+# RideshareMatchingPlannerと誤って同一視され、Pattern 3の拡張生成が
+# 中途半端な差分しか作れないまま登録されてしまった）を受けた対応。
+#
+# classify_problem()は候補ドメインの名前＋説明文（DBの短い要約テキスト）
+# だけを見て判定しており、実際のDSL/ソースコードの構造を見ていない
+# （説明文が薄い・名前が似ているだけで誤爆する既知パターン、
+# HANDOFF_2026-07-31参照）。この誤爆を、新しいDSLを一切生成せずに
+# 検出するため、detect_extension_gaps()（Stage1a.5）と同じ手法
+# ——base_domainの実ソースコードをそのまま読ませ、ヒアリング文と
+# 直接比較させる——を、Stage1a.5より前段（gap detail算定の前）で
+# 「そもそもこの既存ドメインへの当てはめ自体が妥当か」という粗い
+# ゲート判定として先出しする。
+#
+# Koshoshi合意の設計方針（2026-09-18）:
+#   - 名前の一致・類似はあくまで「どの候補について実物を読みに行くか」の
+#     トリガーに留め、最終判断は実物（DSL/ソース）比較で行う。
+#   - ドメイン名が同一またはほぼ同一の場合は、LLM呼び出し無しで
+#     即座に same_scenario と判定する（安価な決定的ショートカット）。
+#   - 「差分がほぼ無い/名前がほぼ同一」→ same_scenario、
+#     「差分小・再利用可能」→ extension、
+#     それ以外（差分大・判断が難しい・確信が持てない）は全部 new_domain
+#     に倒す（疑わしきは新規ドメイン。confidenceが低い場合も同様に
+#     new_domain側に倒す非対称ルール）。
+# ─────────────────────────────────────────────────────────────
+
+_DOMAIN_NAME_IDENTITY_THRESHOLD = 0.9
+
+_STRUCTURAL_SIMILARITY_SYSTEM = """あなたは、新しい業務ヒアリングの内容と、既存に実装済みの最適化ドメインの実際の
+ソースコードを見比べて、両者がどれだけ構造的に近いかを判定する専門家です。
+
+背景: この判定の前段（別のLLM呼び出し）で、候補ドメインの「名前」と「短い説明文」
+だけを見て、この既存ドメインに当てはめられそうだという一次判定が既に出ています。
+しかしその一次判定は、業務用語がドメイン名と字面上似ているだけで、実際には全く
+別の業務構造を誤って同一視してしまうことがあります（実例: 「送迎」という言葉が
+似ているだけで、通院送迎の1対1割当を、乗合マッチングの別ドメインと誤って
+同一視した事故）。あなたの仕事は、実際のソースコード（変数構造・制約ファミリー・
+目的関数の形）とヒアリング文を直接見比べて、この一次判定が本当に正しいかを
+検証することです。
+
+判定基準:
+1. **same_scenario**: ヒアリング内容が、既存ドメインの実装が既にカバーしている
+   業務とほぼ同一（変数構造・制約・目的関数がほぼそのまま使え、新しいコードを
+   一切書く必要がない）。
+2. **extension**: 業務の骨格（主要な変数構造・制約ファミリー）は既存ドメインと
+   共通しているが、新しい制約や項目の追加が必要（既存コードへの部分的な拡張で
+   対応できる）。
+3. **new_domain**: 骨格から異なる（変数構造・制約ファミリー・目的関数の形が
+   別物）、または既存ドメインとの対応関係の判断に確信が持てない。
+
+**重要**: 2（extension）と判定してよいのは、既存コードの主要な構造をそのまま
+再利用できると高い確信を持てる場合のみです。少しでも「本当にこの既存ドメインを
+土台にしてよいか」に迷いがある場合、あるいは業務の対象・単位・粒度が違う
+（例: 個人単位 vs グループ単位、施設単位 vs 案件単位）場合は、無理に
+same_scenario/extensionに寄せず、3（new_domain）と判定してください。
+疑わしきは new_domain です。
+
+JSONのみを返してください。前置き・説明不要。
+
+{
+  "verdict": "same_scenario" または "extension" または "new_domain",
+  "confidence": 0.0〜1.0の数値（judgmentへの確信度。少しでも迷いがあれば0.5以下にすること）,
+  "reason": "判定理由を1〜2文で。実際のソースコードのどの部分（関数名・変数名・制約の形等）を
+             根拠にしたかを具体的に含めること。"
+}
+"""
+
+
+def check_structural_similarity(domain_name: str, hearing_texts: list, base_domain: str) -> dict:
+    """
+    Stage1a.3: classify_problem()がmatch_type="existing_domain"または
+    "base_problem"と判定した直後に呼ぶ。base_domainの実ソースコードを
+    直接読ませてヒアリング文と比較し、その一次判定が本当に妥当かを検証する。
+
+    戻り値: {"verdict": "same_scenario"|"extension"|"new_domain",
+             "confidence": float, "reason": str}
+    ソースファイルが見つからない場合は安全側に倒し、new_domain・confidence=0.0を返す
+    （実ソースで検証できない以上、既存ドメインへの当てはめを続ける根拠が無いため）。
+    """
+    # 決定的ショートカット: ドメイン名が同一またはほぼ同一な場合、LLM呼び出し無しで
+    # same_scenario と判定する（Koshoshi合意の設計方針）。
+    name_ratio = difflib.SequenceMatcher(
+        None, _to_snake(domain_name), _to_snake(base_domain)
+    ).ratio()
+    if name_ratio >= _DOMAIN_NAME_IDENTITY_THRESHOLD:
+        logger.info(
+            f"[structural_similarity] {domain_name} と {base_domain} のドメイン名が"
+            f"ほぼ同一（一致率{name_ratio:.2f}）のため、LLM呼び出し無しで "
+            f"same_scenario と判定"
+        )
+        return {"verdict": "same_scenario", "confidence": 1.0,
+                "reason": f"ドメイン名がほぼ同一（一致率{name_ratio:.2f}）"}
+
+    from llm.llm_client import call_llm, extract_json, default_model
+
+    _ensure_domain_registry_reconciled()
+    src = _DOMAIN_SOURCE_FILES.get(base_domain, {})
+    source_sections = []
+    for role, path in src.items():
+        if not path:
+            continue
+        try:
+            code = Path(path).read_text(encoding="utf-8")
+            source_sections.append(f"### {role}: {Path(path).name}\n```python\n{code}\n```")
+        except Exception as e:
+            logger.warning(f"[structural_similarity] ソース読み込み失敗: {path} — {e}")
+
+    if not source_sections:
+        logger.warning(
+            f"[structural_similarity] {base_domain} のソースファイルが見つからず"
+            f"検証不能。安全側に倒し new_domain と判定します。"
+        )
+        return {"verdict": "new_domain", "confidence": 0.0,
+                "reason": f"{base_domain} の実ソースコードが見つからず構造検証ができなかった"}
+
+    hearing_combined = "\n\n---\n\n".join(hearing_texts)
+    user_prompt = f"""## 新しい業務名
+{domain_name}
+
+## 一次判定で候補になった既存ドメイン
+{base_domain}
+
+## 既存ドメインの実際のソースコード
+{chr(10).join(source_sections)}
+
+## 新しい業務のヒアリング内容
+{hearing_combined}
+
+上記を見比べて、JSON で判定してください。
+"""
+    messages = [{"role": "system", "content": _STRUCTURAL_SIMILARITY_SYSTEM},
+                {"role": "user", "content": user_prompt}]
+    raw    = call_llm(messages, model=default_model(), max_tokens=1024, temperature=0)
+    result = extract_json(raw)
+    verdict    = result.get("verdict", "new_domain")
+    confidence = result.get("confidence", 0.0)
+    reason     = result.get("reason", "")
+    if verdict not in ("same_scenario", "extension", "new_domain"):
+        verdict = "new_domain"
+    logger.info(
+        f"[structural_similarity] {domain_name} vs {base_domain}: "
+        f"verdict={verdict}, confidence={confidence}"
+    )
+    return {"verdict": verdict, "confidence": confidence, "reason": reason}
+
+
+# ─────────────────────────────────────────────────────────────
 # Stage 1a.4: 軸(a)適合チェック（専用LLM呼び出し、2026-07-31分離）
 #
 # 背景: 2026-07-30に導入した軸(a)適合チェックは、当初classify_problem()の
