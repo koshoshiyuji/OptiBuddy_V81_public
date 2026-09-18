@@ -411,21 +411,18 @@ def check_structural_similarity(domain_name: str, hearing_texts: list, base_doma
              "confidence": float, "reason": str}
     ソースファイルが見つからない場合は安全側に倒し、new_domain・confidence=0.0を返す
     （実ソースで検証できない以上、既存ドメインへの当てはめを続ける根拠が無いため）。
-    """
-    # 決定的ショートカット: ドメイン名が同一またはほぼ同一な場合、LLM呼び出し無しで
-    # same_scenario と判定する（Koshoshi合意の設計方針）。
-    name_ratio = difflib.SequenceMatcher(
-        None, _to_snake(domain_name), _to_snake(base_domain)
-    ).ratio()
-    if name_ratio >= _DOMAIN_NAME_IDENTITY_THRESHOLD:
-        logger.info(
-            f"[structural_similarity] {domain_name} と {base_domain} のドメイン名が"
-            f"ほぼ同一（一致率{name_ratio:.2f}）のため、LLM呼び出し無しで "
-            f"same_scenario と判定"
-        )
-        return {"verdict": "same_scenario", "confidence": 1.0,
-                "reason": f"ドメイン名がほぼ同一（一致率{name_ratio:.2f}）"}
 
+    [2026-09-18修正] 実装ファイルの存在確認を、ドメイン名一致ショートカットより
+    「先に」行うよう順序を変更した。修正前は名前が一致しさえすれば実装ファイルの
+    有無を一切見ずに same_scenario を確定させていたため、DBにレコードだけ残り
+    実装ファイルが存在しない「幽霊ドメイン」が候補になった場合（PatientTransportPlanner
+    再登録時に実機発生: post_register_fixが失敗し実装ファイルが失われた後も
+    dsl_definitionsの行だけが残り、同名で再登録するたびに名前一致ショートカットが
+    発火して「same_scenario」と誤認定し、実装コードの無いDSL定義だけが際限なく
+    積み上がった）、これを検出できなかった。「名前が同じだから中身も同じはず」という
+    前提そのものが、まさに幽霊ドメインでは成り立たないため、ファイル存在確認を
+    名前一致より優先する。
+    """
     from llm.llm_client import call_llm, extract_json, default_model
 
     _ensure_domain_registry_reconciled()
@@ -442,11 +439,29 @@ def check_structural_similarity(domain_name: str, hearing_texts: list, base_doma
 
     if not source_sections:
         logger.warning(
-            f"[structural_similarity] {base_domain} のソースファイルが見つからず"
-            f"検証不能。安全側に倒し new_domain と判定します。"
+            f"[structural_similarity] {base_domain} の実装ファイルが1つも見つからず"
+            f"検証不能（幽霊ドメインの疑い）。ドメイン名の一致有無に関わらず安全側に倒し "
+            f"new_domain と判定します。"
         )
         return {"verdict": "new_domain", "confidence": 0.0,
-                "reason": f"{base_domain} の実ソースコードが見つからず構造検証ができなかった"}
+                "reason": f"{base_domain} の実ソースコードが1つも見つからず構造検証が"
+                          f"できなかった（幽霊ドメインの疑い）"}
+
+    # 決定的ショートカット: 実装ファイルの存在を確認できた上で、ドメイン名が同一または
+    # ほぼ同一な場合のみ、LLM呼び出し無しで same_scenario と判定する
+    # （Koshoshi合意の設計方針）。
+    name_ratio = difflib.SequenceMatcher(
+        None, _to_snake(domain_name), _to_snake(base_domain)
+    ).ratio()
+    if name_ratio >= _DOMAIN_NAME_IDENTITY_THRESHOLD:
+        logger.info(
+            f"[structural_similarity] {domain_name} と {base_domain} のドメイン名が"
+            f"ほぼ同一（一致率{name_ratio:.2f}）、かつ実装ファイルの存在を確認できたため、"
+            f"LLM呼び出し無しで same_scenario と判定"
+        )
+        return {"verdict": "same_scenario", "confidence": 1.0,
+                "reason": f"ドメイン名がほぼ同一（一致率{name_ratio:.2f}）、"
+                          f"実装ファイルの存在も確認済み"}
 
     hearing_combined = "\n\n---\n\n".join(hearing_texts)
     user_prompt = f"""## 新しい業務名

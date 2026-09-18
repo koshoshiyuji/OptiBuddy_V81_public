@@ -25,23 +25,33 @@ import domain_generator.hearing as hearing_mod
 
 # ── check_structural_similarity() 単体 ─────────────────────────
 
-def test_identical_domain_name_shortcuts_to_same_scenario_no_llm():
-    # domain_name と base_domain が同一 → LLM呼び出し無しでsame_scenario
-    # (call_llmはcheck_structural_similarity内でローカルimportされるため、
-    #  ショートカットで早期returnすればそもそも呼ばれない。ここではその
-    #  早期returnの結果だけを検証する。)
-    result = check_structural_similarity("PatientTransportPlanner", ["dummy hearing"], "PatientTransportPlanner")
+def test_identical_domain_name_shortcuts_to_same_scenario_when_files_exist():
+    # domain_name と base_domain が同一、かつ実装ファイルが実在する場合のみ
+    # → LLM呼び出し無しでsame_scenario。TruckDispatcherは実ファイルが存在する
+    # 既存ドメインなのでこれを使う。
+    result = check_structural_similarity("TruckDispatcher", ["dummy hearing"], "TruckDispatcher")
     assert result["verdict"] == "same_scenario", result
     assert result["confidence"] == 1.0, result
 
 
-def test_near_identical_domain_name_shortcuts_to_same_scenario():
-    result = check_structural_similarity("patient_transport_planner", ["dummy"], "PatientTransportPlanner")
+def test_near_identical_domain_name_shortcuts_to_same_scenario_when_files_exist():
+    result = check_structural_similarity("truck_dispatcher", ["dummy"], "TruckDispatcher")
     assert result["verdict"] == "same_scenario", result
 
 
 def test_missing_source_files_falls_back_to_new_domain():
     result = check_structural_similarity("SomeNewThing", ["dummy hearing"], "NoSuchDomainAtAll12345")
+    assert result["verdict"] == "new_domain", result
+    assert result["confidence"] == 0.0, result
+
+
+def test_identical_domain_name_but_ghost_domain_falls_back_to_new_domain():
+    # 2026-09-18バグ修正の回帰テスト: ドメイン名が完全一致していても、
+    # 実装ファイルが1つも存在しない「幽霊ドメイン」の場合は、名前一致
+    # ショートカットを発火させずnew_domainに倒す（PatientTransportPlanner
+    # 再登録時に実機発生: DB行だけ残った幽霊ドメインが名前一致で
+    # same_scenarioと誤認定され、実装コード無しのDSL定義が積み上がった）。
+    result = check_structural_similarity("PatientTransportPlanner", ["dummy hearing"], "PatientTransportPlanner")
     assert result["verdict"] == "new_domain", result
     assert result["confidence"] == 0.0, result
 
@@ -132,9 +142,10 @@ def test_override_skipped_when_force_new_domain():
 
 if __name__ == "__main__":
     tests = [
-        test_identical_domain_name_shortcuts_to_same_scenario_no_llm,
-        test_near_identical_domain_name_shortcuts_to_same_scenario,
+        test_identical_domain_name_shortcuts_to_same_scenario_when_files_exist,
+        test_near_identical_domain_name_shortcuts_to_same_scenario_when_files_exist,
         test_missing_source_files_falls_back_to_new_domain,
+        test_identical_domain_name_but_ghost_domain_falls_back_to_new_domain,
         test_low_confidence_verdict_overrides_to_new_domain,
         test_high_confidence_extension_verdict_is_not_overridden,
         test_override_skipped_when_force_new_domain,
