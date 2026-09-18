@@ -25,7 +25,9 @@ from .static_checks import (
     _check_no_overlap_cumulative_conflict,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
+    _check_if_then_comparison_arg,
     _check_optional_interval_absent_value,
+    _check_pulse_float_height,
     _check_table_sections_wiring,
     _check_unnamed_expr_get_value,
     _check_unwrapped_minimize,
@@ -68,6 +70,17 @@ _FINDING_CATEGORY_HINTS: dict[str, str] = {
         "この指摘は、候補の中から選ばれなかった場合の扱い方に矛盾がある可能性が"
         "ある、という内容です。『選ばれなかった候補（未採用のケース）の扱いに"
         "関する計算ロジックについての指摘であること』が伝わるようにしてください。"
+    ),
+    "pulse_float": (
+        "この指摘は、数量を整数として扱うべき箇所に小数のままの値が渡されている"
+        "可能性がある、という内容です。『数量の型（整数か小数か）の扱いについての"
+        "指摘であること』が伝わるようにしてください。"
+    ),
+    "containment": (
+        "この指摘は、ある条件が成り立つときだけ別の条件式が評価される、という"
+        "書き方の一部が、システムの実行制約に反している可能性がある、という"
+        "内容です。『条件分岐の書き方についての指摘であること』が伝わるように"
+        "してください。"
     ),
     "missing_in_dsl_for_solver": (
         "この指摘は、入力データ（業務データ）の中の特定の設定項目が、実際の"
@@ -363,6 +376,8 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
     unused_in_solver_warnings = []
     big_m_warnings = []
     absent_value_warnings = []
+    pulse_float_warnings = []
+    containment_warnings = []
     missing_in_dsl_for_solver_warnings = []
     mip_self_check_warnings = []
     solver_by_snake:       dict[str, tuple[str, str]] = {}
@@ -392,6 +407,8 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             warnings.extend(_check_no_overlap_cumulative_conflict(code, path))
             big_m_warnings.extend(_check_big_m_objective(code, path))
             absent_value_warnings.extend(_check_optional_interval_absent_value(code, path))
+            pulse_float_warnings.extend(_check_pulse_float_height(code, path))
+            containment_warnings.extend(_check_if_then_comparison_arg(code, path))
             mip_self_check_warnings.extend(_check_mip_self_verification(code, path))
 
         elif path.endswith("_converter.py") and not path.endswith("_ui_converter.py"):
@@ -497,6 +514,8 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
         "unused_in_solver_warnings": unused_in_solver_warnings,
         "big_m_warnings": big_m_warnings,
         "absent_value_warnings": absent_value_warnings,
+        "pulse_float_warnings": pulse_float_warnings,
+        "containment_warnings": containment_warnings,
         "missing_in_dsl_for_solver_warnings": missing_in_dsl_for_solver_warnings,
         "mip_self_check_warnings": mip_self_check_warnings,
     }

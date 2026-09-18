@@ -923,6 +923,8 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         unused_in_solver_warnings = _scan_result["unused_in_solver_warnings"]
         big_m_warnings = _scan_result["big_m_warnings"]
         absent_value_warnings = _scan_result["absent_value_warnings"]
+        pulse_float_warnings = _scan_result["pulse_float_warnings"]
+        containment_warnings = _scan_result["containment_warnings"]
         missing_in_dsl_for_solver_warnings = _scan_result["missing_in_dsl_for_solver_warnings"]
         mip_self_check_warnings = _scan_result["mip_self_check_warnings"]
     except Exception as e:
@@ -931,6 +933,8 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         unused_in_solver_warnings = []
         big_m_warnings = []
         absent_value_warnings = []
+        pulse_float_warnings = []
+        containment_warnings = []
         missing_in_dsl_for_solver_warnings = []
         mip_self_check_warnings = []
 
@@ -1133,6 +1137,25 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         logger.warning(f"[gate2_checks] absent_value指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         absent_value_humanized = absent_value_warnings
 
+    # 2026-09-18追加: mdl.pulse()へのfloat height直渡し検出（EnergyCostAwareScheduler
+    # 登録時に実機発生、2026-08-09）。absent_value_warningsと同じ理由でblocking側へ
+    # （Koshoshi合意、2026-09-18）。
+    try:
+        pulse_float_humanized = humanize_technical_findings(pulse_float_warnings, domain_name, category="pulse_float")
+    except Exception as e:
+        logger.warning(f"[gate2_checks] pulse_float指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
+        pulse_float_humanized = pulse_float_warnings
+
+    # 2026-09-18追加: if_thenの第2引数への比較式直渡し検出（禁止パターン4）。
+    # 従来はadvisory（_CPO_WARN_PATTERNS）扱いだったが、EnergyCostAwareScheduler
+    # で実際に見過ごされた事故（2026-08-30発覚）を受けblocking側へ昇格
+    # （Koshoshi合意、2026-09-18）。
+    try:
+        containment_humanized = humanize_technical_findings(containment_warnings, domain_name, category="containment")
+    except Exception as e:
+        logger.warning(f"[gate2_checks] containment指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
+        containment_humanized = containment_warnings
+
     # 2026-07-26追加: missing_in_dsl_for_solver（DSL⇔solver直接突き合わせ、ネストキー
     # 対応）も、unused_in_solver/big_mと同じ理由（既知の誤検知パターンが薄く、
     # work_limitsのようなパススルー構造で実際にハード制約が無効化された実機不具合の
@@ -1166,6 +1189,8 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（入力項目の反映漏れの疑い）{w}" for w in unused_in_solver_humanized]
         + [f"（数値のざっくり近似に関する指摘）{w}" for w in big_m_humanized]
         + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_humanized]
+        + [f"（数量の型に関する指摘）{w}" for w in pulse_float_humanized]
+        + [f"（条件分岐の書き方に関する指摘）{w}" for w in containment_humanized]
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
@@ -1182,6 +1207,8 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         f"sanitizer_warnings={len(sanitizer_warnings)}件, unused_in_solver={len(unused_in_solver_warnings)}件, "
         f"big_m_warnings={len(big_m_warnings)}件, "
         f"absent_value_warnings={len(absent_value_warnings)}件, "
+        f"pulse_float_warnings={len(pulse_float_warnings)}件, "
+        f"containment_warnings={len(containment_warnings)}件, "
         f"missing_in_dsl_for_solver={len(missing_in_dsl_for_solver_warnings)}件, "
         f"required_gap={len(required_gap_warnings)}件, "
         f"optional_gap_summary={len(optional_gap_summary)}件, dynamic_warnings={len(dynamic_warnings)}件, "
