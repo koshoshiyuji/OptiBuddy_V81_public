@@ -119,13 +119,6 @@ def convert_business_to_solver(business_dsl: Dict[str, Any]) -> Dict[str, Any]:
 
 
 
-    if problem_class == "PatientTransportPlanner":
-            from .patient_transport_planner_converter import convert_patient_transport_planner_to_solver
-            return convert_patient_transport_planner_to_solver(business_dsl)
-
-
-
-
     if problem_class == "MedicalAppointmentScheduler":
                 from .medical_appointment_scheduler_converter import convert_medical_appointment_scheduler_to_solver
                 return convert_medical_appointment_scheduler_to_solver(business_dsl)

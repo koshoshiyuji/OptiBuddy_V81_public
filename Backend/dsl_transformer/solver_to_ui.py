@@ -109,13 +109,6 @@ def convert_solver_to_ui(solver_output: Dict[str, Any]) -> Dict[str, Any]:
 
 
 
-    if problem_class == "PatientTransportPlanner":
-            from .patient_transport_planner_ui_converter import convert_patient_transport_planner_to_ui
-            return convert_patient_transport_planner_to_ui(solver_output)
-
-
-
-
     if problem_class == "MedicalAppointmentScheduler":
                 from .medical_appointment_scheduler_ui_converter import convert_medical_appointment_scheduler_to_ui
                 return convert_medical_appointment_scheduler_to_ui(solver_output)

@@ -49,7 +49,6 @@ const TAG_MAP: Record<string, { tag: string; tagColor: string; domain: string }>
   SteelMillSlabDesign: { tag: 'STEELM', tagColor: '#8b5cf6', domain: 'steel_mill_slab_design' },
   ShiftRotationScheduler: { tag: 'SHIFTR', tagColor: '#8b5cf6', domain: 'shift_rotation_scheduler' },
   LotSizingScheduler: { tag: 'LOTSIZ', tagColor: '#8b5cf6', domain: 'lot_sizing_scheduler' },
-  PatientTransportPlanner: { tag: 'PATIEN', tagColor: '#8b5cf6', domain: 'patient_transport_planner' },
   MedicalAppointmentScheduler: { tag: 'MEDICA', tagColor: '#8b5cf6', domain: 'medical_appointment_scheduler' },
   MedicalAppointmentSequenceScheduler: { tag: 'MEDICA', tagColor: '#8b5cf6', domain: 'medical_appointment_sequence_scheduler' },
   MysteryShopperScheduler: { tag: 'MYSTER', tagColor: '#8b5cf6', domain: 'mystery_shopper_scheduler' },
