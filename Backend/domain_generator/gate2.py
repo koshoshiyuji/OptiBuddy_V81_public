@@ -363,6 +363,37 @@ def _check_baseline_degenerate_solution(solver_input: dict, metrics: dict | None
     )
 
 
+def _format_exception_tail(tb_text: str, max_lines: int = 6) -> str:
+    """
+    2026-09-19追加（Koshoshi合意）: 動的検証で例外が発生した際、フルトレースバック
+    （tb_text）から debug_agent 向けの要約1行を作るとき、従来は
+    tb_text.strip().splitlines()[-1]（最終行＝例外クラス名・メッセージのみ）だけを
+    使っていた。これは「どのファイルの何行目・どのソース行で発生したか」という、
+    自己修復エージェントが実際にバグ箇所を特定するために必須の情報を毎回
+    切り捨ててしまっていた（PatientTransportPlanner再登録時、if out_do: のような
+    ここまで一度も禁止パターン化されていない新種バグで発覚。2026-09-19）。
+    エージェントに渡す情報を「最後の1行」から「最後のFile行（＝実際に例外を
+    投げた一番深いフレーム）以降」に広げることで、特定のバグパターンを
+    追加するのではなく、例外系の指摘全般に効く形で位置情報の欠落を防ぐ。
+
+    該当フレームが見つからない場合（tb_textが空、Fileパターンが無い等）は
+    従来通り最終行のみにフォールバックする。
+    """
+    if not tb_text or not tb_text.strip():
+        return "不明なエラー"
+    lines = tb_text.strip().splitlines()
+    last_file_idx = None
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("File \""):
+            last_file_idx = i
+    if last_file_idx is None:
+        return lines[-1]
+    tail = lines[last_file_idx:]
+    if len(tail) > max_lines:
+        tail = tail[:1] + ["    ..."] + tail[-(max_lines - 1):]
+    return "\n".join(line.strip() for line in tail)
+
+
 def run_gate2_dynamic_verification(
     snake_name: str, scenario_suffixes: tuple = ("baseline", "infeasible")
 ) -> dict:
@@ -604,7 +635,7 @@ def run_gate2_dynamic_verification(
         if status == "exception":
             report["warnings"].append(
                 f"[Gate2 CE上限ストレス検証] 例外が発生しました（CE上限を握り潰さず"
-                f"伝播させてしまっている可能性）: {ce_limit_report.get('traceback', '').splitlines()[-1] if ce_limit_report.get('traceback') else ''}"
+                f"伝播させてしまっている可能性）: {_format_exception_tail(ce_limit_report.get('traceback', ''))}"
             )
         elif status == "ce_limit_not_triggered":
             report["warnings"].append(
@@ -802,7 +833,7 @@ def run_post_registration_fix(snake: str, domain_name: str, warnings: list,
         for suffix, entry in dyn_report.get("scenarios", {}).items():
             if entry.get("status") == "exception":
                 tb_text = entry.get("traceback") or ""
-                last_line = tb_text.strip().splitlines()[-1] if tb_text.strip() else "不明なエラー"
+                last_line = _format_exception_tail(tb_text)
                 new_warnings.append(
                     f"（実装のバグの疑い）{suffix}シナリオの実行中に例外が発生しました: {last_line}"
                 )
@@ -1058,7 +1089,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
             for suffix, entry in gate2_report.get("scenarios", {}).items():
                 if entry.get("status") == "exception":
                     tb_text   = entry.get("traceback") or ""
-                    last_line = tb_text.strip().splitlines()[-1] if tb_text.strip() else "不明なエラー"
+                    last_line = _format_exception_tail(tb_text)
                     dynamic_exception_warnings.append(
                         f"{suffix}シナリオの実行中に例外が発生しました: {last_line}"
                     )
