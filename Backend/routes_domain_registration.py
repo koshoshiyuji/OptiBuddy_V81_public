@@ -637,6 +637,21 @@ _DYNAMIC_STRUCTURAL_PREFIXES = (
     "（実際に解いてみた結果が想定と違いました）",
 )
 
+# 2026-09-19追加（Koshoshi合意）: debug_agentのmax_turnsを動的化する第一弾。
+# 当初は指摘の「件数」で動的化する案だったが、実機ログ（job 1fc75b36...）で
+# 反証された: このラウンドは指摘2件と少なかったにもかかわらずmax_turns=8を
+# 使い切ってfailed（reason=max_turns）。実際のボトルネックは件数ではなく、
+# 「原因不明系の指摘」（_DYNAMIC_STRUCTURAL_PREFIXESに該当するもの＝実行時例外や
+# feasible不一致など、原因箇所が名指しされておらずdebug_agent自身がread_fileで
+# 調査してから直す必要があるもの）が含まれるかどうかだった。actions=10件中
+# edit_fileはわずか2回で、残りは主にread_file（要約置換ログから推定）に
+# 費やされていた。静的field-check由来の指摘（禁止パターンN等、直し方が
+# 警告文に明記されている）はこの調査コストが要らないため対象外とする。
+# 値は実測に基づく初回見積もりであり、今後の実機データで調整する前提
+# （learnings.md: 測定してから最適化、の方針通り）。
+_DEBUG_AGENT_MAX_TURNS_DEFAULT = 8
+_DEBUG_AGENT_MAX_TURNS_WITH_DIAGNOSTIC_FINDING = 12
+
 
 def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: list, answers: str,
                       force_apply: bool = False, dynamic_override: bool = False) -> None:
@@ -920,14 +935,27 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
             agent_questions_raw = questions_raw if (answers or "").strip() else (
                 non_dynamic_questions_raw if dynamic_structural_questions else questions_raw
             )
+            # 2026-09-19追加（Koshoshi合意）: dynamic_structural_questions
+            # （このブロック冒頭で既に計算済み）が1件でもあれば、原因調査に
+            # ターンを要すると見て上限を引き上げる。answersが空でdynamic系が
+            # 丸ごと除外されるケース（non_dynamic_questionsのみ渡す分岐）では
+            # 該当しないため、agent_questions_rawの絞り込みロジックとは独立に
+            # dynamic_structural_questionsの有無だけで判定する。
+            debug_agent_max_turns = (
+                _DEBUG_AGENT_MAX_TURNS_WITH_DIAGNOSTIC_FINDING
+                if dynamic_structural_questions else _DEBUG_AGENT_MAX_TURNS_DEFAULT
+            )
             logger.info(f"[confirm_job:{job_id}] 続行: デバッグエージェント開始"
                         f"（指摘{len(agent_questions)}件、対象ファイル{len(written_paths)}件、"
+                        f"max_turns={debug_agent_max_turns}"
+                        f"{'（原因調査系の指摘あり）' if dynamic_structural_questions else ''}、"
                         "questionsは生の技術情報を使用）")
             agent_result = run_debug_agent(
                 questions=agent_questions_raw, written_paths=written_paths,
                 domain_name=domain_name, hearing_texts=hearing_texts_for_check,
                 snake_name=snake,
                 human_notes=answers,
+                max_turns=debug_agent_max_turns,
                 should_stop=lambda: bool((_job_get(job_id) or {}).get("interrupt_requested")),
                 # 2026-08-10: 段階B A/Bテストでトークン-19%・所要時間-5%を確認
                 # （Koshoshi承認、詳細はENGINEERING_LOG.md 2026-08-10追記4）。
