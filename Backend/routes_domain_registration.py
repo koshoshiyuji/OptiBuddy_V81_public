@@ -1081,8 +1081,33 @@ def _auto_decide_confirm_action(
         allowed_actions.append("force_apply")
     allowed_actions.append("cancel")
 
+    def _format_diff_for_autopilot(d: dict, max_chars: int = 80000) -> str:
+        """1ファイル分の生成コードをautopilot判断用に整形する。
+
+        2026-09-19追加（Koshoshi合意、同日再修正）: 従来は先頭4000文字で
+        機械的に切り捨てていたが、実際のsolverファイルは11,979〜70,459文字
+        （実測、solvers/*_solver.py全数）あり、ほぼ確実に途中で切れた状態の
+        ままautopilotの判断LLMに渡っていた（実際にround0の自動判断理由に
+        「ソルバーコードも途中で切れていて検証できない」と出ていたのはこれが
+        原因）。当初30,000文字に引き上げたが、実測最大値70,459文字を下回って
+        おり依然として大きいファイルの半数近くが切れる状態だったため、実測
+        最大値+安全マージンで80,000文字に修正。入力トークンは出力トークン
+        ほど処理時間に影響しないため（learnings参照）、この程度の引き上げは
+        レイテンシ上の懸念にはならない。それでも収まらない場合のみ、末尾を
+        切ったことが分かるよう明示的なマーカーを付ける（無言で切ると
+        「コードが壊れている」とLLMに誤解されるため。実際に今回それでcancel
+        判断につながった）。
+        """
+        content = d.get("new_content", "") or ""
+        if len(content) <= max_chars:
+            return content
+        return (
+            content[:max_chars]
+            + f"\n# ...(以下省略。全体{len(content)}文字中、先頭{max_chars}文字のみ表示)"
+        )
+
     diffs_block = "\n\n".join(
-        f"### {d.get('path','')}\n```\n{(d.get('new_content','') or '')[:4000]}\n```"
+        f"### {d.get('path','')}\n```\n{_format_diff_for_autopilot(d)}\n```"
         for d in (pending.get("diffs") or [])[:5]
     ) or "（コード差分なし）"
     hearing_block = "\n\n---\n\n".join(hearing_texts) if hearing_texts else "（ヒアリング内容なし）"
