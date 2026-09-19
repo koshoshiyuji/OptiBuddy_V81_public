@@ -261,6 +261,8 @@
     "addFile": "Add file",
     "forceNewDomain": "Force as a new domain (never try to fit into an existing domain)",
     "forceNewDomainHint": "Use this when automatic classification incorrectly picks \"add scenario to existing domain\" or \"generate scenario from base problem\". Checking this always routes through Stage 2's full new-code generation (creating new converter.py/solver.py).",
+    "autoResolve": "Let AI handle first-pass decisions (autopilot mode)",
+    "autoResolveHint": "OptiBuddy's own AI agent will automatically answer questions and address issues that come up during registration, so you only need to review the final registration result. If the AI is unsure, or the automatic-retry limit is reached, it will ask you with a recommendation attached. When off, you'll be asked at each step as before.",
     "cancel": "Cancel",
     "startGeneration": "Start Generation",
     "generatingDomain": "AI is generating the business domain...",

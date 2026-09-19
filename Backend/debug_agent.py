@@ -397,6 +397,69 @@ def _needs_reverify(actions: list[dict]) -> bool:
     return last_write_idx > last_verify_idx
 
 
+# 2026-09-19新設（Koshoshi合意）: 自動代行モード（auto_resolve=True）用。
+# ask_humanが呼ばれた際、人間を待たずにOptiBuddy自身のLLM呼び出しで即座に回答を
+# 生成する。判断材料はヒアリング内容のみに限定し、そこに根拠が無い場合は
+# resolved=Falseを返して人間へのエスカレーションを促す（無理に断定しない）。
+# resolved=Falseの場合でも、answer/reasoningには「推奨回答」として使える
+# ベストエフォートの内容を必ず入れる（呼び出し元がエスカレーション時に
+# 推奨回答として人間に提示するため）。
+def _auto_answer_question(question: str, hearing_texts: list[str], domain_name: str) -> dict:
+    from llm.llm_client import call_llm_json
+
+    hearing_block = "\n\n---\n\n".join(hearing_texts) if hearing_texts else "（ヒアリング内容なし）"
+    system = (
+        "あなたはOptiBuddy（業務最適化システムの自動登録基盤）で、ドメイン登録処理中に"
+        "生成AIエージェントが発した業務判断の質問に、業務担当者に代わって回答する役割を"
+        "担います。回答の根拠にできるのは、渡されたヒアリングシートの内容のみです。"
+        "ヒアリングシートに明確な根拠がない場合、業務ルールを勝手に断定してはいけません。"
+        "その場合はresolvedをfalseにし、それでも参考になる一番もっともらしい回答案を"
+        "answerに、なぜ確信が持てないかをreasoningに書いてください。"
+    )
+    user = (
+        f"## 業務名\n{domain_name}\n\n"
+        f"## ヒアリングシート\n{hearing_block}\n\n"
+        f"## AIエージェントからの質問\n{question}\n\n"
+        "以下のJSON形式のみで回答してください（他の文章は一切含めない）:\n"
+        '{"resolved": true/false, "answer": "回答本文", '
+        '"confidence": "high"/"low", "reasoning": "この回答/確信度に至った理由"}\n\n'
+        "resolved=trueにしてよいのは、ヒアリングシートに明確な根拠がある場合、"
+        "または業務リスクが低く一般的な妥当解釈で問題ない場合のみです。"
+    )
+    try:
+        result = call_llm_json(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            temperature=0.3, max_tokens=1024,
+        )
+        answer = str(result.get("answer", "")).strip()
+        if not answer:
+            raise ValueError("answerが空")
+        return {
+            "resolved": bool(result.get("resolved", False)) and str(result.get("confidence", "")) == "high",
+            "answer": answer,
+            "confidence": str(result.get("confidence", "low")),
+            "reasoning": str(result.get("reasoning", "")).strip(),
+        }
+    except Exception as e:
+        logger.warning(f"[debug_agent] 自動代行回答の生成に失敗、人間へエスカレーション: {e}")
+        return {
+            "resolved": False, "answer": "（自動生成に失敗したため推奨回答なし）",
+            "confidence": "low", "reasoning": f"自動代行呼び出し自体がエラーになりました: {e}",
+        }
+
+
+# 2026-09-19新設（Koshoshi合意）: report_doneのneeds_human_decision各項目に、
+# 自動代行モードでは推奨アクションを付記する。戻り値の型（list[str]）は変えない
+# ——既存の確認画面が文字列のカード表示を前提にしているため、末尾に【推奨】ブロックを
+# 追記する形（humanize.pyの【推奨】ブロックと同じ見た目の慣習）で後方互換を保つ。
+def _recommend_for_decision_items(items: list[str], hearing_texts: list[str], domain_name: str) -> list[str]:
+    out = []
+    for item in items:
+        auto = _auto_answer_question(question=item, hearing_texts=hearing_texts, domain_name=domain_name)
+        out.append(f"{item}\n\n【推奨】{auto['answer']}")
+    return out
+
+
 def run_debug_agent(
     questions: list[str],
     written_paths: list[str],
@@ -410,6 +473,7 @@ def run_debug_agent(
     human_answer: Optional[str] = None,
     disable_edit_file: bool = False,
     summarize_stale_reads: bool = False,
+    auto_resolve: bool = False,
 ) -> dict:
     """
     disable_edit_file: 2026-08-09新設。edit_file導入前の挙動（write_fileのみ）を
@@ -834,6 +898,45 @@ def run_debug_agent(
                     "content": f"不明なツール: {tu.name}",
                 })
 
+        if pending_ask is not None and auto_resolve:
+            auto = _auto_answer_question(
+                question=pending_ask["question"], hearing_texts=hearing_texts,
+                domain_name=domain_name,
+            )
+            actions.append({
+                "tool": "auto_answer", "path": None,
+                "question": pending_ask["question"], "answer": auto["answer"],
+                "confidence": auto["confidence"], "reasoning": auto.get("reasoning", ""),
+                "escalated": not auto["resolved"],
+            })
+            if auto["resolved"]:
+                logger.info(
+                    f"[debug_agent] {turn}ターン目のask_humanを自動代行で解決: "
+                    f"{pending_ask['question']!r} → {auto['answer']!r}"
+                )
+                tool_results.append({
+                    "type": "tool_result", "tool_use_id": pending_ask["tool_use_id"],
+                    "content": auto["answer"],
+                })
+                pending_ask = None
+            else:
+                logger.info(
+                    f"[debug_agent] {turn}ターン目のask_humanは自動代行で解決できず人間へ"
+                    f"エスカレーション（推奨回答付き）: {pending_ask['question']!r}"
+                )
+                return {
+                    "fixed_summary": "", "needs_human_decision": [],
+                    "turns_used": turn, "stopped_reason": "waiting_for_human", "actions": actions,
+                    "pending_question": pending_ask["question"],
+                    "recommended_answer": auto["answer"],
+                    "recommendation_reasoning": auto.get("reasoning", ""),
+                    "resume_state": {
+                        "messages": messages, "turns_used": turn,
+                        "pending_ask": pending_ask, "partial_tool_results": tool_results,
+                        "actions": actions,
+                    },
+                }
+
         if pending_ask is not None:
             logger.info(f"[debug_agent] {turn}ターン目でask_human: {pending_ask['question']}")
             return {
@@ -848,6 +951,13 @@ def run_debug_agent(
             }
 
         if done_result is not None:
+            if auto_resolve and done_result.get("needs_human_decision"):
+                done_result = {
+                    **done_result,
+                    "needs_human_decision": _recommend_for_decision_items(
+                        done_result["needs_human_decision"], hearing_texts, domain_name,
+                    ),
+                }
             return {**done_result, "turns_used": turn, "stopped_reason": "done", "actions": actions}
 
         messages.append({"role": "user", "content": tool_results})

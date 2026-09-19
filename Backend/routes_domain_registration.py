@@ -904,6 +904,9 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
                 # （Koshoshi承認、詳細はENGINEERING_LOG.md 2026-08-10追記4）。
                 # 段階C（本番切替）として有効化。
                 summarize_stale_reads=True,
+                # 2026-09-19追加（Koshoshi合意）: auto_resolveモードのジョブでは
+                # ask_humanも自動代行する（debug_agent.py側の実装参照）。
+                auto_resolve=bool((_job_get(job_id) or {}).get("auto_resolve", False)),
             )
             outcome = _advance_after_agent_round(
                 job_id, domain_name, pending, agent_result,
@@ -1010,6 +1013,207 @@ def domain_apply():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ============================================================
+# 自動操縦（auto_resolve）モード（2026-09-19新設、Koshoshi合意）
+# ============================================================
+# 「業務担当者は最終登録承認のみ行う」機能。既存の_run_hearing_pipeline /
+# _advance_after_agent_round / _run_confirm_job / run_debug_agentの内部ロジックは
+# 一切変更せず（過去に何度もこの周辺の変更で実害のあるバグを出しているため、
+# 意図的に触れない）、外側からジョブ状態をポーリングして、人間が画面から行う
+# 操作（/api/domain/confirm・/api/domain/cancel相当）を自動で代行するだけの
+# 「自動操縦」スレッドとして実装する。
+
+def _auto_decide_confirm_action(
+    questions: list, pending: dict, hearing_texts: list, domain_name: str,
+    allow_continue: bool = True,
+) -> dict:
+    """
+    needs_confirmation中の指摘に対し、業務担当者に代わって次のアクション
+    （continue/force_apply/cancel）をOptiBuddy自身のLLM呼び出しで判断する。
+    Chrome/Coworkは一切介在しない。
+
+    動的検証由来の指摘（_DYNAMIC_STRUCTURAL_PREFIXES）が残っている場合は、
+    既存のforce_apply拒否ガードレール（force_apply側の実装参照）と矛盾しない
+    よう、force_applyを選択肢から機械的に除外する。allow_continue=Falseの
+    場合（自動続行の上限到達後の「推奨だけ添える」用途）はcontinueも除外する。
+
+    戻り値: {"action": "continue"|"force_apply"|"cancel", "reasoning": str}
+    失敗時は安全側（登録しない）のcancelにフォールバックする。
+    """
+    from llm.llm_client import call_llm_json
+
+    has_dynamic = any(
+        isinstance(q, str) and q.startswith(_DYNAMIC_STRUCTURAL_PREFIXES) for q in questions
+    )
+    allowed_actions = []
+    if allow_continue:
+        allowed_actions.append("continue")
+    if not has_dynamic:
+        allowed_actions.append("force_apply")
+    allowed_actions.append("cancel")
+
+    diffs_block = "\n\n".join(
+        f"### {d.get('path','')}\n```\n{(d.get('new_content','') or '')[:4000]}\n```"
+        for d in (pending.get("diffs") or [])[:5]
+    ) or "（コード差分なし）"
+    hearing_block = "\n\n---\n\n".join(hearing_texts) if hearing_texts else "（ヒアリング内容なし）"
+    questions_block = "\n".join(f"- {q}" for q in questions) or "（指摘なし）"
+
+    system = (
+        "あなたはOptiBuddy（業務最適化システムの自動登録基盤）で、ドメイン登録処理中に"
+        "残った指摘事項に対し、業務担当者に代わって次のアクションを判断する役割を担います。"
+        "登録する（force_apply）という判断は、ヒアリング内容や実装から見て実害が無い、"
+        "または許容範囲内だと明確な根拠を持って言える場合のみ選んでください。"
+        "確信が持てない場合はcontinue（あれば）かcancelを選び、無理にforce_applyしないこと。"
+    )
+    user = (
+        f"## 業務名\n{domain_name}\n\n"
+        f"## ヒアリングシート\n{hearing_block}\n\n"
+        f"## 残っている指摘事項\n{questions_block}\n\n"
+        f"## 生成されたコード（抜粋、最大5ファイル）\n{diffs_block}\n\n"
+        f"## 選択可能なアクション\n{allowed_actions}\n"
+        "- continue: 指摘への対応をAIエージェントにもう1ラウンド試させる\n"
+        "- force_apply: 指摘を残したまま登録する\n"
+        "- cancel: 登録を取りやめる（致命的な矛盾があり続行しても解決の見込みがない場合）\n\n"
+        "以下のJSON形式のみで回答してください（他の文章は一切含めない）:\n"
+        '{"action": "上記のいずれか", "reasoning": "判断理由（1〜2文）"}'
+    )
+    try:
+        result = call_llm_json(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            temperature=0.3, max_tokens=1024,
+        )
+        action = str(result.get("action", "")).strip()
+        reasoning = str(result.get("reasoning", "")).strip() or "（理由の生成に失敗）"
+        if action not in allowed_actions:
+            logger.warning(
+                f"[auto_decide_confirm] 許可されていないaction={action!r}が返されたため"
+                f"安全側のcancelにフォールバックします（許可: {allowed_actions}）"
+            )
+            reasoning = f"（自動判断が不正な値を返したため安全側でcancelにフォールバック。元の理由: {reasoning}）"
+            action = "cancel"
+        return {"action": action, "reasoning": reasoning}
+    except Exception as e:
+        logger.warning(f"[auto_decide_confirm] 自動判断に失敗、安全側のcancelにフォールバック: {e}")
+        return {
+            "action": "cancel",
+            "reasoning": f"自動判断呼び出し自体がエラーになったため、安全側でcancelを選択しました: {e}",
+        }
+
+
+def _run_auto_pilot(job_id: str, domain_name: str, max_rounds: int = 2) -> None:
+    """
+    auto_resolve=Trueのジョブに対する自動操縦スレッド。/api/domain/run発行直後に
+    起動し、stageがneeds_confirmationになるたびに_auto_decide_confirm_actionで
+    判断し、_run_confirm_job（人間がconfirmボタンを押した場合と全く同じ関数）を
+    直接呼び出す。doneかerrorに達するか、waiting_for_agent_question（Component1の
+    ask_human自動代行でも解決できず人間へのエスカレーションが必要と判定された状態）
+    になったら終了する。
+
+    自動でcontinueを選べるのは同一ジョブにつき最大max_rounds回まで
+    （Koshoshi合意: 上限到達時は自動延長せず、推奨アクション付きで人間に委ねる）。
+    """
+    round_count = 0
+    poll_interval_sec = 3
+    max_idle_wait_sec = 1800  # 30分。ジョブ側で処理中のstageが続く限りidle扱いしない
+    idle_waited = 0.0
+
+    while idle_waited < max_idle_wait_sec:
+        job = _job_get(job_id)
+        if job is None:
+            logger.warning(f"[auto_pilot:{job_id}] ジョブが見つかりません。自動操縦を終了します。")
+            return
+        stage = job.get("stage")
+
+        if stage in ("done", "error", "cancelled"):
+            logger.info(f"[auto_pilot:{job_id}] stage={stage}のため自動操縦を終了します。")
+            return
+
+        if stage == "waiting_for_agent_question":
+            logger.info(
+                f"[auto_pilot:{job_id}] ask_humanが自動代行できずエスカレーション済み"
+                "（推奨回答つき）のため、自動操縦を終了し人間の回答を待ちます。"
+            )
+            return
+
+        if stage != "needs_confirmation":
+            time.sleep(poll_interval_sec)
+            idle_waited += poll_interval_sec
+            continue
+
+        idle_waited = 0.0
+        questions = job.get("questions", []) or []
+        pending = job.get("pending", {}) or {}
+        hearing_texts = pending.get("hearing_texts", [])
+        loop_exhausted = bool(job.get("loop_exhausted", False))
+
+        if round_count >= max_rounds:
+            decision = _auto_decide_confirm_action(
+                questions, pending, hearing_texts, domain_name, allow_continue=False,
+            )
+            _job_set(
+                job_id,
+                auto_pilot_recommendation={
+                    "action": decision["action"], "reasoning": decision["reasoning"],
+                    "round_count": round_count,
+                },
+            )
+            logger.info(
+                f"[auto_pilot:{job_id}] 自動続行の上限（{max_rounds}回）に到達。"
+                f"推奨アクション「{decision['action']}」（理由: {decision['reasoning']}）"
+                "を添えて人間に委ね、自動操縦を終了します。"
+            )
+            return
+
+        allow_continue = not loop_exhausted
+        decision = _auto_decide_confirm_action(
+            questions, pending, hearing_texts, domain_name, allow_continue=allow_continue,
+        )
+        action = decision["action"]
+        reasoning = decision["reasoning"]
+
+        prior_log = job.get("auto_pilot_log") or []
+        _job_set(job_id, auto_pilot_log=prior_log + [{
+            "round": round_count, "questions": questions,
+            "action": action, "reasoning": reasoning,
+        }])
+        logger.info(
+            f"[auto_pilot:{job_id}] round{round_count}: 自動判断「{action}」"
+            f"（理由: {reasoning}）"
+        )
+
+        if action == "cancel":
+            try:
+                written_paths = pending.get("written_paths", []) or []
+                if written_paths:
+                    from domain_generator import cleanup_dynamic_check_files
+                    cleanup_dynamic_check_files(written_paths)
+                _job_set(job_id, stage="cancelled", auto_pilot_final="cancel",
+                         auto_pilot_final_reasoning=reasoning)
+                logger.info(f"[auto_pilot:{job_id}] 自動判断によりドメイン登録を取りやめました。")
+            except Exception as e:
+                logger.error(f"[auto_pilot:{job_id}] 自動cancel処理でエラー: {e}", exc_info=True)
+                _job_set(job_id, stage="error", error=f"自動操縦のcancel処理でエラー: {e}")
+            return
+
+        force_apply = (action == "force_apply")
+        if action == "continue":
+            round_count += 1
+        try:
+            _run_confirm_job(job_id, domain_name, pending, questions, reasoning, force_apply, False)
+        except Exception as e:
+            logger.error(f"[auto_pilot:{job_id}] _run_confirm_job呼び出しでエラー: {e}", exc_info=True)
+            _job_set(job_id, stage="error", error=f"自動操縦の実行中にエラー: {e}")
+            return
+        # _run_confirm_jobは同期実行なので、次のループでjob状態を読み直せば
+        # 最新のstageが反映されている。すぐ次を確認する。
+
+    logger.warning(
+        f"[auto_pilot:{job_id}] {max_idle_wait_sec}秒の間needs_confirmationへの遷移が"
+        "無かったため（ジョブが他の理由で停止した可能性）、自動操縦を終了します。"
+    )
+
+
 @bp.route("/api/domain/run", methods=["POST"])
 def domain_run():
     """
@@ -1023,6 +1227,12 @@ def domain_run():
         overrides            = data.get("attachment_overrides", None)
         base_domain_override = data.get("base_domain_override") or None
         force_new_domain     = bool(data.get("force_new_domain", False))
+        # 2026-09-19追加（Koshoshi合意）: True の場合、needs_confirmation等の
+        # 各確認ポイントを人間の/api/domain/confirm呼び出し待ちにせず、
+        # OptiBuddy自身のLLM判断で自動的に代行する（_run_auto_pilot参照）。
+        # 最終的な登録結果はいつも通りstage="done"/"cancelled"/"error"に現れるので、
+        # 人間は最後に結果を確認するだけでよい。
+        auto_resolve = bool(data.get("auto_resolve", False))
 
         if not domain_name:
             return jsonify({"status": "error", "message": "domain_name は必須です"}), 400
@@ -1034,7 +1244,7 @@ def domain_run():
 
         _job_gc()
         job_id = uuid.uuid4().hex
-        _job_set(job_id, stage="queued", domain_name=domain_name)
+        _job_set(job_id, stage="queued", domain_name=domain_name, auto_resolve=auto_resolve)
 
         thread = threading.Thread(
             target=_run_domain_job,
@@ -1042,6 +1252,15 @@ def domain_run():
             daemon=True,
         )
         thread.start()
+
+        if auto_resolve:
+            autopilot_thread = threading.Thread(
+                target=_run_auto_pilot,
+                args=(job_id, domain_name),
+                daemon=True,
+            )
+            autopilot_thread.start()
+            logger.info(f"[domain_run:{job_id}] auto_resolve=True: 自動操縦スレッドを起動しました。")
 
         return jsonify({"status": "started", "job_id": job_id})
 

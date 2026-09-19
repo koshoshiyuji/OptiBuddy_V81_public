@@ -199,6 +199,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const [expandedIdx, setExpandedIdx]         = useState<Set<number>>(new Set());
   const [agentAnswerText, setAgentAnswerText] = useState('');
   const [forceNewDomain, setForceNewDomain] = useState(false);
+  const [autoResolve, setAutoResolve]       = useState(false);
   // 2026-07-18f追加: 登録完了後の「今すぐ直す」ジョブが実行中かどうか。
   const [startingFix, setStartingFix]       = useState(false);
   const fileInputRef                        = useRef<HTMLInputElement>(null);
@@ -361,6 +362,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           domain_name: domainName.trim(),
           hearing_texts: hearingTexts,
           force_new_domain: forceNewDomain,
+          auto_resolve: autoResolve,
         }),
       });
 
@@ -674,6 +676,17 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
                     <span style={{ fontSize: '12px', color: '#eee' }}>{t('registerModal.forceNewDomain')}</span>
                     <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
                       {t('registerModal.forceNewDomainHint')}
+                    </div>
+                  </span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', marginTop: '10px' }}>
+                  <input type="checkbox" checked={autoResolve}
+                    onChange={e => setAutoResolve(e.target.checked)}
+                    style={{ marginTop: '2px', cursor: 'pointer' }} />
+                  <span>
+                    <span style={{ fontSize: '12px', color: '#eee' }}>{t('registerModal.autoResolve')}</span>
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                      {t('registerModal.autoResolveHint')}
                     </div>
                   </span>
                 </label>
