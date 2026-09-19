@@ -215,6 +215,11 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const fileInputRef                        = useRef<HTMLInputElement>(null);
   const checkTimerRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollTimerRef                        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 2026-09-19追加（Koshoshi合意）: autopilot(auto_resolve)継続用のポーリング
+  // タイマーが、それをセットした直後のphase変化（running→confirming等）に
+  // よって誤ってclearTimeoutされてしまうバグの修正。詳細はポーリングuseEffect
+  // 内のコメント参照。
+  const suppressNextPollCleanupRef          = useRef(false);
   const lastStageRef                        = useRef<JobStage | null>(null);
   // 2026-07-18f追加: ポーリング中のjobが「登録完了後の任意修正」ラウンドかどうかを
   // 判定するフラグ。trueの場合、stage==='done'到達時にj.resultで既存resultを
@@ -296,10 +301,18 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           setPhase('confirming');
           // 2026-09-19追加: 自動操縦（auto_resolve）ジョブは、この画面で人間の
           // ボタン操作を待たず裏で進行し続けるため、通常モード（人間の操作待ち＝
-          // ポーリング停止）と異なりポーリングを止めずに継続する。止めてしまうと
-          // 自動操縦が裏で次のラウンドやcancelledへ進んでも画面が固まったままになる
-          // バグが実機で発生した（2026-09-19）。
+          // ポーリング停止）と異なりポーリングを止めずに継続する。
+          // 2026-09-19再修正（Koshoshi合意）: 上記の「継続する」意図は実際には
+          // 機能していなかった。setPhase('confirming')によりphaseが変わり、この
+          // useEffectが[jobId, phase]依存で再実行される際、Reactが直前の
+          // cleanup（下のreturn関数）を呼ぶ。そのcleanupが「今まさにセットした
+          // ばかりのこのタイマー」までclearTimeoutで消してしまい、以降ポーリングが
+          // 完全に停止する（実機で確認: needs_confirmation到達後、バックエンドが
+          // 後で正常にdone/cancelledへ到達しても画面が最初の確認画面のまま固まる）。
+          // suppressNextPollCleanupRefを立てて、次に一度だけ走るcleanupに
+          // 「このタイマーは消さないでほしい」と伝える。
           if (j.auto_resolve) {
+            suppressNextPollCleanupRef.current = true;
             pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
           }
           return;
@@ -308,7 +321,10 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           // 2026-07-17追加: エージェントがその場で質問してきた状態。
           // needs_confirmationと同様、sessionStorageは保持したまま（再開可能に）。
           setPhase('agent_question');
+          // 2026-09-19再修正（Koshoshi合意）: needs_confirmation分岐と同じ理由で
+          // suppressNextPollCleanupRefが必要（詳細は上のコメント参照）。
           if (j.auto_resolve) {
+            suppressNextPollCleanupRef.current = true;
             pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
           }
           return;
@@ -356,7 +372,21 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
     };
 
     poll();
-    return () => { cancelled = true; if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
+    return () => {
+      // 2026-09-19追加（Koshoshi合意）: このタイマーがautopilot継続用として
+      // 直前にセットされたばかりの場合（suppressNextPollCleanupRef）は、
+      // ここでのclearTimeoutをスキップする。このcleanupは「phaseが
+      // running以外に変わった」ことで走るが、autopilot継続の場合はまさに
+      // そのphase変化（running→confirming/agent_question）自身が原因で
+      // 呼ばれており、消してよいのは通常の（手動操作待ちで本当に止めるべき）
+      // タイマーだけ。フラグは一度だけ使ったらリセットする。
+      if (suppressNextPollCleanupRef.current) {
+        suppressNextPollCleanupRef.current = false;
+        return;
+      }
+      cancelled = true;
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    };
   }, [jobId, phase]);
 
   const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
