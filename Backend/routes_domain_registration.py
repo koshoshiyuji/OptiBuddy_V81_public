@@ -280,8 +280,15 @@ def _run_hearing_pipeline(job_id: str, domain_name: str, hearing_texts: list, ov
                 f"{gate2_result['advisory_questions']}"
             )
         all_questions = list(missing_info) + gate2_result["blocking_questions"]
+        # 2026-09-19追加（Koshoshi合意）: humanizeを経ない生のblocking_questionsも
+        # missing_infoと同じ並びでjob状態に保持しておく。missing_infoは元々
+        # humanize対象外（ヒアリングギャップの機械的な文言）のためそのまま使い回す。
+        # _run_confirm_job側でrun_debug_agent()に渡す際、questionsではなく
+        # こちらを使う（詳細はgate2.pyのblocking_questions_raw追加コメント参照）。
+        all_questions_raw = list(missing_info) + gate2_result["blocking_questions_raw"]
         if all_questions:
             _job_set(job_id, stage="needs_confirmation", questions=all_questions,
+                questions_raw=all_questions_raw,
                 pending={"diffs": s2["diffs"], "patches": s2["patches"],
                          "scenario_registrations": s2["scenario_registrations"],
                          "hearing_texts": hearing_texts,
@@ -657,6 +664,13 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
     try:
         from domain_generator import apply_domain_files, apply_scenarios
 
+        # 2026-09-19追加（Koshoshi合意）: debug_agentへ渡すquestionsだけ、
+        # humanize済みのquestions引数ではなくjob状態のquestions_raw
+        # （無ければquestionsにフォールバック）を使う。詳細は
+        # gate2.pyのblocking_questions_raw追加コメント参照。
+        _job_for_raw_questions = _job_get(job_id) or {}
+        questions_raw = _job_for_raw_questions.get("questions_raw") or questions
+
         _job_set(job_id, stage="applying")
 
         extensions_applied = None
@@ -833,6 +847,12 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
             dynamic_structural_questions = [
                 q for q in questions if isinstance(q, str) and q.startswith(_DYNAMIC_STRUCTURAL_PREFIXES)
             ]
+            # 2026-09-19追加: 上と同じ絞り込みをquestions_raw側にも並行して適用する
+            # （件数・並び順はquestionsと常に一致する設計。gate2.py参照）。
+            non_dynamic_questions_raw = [
+                q for q in questions_raw
+                if not (isinstance(q, str) and q.startswith(_DYNAMIC_STRUCTURAL_PREFIXES))
+            ]
             # 2026-08-10追加（#30）: 以前は動的検証系の指摘が1件でもあれば、同じ
             # ラウンドに混在する他カテゴリの指摘（hearing_coverage等、debug_agentで
             # 直せる可能性がある）もろとも丸ごとエージェントラウンドをスキップしていた。
@@ -892,10 +912,19 @@ def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: li
             agent_questions = questions if (answers or "").strip() else (
                 non_dynamic_questions if dynamic_structural_questions else questions
             )
+            # 2026-09-19追加（Koshoshi合意）: debug_agentに実際に渡す内容だけは、
+            # 上のagent_questions（humanize済み・件数/絞り込みロジック決定用）
+            # ではなくagent_questions_raw（生の技術情報）を使う。絞り込みの
+            # 「する/しない」判断自体（dynamic_structural_questions等）は
+            # 一切変更しない。
+            agent_questions_raw = questions_raw if (answers or "").strip() else (
+                non_dynamic_questions_raw if dynamic_structural_questions else questions_raw
+            )
             logger.info(f"[confirm_job:{job_id}] 続行: デバッグエージェント開始"
-                        f"（指摘{len(agent_questions)}件、対象ファイル{len(written_paths)}件）")
+                        f"（指摘{len(agent_questions)}件、対象ファイル{len(written_paths)}件、"
+                        "questionsは生の技術情報を使用）")
             agent_result = run_debug_agent(
-                questions=agent_questions, written_paths=written_paths,
+                questions=agent_questions_raw, written_paths=written_paths,
                 domain_name=domain_name, hearing_texts=hearing_texts_for_check,
                 snake_name=snake,
                 human_notes=answers,

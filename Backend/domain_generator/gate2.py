@@ -1194,6 +1194,33 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
+
+    # 2026-09-19追加（Koshoshi合意）: debug_agentに渡すため、humanizeを一切
+    # 経由しない「生の」blocking_questionsを別途組み立てる。上のblocking_questions
+    # （humanize済み）は業務担当者向け確認画面の表示専用であり、
+    # humanize_technical_findings()/_humanize_exception_findings()は意図的に
+    # presence_of/interval_var等の識別子・コード片を削る設計（画面を見る人が
+    # プログラムを読めない前提のため）。ところがrun_debug_agent()の
+    # questions引数にはこれまでこのhumanize済みテキストがそのまま渡っており、
+    # 例えば_check_optional_interval_absent_value()が既に警告文中に書いている
+    # 「mdl.if_then(mdl.presence_of(var), mdl.start_of(var) == <値>)」という
+    # そのまま使える正解のコードパターンを、debug_agentが一度も受け取れない
+    # 状態になっていた（実機2回連続で同一バグを8ターン修正できず失敗、
+    # 2026-09-19）。blocking_questionsと完全に同じ接頭辞・同じ並び順を保つ
+    # ことで、呼び出し側の_DYNAMIC_STRUCTURAL_PREFIXESによる絞り込みロジックは
+    # 一切変更せずに、debug_agent行き専用の内容だけを差し替えられるようにする。
+    blocking_questions_raw = (
+        [f"（プログラムのエラーで停止・要修正）{w}" for w in dynamic_exception_warnings]
+        + [f"（実際に解いてみた結果が想定と違いました）{w}" for w in dynamic_warnings]
+        + [f"（ヒアリング内容が未反映）{w}" for w in required_gap_warnings]
+        + [f"（入力項目の反映漏れの疑い）{w}" for w in unused_in_solver_warnings]
+        + [f"（数値のざっくり近似に関する指摘）{w}" for w in big_m_warnings]
+        + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_warnings]
+        + [f"（数量の型に関する指摘）{w}" for w in pulse_float_warnings]
+        + [f"（条件分岐の書き方に関する指摘）{w}" for w in containment_warnings]
+        + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_warnings]
+        + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
+    )
     advisory_questions = (
         [f"（参考情報）{w}" for w in static_humanized]
         + [f"（ヒアリング内容が未反映・任意項目）{w}" for w in optional_gap_summary]
@@ -1221,6 +1248,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     return {
         "questions": questions,
         "blocking_questions": blocking_questions,
+        "blocking_questions_raw": blocking_questions_raw,
         "advisory_questions": advisory_questions,
         "written_paths": written_paths,
         "coverage": coverage,
