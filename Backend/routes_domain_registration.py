@@ -533,13 +533,19 @@ def _finalize_confirm_job(job_id: str, domain_name: str, questions: list, answer
                 {"hearing_texts": hearing_texts or [], "unresolved_at_registration": list(gate2_warnings)}
                 if gate2_warnings else None
             )
+            # 2026-09-20修正（Koshoshi合意）: auto_resolve経由の確認を「人間が確認した」と
+            # 誤記録していたのを修正。実際の決定者（autopilot / user）を正しく記録する。
+            is_autopilot = bool((_job_get(job_id) or {}).get("auto_resolve", False))
             repo.log_dsl_evolution(
-                dsl_id=dsl_id, change_type="human_confirmed", trigger_type="manual",
-                business_context=f"{domain_name} の新規登録確認（/api/domain/confirm）",
+                dsl_id=dsl_id,
+                change_type="autopilot_confirmed" if is_autopilot else "human_confirmed",
+                trigger_type="automatic" if is_autopilot else "manual",
+                business_context=f"{domain_name} の新規登録確認（/api/domain/confirm"
+                                  f"{'、auto_resolve' if is_autopilot else ''}）",
                 before_summary="\n".join(f"- {q}" for q in questions) or None,
                 after_summary=answers or None,
                 dsl_patch=unresolved_dsl_patch,
-                created_by="user",
+                created_by="autopilot" if is_autopilot else "user",
             )
         except Exception as log_err:
             logger.warning(f"[confirm_job:{job_id}] 監査ログ記録失敗（無視して続行）: {log_err}")
@@ -1273,6 +1279,23 @@ def _run_auto_pilot(job_id: str, domain_name: str, max_rounds: int = 2) -> None:
                 _job_set(job_id, stage="cancelled", auto_pilot_final="cancel",
                          auto_pilot_final_reasoning=reasoning)
                 logger.info(f"[auto_pilot:{job_id}] 自動判断によりドメイン登録を取りやめました。")
+                # 2026-09-20追加（Koshoshi合意）: 取りやめ理由は従来domain_jobs.dataにしか
+                # 残らず、_DOMAIN_JOB_TTL_SEC（1時間）のjob_gcで消えていた。dsl_idを付けず
+                # （＝dsl_definitions行を作らず）target_domainに名前だけ残すことで、
+                # 2026-07-17の幽霊ドメイン防止ルール（成功時のみdsl_definitions行を作る）を
+                # 崩さずに恒久記録する。
+                try:
+                    DslRepository().log_dsl_evolution(
+                        dsl_id=None, change_type="autopilot_cancelled", trigger_type="automatic",
+                        target_domain=domain_name,
+                        business_context=f"{domain_name} の自動登録を自動操縦が取りやめ"
+                                          "（/api/domain/run, auto_resolve）",
+                        before_summary="\n".join(f"- {q}" for q in questions) or None,
+                        after_summary=reasoning,
+                        created_by="autopilot",
+                    )
+                except Exception as log_err:
+                    logger.warning(f"[auto_pilot:{job_id}] 取りやめ理由の恒久記録に失敗（無視して続行）: {log_err}")
             except Exception as e:
                 logger.error(f"[auto_pilot:{job_id}] 自動cancel処理でエラー: {e}", exc_info=True)
                 _job_set(job_id, stage="error", error=f"自動操縦のcancel処理でエラー: {e}")
