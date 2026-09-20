@@ -284,6 +284,19 @@ def _solve_new_domain(dsl, issue_statuses):
 
 両方の警告はGate1のmissing_infoと同じ`needs_confirmation`の`questions`に合流し、人間の確認画面は1回のまま。詳細と、警告が出た場合の再投入手順は `docs/DESIGN_2026-07-09_registration_gates_and_hard_soft.md`（7節）を参照。
 
+### 4-3c. Confirm／自動操縦モード（auto_resolve）（2026-09追加）
+
+`needs_confirmation` に到達した後の確認フローには2種類ある。
+
+1. **手動確認**: 人間が画面で指摘事項を読み、回答またはforce_applyを選択する。
+2. **自動操縦（`auto_resolve=True`）**: `_run_auto_pilot()` がジョブをポーリングし、`_auto_decide_confirm_action()`（LLM）に「続行／force_apply／取りやめ」を判断させ、`_run_confirm_job()` へディスパッチする。最大2ラウンドまで自動続行。
+
+開発時に踏んだ落とし穴（2026-09-19実機テストで発見・修正、詳細は `claude/STATUS_2026-09-20_patient_transport_planner_autopilot_investigation.md` 参照）:
+
+- **生成コードの切り捨て**: `_auto_decide_confirm_action()` が判断材料としてLLMに渡す生成コードのdiffは、以前は先頭4,000文字で機械的に切り捨てていた。実際のsolverファイルは11,979〜70,459文字あり、ほぼ確実に途中で切れた状態で判断LLMに渡っていた（自動判断理由に「ソルバーコードも途中で切れていて検証できない」と出る症状で発覚）。現在は80,000文字に引き上げ済み（`_format_diff_for_autopilot()`）。今後solverファイルがさらに肥大化した場合は再度上限を見直すこと。
+- **debug_agentのmax_turns**: `_run_confirm_job()` の続行ラウンドは、以前は `max_turns` が常に固定8だった。原因不明系の指摘（`_DYNAMIC_STRUCTURAL_PREFIXES` に該当するもの＝実行時例外やfeasible不一致など、debug_agent自身が原因調査してから直す必要があるもの）が含まれる場合、指摘件数がわずかでもターン切れ（`reason=max_turns`）することがある。現在は該当する場合のみ `_DEBUG_AGENT_MAX_TURNS_WITH_DIAGNOSTIC_FINDING`（12）に動的に引き上げている（値は実測に基づく初回見積もり、今後調整前提）。
+- **フロントエンドのポーリング停止**: `RegisterModal.tsx` で、`needs_confirmation`／`waiting_for_agent_question` 到達後もauto_resolveジョブはポーリングを継続する設計だったが、React `useEffect` のcleanupが自身が直後にセットした継続用タイマーを `clearTimeout` してしまい、画面が最初の確認画面のまま固まっていた（バックエンドは正常にdone/cancelledへ到達していても画面に反映されない）。`suppressNextPollCleanupRef` フラグで対策済み。
+
 ### 4-4. Apply：ファイル書き込みと自動パッチ（`apply_domain_files`）
 
 ここが「ユーザーはコードを書かない」を実現している中核。承認された差分（`approved_diffs`）と追記パッチ（`approved_patches`）を実際のファイルに書き込む。
@@ -315,6 +328,7 @@ def _solve_new_domain(dsl, issue_statuses):
 | Stage 2でコードは生成されるが`app.py`に反映されない | `instruction` 文字列に `"_DSL4_SOLVERS"` / `"_LEGACY_SOLVERS"` の文言が含まれているか、マーカーコメントが残っているか |
 | 生成は完了するが自動でapplyまで進まず`needs_confirmation`で止まる | Gate 2（4-3b節）の静的・動的チェックが警告を出している。`questions`の「（自動検知）」/「（自動検知・動的検証）」接頭辞を確認 |
 | ソルバーコードがCP OptimizerでエラーになるI | 3章のサニタイザーがカバーしない `no_overlap` / `if_then` パターンを手動確認 |
+| 自動操縦（auto_resolve）の画面が確認待ちのまま進まない | フロントエンドのポーリング継続バグ（4-3c節）。バックエンドのjob状態は正常な場合が多いので、まずDBの `domain_jobs` テーブルで実際のstageを確認する |
 | ホーム画面にタグが出ない | `TAG_MAP` パッチのマーカーコメント、または `problem_class` 文字列の不一致（大文字小文字・スペース） |
 
 ---
