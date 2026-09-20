@@ -44,8 +44,30 @@ def check_domain_exists(domain_name: str) -> dict:
         p = _SCENARIOS_DIR / f"{snake}_{suffix}.json"
         if p.exists():
             conflicts.append(f"Backend/dsl_repository/scenarios/{snake}_{suffix}.json")
+
+    # 2026-09-19追加（Koshoshi合意）: ドメイン名は分類LLM（classify_problem）に
+    # とって所詮弱いヒントに過ぎない。DB・ファイルからは完全に削除されていても、
+    # _STAGE1A_SYSTEM内に過去の誤分類事故の再発防止コメントとして実名で書かれた
+    # ドメイン名と同じ名前で登録しようとすると、LLMが自身のシステムプロンプト中の
+    # 事故事例をあたかも実在候補であるかのように読み込み、existing_domainへ誤って
+    # 分類する実例が確認された（PatientTransportPlanner再登録時、2026-09-19）。
+    # プロンプト全文を機械的に安全化する手段が無いため、せめて名前入力の時点で
+    # 気付けるよう、_STAGE1A_SYSTEMの固定文言中にこの名前がそのまま含まれて
+    # いないかをここで突き合わせる（新しい永続データは増やさない、その場限りの
+    # 文字列検査。conflictsとは異なり登録をブロックはしない、注意喚起のみ）。
+    prompt_name_warning = None
+    if len(domain_name) >= 4 and domain_name in _STAGE1A_SYSTEM:
+        prompt_name_warning = (
+            f"「{domain_name}」という名前は、ドメイン分類AIへの固定指示文の中に"
+            "過去の事例名としてそのまま書かれています。同じ名前で新規登録すると、"
+            "無関係な内容でも「既存ドメインの拡張」と誤判定される可能性があります。"
+            "別の名前を検討するか、あえて同じ名前で登録する場合は分類結果（既存/新規）"
+            "を必ず確認してください。"
+        )
+
     return {"exists": len(conflicts) > 0, "conflicts": conflicts,
-            "domain_name": domain_name, "snake_name": snake}
+            "domain_name": domain_name, "snake_name": snake,
+            "prompt_name_warning": prompt_name_warning}
 
 
 # ─────────────────────────────────────────────────────────────
