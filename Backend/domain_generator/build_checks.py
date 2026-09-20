@@ -19,9 +19,12 @@ from . import (
 )
 from .static_checks import (
     _check_big_m_objective,
+    _check_no_overlap_cumulative_conflict,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
+    _check_if_then_comparison_arg,
     _check_optional_interval_absent_value,
+    _check_pulse_float_height,
     _check_unnamed_expr_get_value,
     _check_unwrapped_minimize,
 )
@@ -105,12 +108,11 @@ _CPO_WARN_PATTERNS: list[tuple[str, str]] = [
         "get_value(mdl.start_of/end_of(...)) が検出されました。optional interval_var の解抽出では"
         "msol.get_var_solution(itv) を使う方式に置き換えてください（presence_of()と同じ既知バグパターン）。",
     ),
-    (
-        r'mdl\.if_then\(\s*[^,]+,\s*mdl\.\w+\([^()]*\)\s*(?:<=|>=|==|!=|<|>)\s*mdl\.\w+\(',
-        "if_then(condition, mdl.xxx(...) <op> mdl.yyy(...)) が検出されました（禁止パターン4）。"
-        "if_then の第2引数に比較式は渡せません。if_then ごと削除し、mdl.add(mdl.end_before_start(...)) "
-        "のように対象の制約を直接 mdl.add() することを検討してください。",
-    ),
+    # 2026-09-18変更: 禁止パターン4（if_thenの第2引数への比較式直渡し）は、
+    # advisory扱いのままEnergyCostAwareSchedulerで実際に見過ごされた事故
+    # （2026-08-30発覚）を受け、専用のblocking検査
+    # static_checks._check_if_then_comparison_arg() に分離・昇格した。
+    # ここには残さない（advisoryとblockingで二重に指摘されるのを避けるため）。
 ]
 
 
@@ -147,6 +149,12 @@ def _sanitize_solver_code(code: str, path: str) -> str:
     for w in _check_big_m_objective(code, path):
         logger.warning(f"[sanitize] {w}")
     for w in _check_optional_interval_absent_value(code, path):
+        logger.warning(f"[sanitize] {w}")
+    for w in _check_pulse_float_height(code, path):
+        logger.warning(f"[sanitize] {w}")
+    for w in _check_if_then_comparison_arg(code, path):
+        logger.warning(f"[sanitize] {w}")
+    for w in _check_no_overlap_cumulative_conflict(code, path):
         logger.warning(f"[sanitize] {w}")
 
     if fixes:

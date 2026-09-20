@@ -17,7 +17,7 @@ const API_BASE = 'http://localhost:5000';
 const POLL_INTERVAL_MS = 1400;
 const JOB_STORAGE_KEY = 'optibuddy_domain_run_job';
 
-type Phase = 'input' | 'running' | 'confirming' | 'agent_question' | 'done' | 'error';
+type Phase = 'input' | 'running' | 'confirming' | 'agent_question' | 'done' | 'error' | 'cancelled';
 
 // バックエンドの job.stage と 1:1 対応する進捗ステージ
 // queued → stage1a_classifying → (stage1a4_axis_a_fit_check) → (stage1a5_extension_gap_check)
@@ -40,7 +40,11 @@ type JobStage =
   | 'fixing'
   // 2026-07-17追加: エージェントがask_humanでその場に質問し、人間の回答待ちの段階。
   // Gate2の再検証はまだ行われていない＝1ラウンドの途中（新しいラウンドではない）。
-  | 'waiting_for_agent_question';
+  | 'waiting_for_agent_question'
+  // 2026-09-19追加: 自動操縦（auto_resolve）が、解決できない指摘が残ったまま
+  // 上限に達した場合等に自律的に登録を取りやめた最終状態。
+  // Backend/routes_domain_registration.py _run_auto_pilot() のcancel分岐が設定する。
+  | 'cancelled';
 
 interface JobState {
   stage: JobStage;
@@ -65,6 +69,10 @@ interface JobState {
   // 通常はクライアント側でボタン自体を無効化するため到達しないが、念のための
   // サーバー側ガードの結果を表示するためのフィールド（防御的多層防御）。
   force_apply_blocked?: boolean;
+  // 2026-09-19追加: 自動操縦モードのジョブかどうか（Backend側run()で保存）。
+  auto_resolve?: boolean;
+  // 2026-09-19追加: stage==='cancelled'の場合、自動操縦が見送りを判断した理由。
+  auto_pilot_final_reasoning?: string;
 }
 
 // 2026-08-10追加（Koshoshi合意）: Gate2動的検証（実ソルブ）由来の指摘の接頭辞。
@@ -152,6 +160,7 @@ function stageLabel(stage: JobStage, matchType: string | undefined, t: TFunction
     case 'waiting_for_agent_question': return `💬 ${t('registerModal.stageAgentQuestion')}`;
     case 'done':                 return `✅ ${t('registerModal.stageDone')}`;
     case 'error':                return `❌ ${t('registerModal.stageError')}`;
+    case 'cancelled':            return `🛑 ${t('registerModal.stageCancelled')}`;
     default:                     return String(stage);
   }
 }
@@ -185,6 +194,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const [result, setResult]                 = useState<any>(null);
   const [errorMsg, setErrorMsg]             = useState('');
   const [existsConflict, setExistsConflict] = useState<string[]>([]);
+  const [promptNameWarning, setPromptNameWarning] = useState<string | null>(null);
   const [checkingName, setCheckingName]     = useState(false);
   const [reconnecting, setReconnecting]     = useState(false);
   const [confirming, setConfirming]         = useState(false);
@@ -199,11 +209,17 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const [expandedIdx, setExpandedIdx]         = useState<Set<number>>(new Set());
   const [agentAnswerText, setAgentAnswerText] = useState('');
   const [forceNewDomain, setForceNewDomain] = useState(false);
+  const [autoResolve, setAutoResolve]       = useState(false);
   // 2026-07-18f追加: 登録完了後の「今すぐ直す」ジョブが実行中かどうか。
   const [startingFix, setStartingFix]       = useState(false);
   const fileInputRef                        = useRef<HTMLInputElement>(null);
   const checkTimerRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollTimerRef                        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 2026-09-19追加（Koshoshi合意）: autopilot(auto_resolve)継続用のポーリング
+  // タイマーが、それをセットした直後のphase変化（running→confirming等）に
+  // よって誤ってclearTimeoutされてしまうバグの修正。詳細はポーリングuseEffect
+  // 内のコメント参照。
+  const suppressNextPollCleanupRef          = useRef(false);
   const lastStageRef                        = useRef<JobStage | null>(null);
   // 2026-07-18f追加: ポーリング中のjobが「登録完了後の任意修正」ラウンドかどうかを
   // 判定するフラグ。trueの場合、stage==='done'到達時にj.resultで既存resultを
@@ -212,13 +228,17 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
   const isFixRoundRef                       = useRef(false);
 
   const checkDomainName = useCallback(async (name: string) => {
-    if (!name.trim()) { setExistsConflict([]); return; }
+    if (!name.trim()) { setExistsConflict([]); setPromptNameWarning(null); return; }
     setCheckingName(true);
     try {
       const res  = await fetch(`${API_BASE}/api/domain/check/${encodeURIComponent(name)}`);
       const data = await res.json();
       setExistsConflict(data.exists ? data.conflicts : []);
-    } catch { setExistsConflict([]); }
+      // 2026-09-19追加: ドメイン名が分類プロンプト内の過去事例名と一致する場合の
+      // 注意喚起（Backend/domain_generator/stage1a.py check_domain_exists()参照）。
+      // conflictsと違い登録はブロックしない。
+      setPromptNameWarning(data.prompt_name_warning ?? null);
+    } catch { setExistsConflict([]); setPromptNameWarning(null); }
     finally { setCheckingName(false); }
   }, []);
 
@@ -279,12 +299,41 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           // 二度と再開できなくなるバグがあった（実機で発生）。doneかerrorに
           // 到達するまでは保持し続け、再度開いた時にこの画面へ復帰できるようにする。
           setPhase('confirming');
+          // 2026-09-19追加: 自動操縦（auto_resolve）ジョブは、この画面で人間の
+          // ボタン操作を待たず裏で進行し続けるため、通常モード（人間の操作待ち＝
+          // ポーリング停止）と異なりポーリングを止めずに継続する。
+          // 2026-09-19再修正（Koshoshi合意）: 上記の「継続する」意図は実際には
+          // 機能していなかった。setPhase('confirming')によりphaseが変わり、この
+          // useEffectが[jobId, phase]依存で再実行される際、Reactが直前の
+          // cleanup（下のreturn関数）を呼ぶ。そのcleanupが「今まさにセットした
+          // ばかりのこのタイマー」までclearTimeoutで消してしまい、以降ポーリングが
+          // 完全に停止する（実機で確認: needs_confirmation到達後、バックエンドが
+          // 後で正常にdone/cancelledへ到達しても画面が最初の確認画面のまま固まる）。
+          // suppressNextPollCleanupRefを立てて、次に一度だけ走るcleanupに
+          // 「このタイマーは消さないでほしい」と伝える。
+          if (j.auto_resolve) {
+            suppressNextPollCleanupRef.current = true;
+            pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+          }
           return;
         }
         if (j.stage === 'waiting_for_agent_question') {
           // 2026-07-17追加: エージェントがその場で質問してきた状態。
           // needs_confirmationと同様、sessionStorageは保持したまま（再開可能に）。
           setPhase('agent_question');
+          // 2026-09-19再修正（Koshoshi合意）: needs_confirmation分岐と同じ理由で
+          // suppressNextPollCleanupRefが必要（詳細は上のコメント参照）。
+          if (j.auto_resolve) {
+            suppressNextPollCleanupRef.current = true;
+            pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+          }
+          return;
+        }
+        if (j.stage === 'cancelled') {
+          // 2026-09-19追加: 自動操縦が解決できない指摘を理由に登録を見送った
+          // 最終状態。done/errorと同様に終了状態として扱い、sessionStorageを解放する。
+          sessionStorage.removeItem(JOB_STORAGE_KEY);
+          setPhase('cancelled');
           return;
         }
         if (j.stage === 'done') {
@@ -323,7 +372,21 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
     };
 
     poll();
-    return () => { cancelled = true; if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
+    return () => {
+      // 2026-09-19追加（Koshoshi合意）: このタイマーがautopilot継続用として
+      // 直前にセットされたばかりの場合（suppressNextPollCleanupRef）は、
+      // ここでのclearTimeoutをスキップする。このcleanupは「phaseが
+      // running以外に変わった」ことで走るが、autopilot継続の場合はまさに
+      // そのphase変化（running→confirming/agent_question）自身が原因で
+      // 呼ばれており、消してよいのは通常の（手動操作待ちで本当に止めるべき）
+      // タイマーだけ。フラグは一度だけ使ったらリセットする。
+      if (suppressNextPollCleanupRef.current) {
+        suppressNextPollCleanupRef.current = false;
+        return;
+      }
+      cancelled = true;
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    };
   }, [jobId, phase]);
 
   const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,6 +424,7 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           domain_name: domainName.trim(),
           hearing_texts: hearingTexts,
           force_new_domain: forceNewDomain,
+          auto_resolve: autoResolve,
         }),
       });
 
@@ -635,6 +699,13 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
                     <div style={{ fontSize: '10px', color: '#888', marginTop: '3px' }}>{t('registerModal.useAnotherName')}</div>
                   </div>
                 )}
+                {existsConflict.length === 0 && promptNameWarning && (
+                  <div style={{ marginTop: '6px', padding: '8px 12px', borderRadius: '6px',
+                                background: '#3a2a00', border: '0.5px solid #ffaa00' }}>
+                    <div style={{ fontSize: '11px', color: '#ffaa00', fontWeight: 600 }}>⚠ {t('registerModal.promptNameWarningTitle')}</div>
+                    <div style={{ fontSize: '10px', color: '#aaa', marginTop: '3px' }}>{promptNameWarning}</div>
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '12px' }}>
@@ -674,6 +745,17 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
                     <span style={{ fontSize: '12px', color: '#eee' }}>{t('registerModal.forceNewDomain')}</span>
                     <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
                       {t('registerModal.forceNewDomainHint')}
+                    </div>
+                  </span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', marginTop: '10px' }}>
+                  <input type="checkbox" checked={autoResolve}
+                    onChange={e => setAutoResolve(e.target.checked)}
+                    style={{ marginTop: '2px', cursor: 'pointer' }} />
+                  <span>
+                    <span style={{ fontSize: '12px', color: '#eee' }}>{t('registerModal.autoResolve')}</span>
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                      {t('registerModal.autoResolveHint')}
                     </div>
                   </span>
                 </label>
@@ -742,25 +824,55 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               </div>
             </div>
 
-            <div style={card}>
-              <textarea value={agentAnswerText} onChange={e => setAgentAnswerText(e.target.value)}
-                placeholder={t('registerModal.agentAnswerPlaceholder')}
-                style={{ ...inp, resize: 'vertical', minHeight: '70px' }} autoFocus />
-            </div>
+            {/* 2026-09-19追加（Koshoshi合意）: 自動操縦（auto_resolve）ジョブでは、
+                裏でバックエンドが自律的に回答を組み立てて進行する。この画面は
+                以前は通常モードと全く同じ「人間が回答を書いて送信する」UIを
+                そのまま出していたため、自動操縦が実際には動いているのに画面上は
+                人間の入力待ちにしか見えず、操作不要であることが伝わらなかった
+                （実機フィードバック、2026-09-19）。auto_resolve時は入力欄・
+                送信ボタンを出さず、自動対応中であることを明示するだけにする。 */}
+            {job.auto_resolve ? (
+              <div style={{ ...card, borderColor: '#8b5cf6' }}>
+                <div style={{ fontSize: '12px', color: '#c4b5fd', lineHeight: 1.6 }}>
+                  {t('registerModal.autopilotAnsweringHint')}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={card}>
+                  <textarea value={agentAnswerText} onChange={e => setAgentAnswerText(e.target.value)}
+                    placeholder={t('registerModal.agentAnswerPlaceholder')}
+                    style={{ ...inp, resize: 'vertical', minHeight: '70px' }} autoFocus />
+                </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-              <button onClick={handleCancel} style={btnGhost}>{t('registerModal.dealLater')}</button>
-              <button onClick={handleAgentAnswer} disabled={confirming || !agentAnswerText.trim()}
-                style={{ ...btnPrimary, opacity: (confirming || !agentAnswerText.trim()) ? 0.5 : 1 }}>
-                {confirming ? t('registerModal.applying') : `💬 ${t('registerModal.submitAnswer')}`}
-              </button>
-            </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                  <button onClick={handleCancel} style={btnGhost}>{t('registerModal.dealLater')}</button>
+                  <button onClick={handleAgentAnswer} disabled={confirming || !agentAnswerText.trim()}
+                    style={{ ...btnPrimary, opacity: (confirming || !agentAnswerText.trim()) ? 0.5 : 1 }}>
+                    {confirming ? t('registerModal.applying') : `💬 ${t('registerModal.submitAnswer')}`}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {/* ══ confirming（Q&Aゲート） ══ */}
         {phase === 'confirming' && job && (
           <div>
+            {/* 2026-09-19追加（Koshoshi合意）: agent_question画面と同じ理由で、
+                auto_resolveジョブの場合は自動操縦が裏で対応中であることを
+                最初に明示する（実機フィードバック、2026-09-19）。 */}
+            {job.auto_resolve && (
+              <div style={{ ...card, borderColor: '#8b5cf6' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#c4b5fd', marginBottom: '4px' }}>
+                  {t('registerModal.autopilotWorkingTitle')}
+                </div>
+                <div style={{ fontSize: '11px', color: '#a78bfa', lineHeight: 1.6 }}>
+                  {t('registerModal.autopilotWorkingHint')}
+                </div>
+              </div>
+            )}
             <div style={{ ...card, borderColor: '#f97316' }}>
               <div style={{ fontSize: '15px', fontWeight: 700, color: '#f97316', marginBottom: '6px' }}>
                 ❓ {t('registerModal.confirmationNeeded')}
@@ -879,38 +991,51 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-              <button onClick={handleCancel} style={btnGhost}>{t('registerModal.dealLater')}</button>
-              {hasBlockingDynamicIssue(job) ? (
-                <button onClick={() => handleConfirm(true, true)}
-                  disabled={confirming || !dynamicOverrideChecked || !answerText.trim()}
-                  style={{ ...btnGhost,
-                           opacity: (!dynamicOverrideChecked || !answerText.trim()) ? 0.4 : 1,
-                           cursor: (!dynamicOverrideChecked || !answerText.trim()) ? 'not-allowed' : undefined,
-                           borderColor: '#ff5555', color: '#ff8888' }}
-                  title={!answerText.trim()
-                    ? t('registerModal.dynamicOverrideReasonRequired')
-                    : t('registerModal.dynamicOverrideHint')}>
-                  {t('registerModal.dynamicOverrideButton')}
-                </button>
-              ) : (
-                <button onClick={() => handleConfirm(true)}
-                  disabled={confirming}
-                  style={btnGhost}
-                  title={t('registerModal.forceApplyHint')}>
-                  {t('registerModal.forceApply')}
-                </button>
-              )}
-              {/* 2026-07-17: loop_exhausted（1ラウンド+Gate2再検証を終えた最終ゲート）
-                  では、新しいエージェントラウンドを開始する「続行」は出さない
-                  （ユーザー要望: ループは1回で終わらせる）。 */}
-              {!job.loop_exhausted && (
-                <button onClick={() => handleConfirm(false)} disabled={confirming}
-                  style={{ ...btnPrimary, opacity: confirming ? 0.5 : 1 }}>
-                  {confirming ? t('registerModal.applying') : `↻ ${t('registerModal.confirmAndContinue')}`}
-                </button>
-              )}
-            </div>
+            {/* 2026-09-19追加（Koshoshi合意）: auto_resolveジョブでは、これらの
+                ボタンはバックエンド側の自律判断（_auto_decide_confirm_action）
+                と競合しうる人間専用の操作のため、押せる形で出さない。実際に
+                クリックされなくても「画面が人間の操作待ちに見える」こと自体が
+                自動操縦の状況を誤解させるという実機フィードバック
+                （2026-09-19）を踏まえ、自動操縦中はボタン行そのものを
+                ステータス表示に置き換える。 */}
+            {job.auto_resolve ? (
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ fontSize: '11px', color: '#a78bfa' }}>{t('registerModal.autopilotWorkingHint')}</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                <button onClick={handleCancel} style={btnGhost}>{t('registerModal.dealLater')}</button>
+                {hasBlockingDynamicIssue(job) ? (
+                  <button onClick={() => handleConfirm(true, true)}
+                    disabled={confirming || !dynamicOverrideChecked || !answerText.trim()}
+                    style={{ ...btnGhost,
+                             opacity: (!dynamicOverrideChecked || !answerText.trim()) ? 0.4 : 1,
+                             cursor: (!dynamicOverrideChecked || !answerText.trim()) ? 'not-allowed' : undefined,
+                             borderColor: '#ff5555', color: '#ff8888' }}
+                    title={!answerText.trim()
+                      ? t('registerModal.dynamicOverrideReasonRequired')
+                      : t('registerModal.dynamicOverrideHint')}>
+                    {t('registerModal.dynamicOverrideButton')}
+                  </button>
+                ) : (
+                  <button onClick={() => handleConfirm(true)}
+                    disabled={confirming}
+                    style={btnGhost}
+                    title={t('registerModal.forceApplyHint')}>
+                    {t('registerModal.forceApply')}
+                  </button>
+                )}
+                {/* 2026-07-17: loop_exhausted（1ラウンド+Gate2再検証を終えた最終ゲート）
+                    では、新しいエージェントラウンドを開始する「続行」は出さない
+                    （ユーザー要望: ループは1回で終わらせる）。 */}
+                {!job.loop_exhausted && (
+                  <button onClick={() => handleConfirm(false)} disabled={confirming}
+                    style={{ ...btnPrimary, opacity: confirming ? 0.5 : 1 }}>
+                    {confirming ? t('registerModal.applying') : `↻ ${t('registerModal.confirmAndContinue')}`}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1049,6 +1174,22 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
           </div>
           );
         })()}
+
+        {/* ══ cancelled（自動操縦による見送り） ══ */}
+        {phase === 'cancelled' && (
+          <div style={{ ...card, borderColor: '#ffaa00' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#ffaa00', marginBottom: '12px' }}>
+              🛑 {t('registerModal.autopilotCancelledTitle')}
+            </div>
+            <pre style={{ fontSize: '12px', color: '#ddd', whiteSpace: 'pre-wrap', margin: 0 }}>
+              {job?.auto_pilot_final_reasoning || t('registerModal.autopilotCancelledNoReason')}
+            </pre>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', gap: '10px' }}>
+              <button onClick={() => { setPhase('input'); setJob(null); }} style={btnGhost}>{t('registerModal.backToInput')}</button>
+              <button onClick={onClose} style={btnGhost}>{t('registerModal.close')}</button>
+            </div>
+          </div>
+        )}
 
         {/* ══ error ══ */}
         {phase === 'error' && (

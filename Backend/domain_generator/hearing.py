@@ -30,6 +30,7 @@ from .stage1a import (
     _MIP_TOKEN_RE,
     check_axis_a_fit,
     check_domain_exists,
+    check_structural_similarity,
     classify_problem,
     detect_extension_gaps,
 )
@@ -50,10 +51,13 @@ def interpret_hearing(domain_name: str, hearing_texts: list, extra_attachments: 
                        force_new_domain: bool = False) -> dict:
     """
     on_progress: 任意のコールバック callable(stage: str)。
-    "stage1a_classifying" → ("stage1a4_axis_a_fit_check" | なし) →
+    "stage1a_classifying" → ("stage1a3_structural_similarity_check" | なし) →
+    ("stage1a4_axis_a_fit_check" | なし) →
     ("stage1a5_extension_gap_check" | なし) → ("stage1b_scenario_gen" | なし) の
     順で呼ばれる（stage1a4はmatch_type="existing_domain"かつStage1a分類を
-    実際に実行した場合のみ、2026-07-31追加）。
+    実際に実行した場合のみ、2026-07-31追加。stage1a3はmatch_typeが
+    "existing_domain"/"base_problem"かつStage1a分類を実際に実行した場合のみ、
+    2026-09-18追加）。
     /api/domain/run のジョブ進捗報告に使用する（app.py から渡される）。
 
     base_domain_override: 指定すると Stage1a（LLMによる自動分類）を呼ばずに、
@@ -136,6 +140,53 @@ def interpret_hearing(domain_name: str, hearing_texts: list, extra_attachments: 
             raise ValueError(
                 f"[interpret_hearing] base_domain_override='{base_domain_override}' は "
                 f"既知の既存ドメインに一致しません。EXISTING_DOMAINS: {sorted(EXISTING_DOMAINS.keys())}"
+            )
+
+    # Stage1a.3: 構造(DSL)類似度チェック（2026-09-18新設）。classify_problem()が
+    # 実際にLLM分類を行い、その結果match_typeが"existing_domain"/"base_problem"と
+    # なった場合にのみ実行する。base_domain_override/force_new_domainで
+    # classify_problem()自体をスキップした経路では、ユーザーが明示的に
+    # base_domainを指定/上書きしているため、この自動検証は行わない
+    # （軸(a)適合チェックと同じ扱い）。
+    #
+    # PatientTransportPlanner誤分類事故（候補ドメインの説明文が薄く、名前の
+    # 字面類似だけで別業務と誤って同一視された）の再発防止。classify_problem()
+    # 自体の分類バイアス修正（2026-09-18、b89e01c）とは独立した、実ソース
+    # コード比較による事後検証レイヤー。verdictがnew_domainの場合、または
+    # confidenceが低く判断に確信が持てない場合は、疑わしきはnew_domainという
+    # 方針（Koshoshi合意）でmatch_typeを上書きし、以降のStage1a.4/1a.5
+    # （軸(a)適合チェック・拡張差分検出）は実行しない。
+    _STRUCTURAL_SIMILARITY_CONFIDENCE_THRESHOLD = 0.5
+    if (match_type in ("existing_domain", "base_problem") and base_domain
+            and not force_new_domain and not base_domain_override):
+        if on_progress: on_progress("stage1a3_structural_similarity_check")
+        logger.info(f"[interpret] Stage1a.3 構造(DSL)類似度チェック: base_domain={base_domain}")
+        structural_result = check_structural_similarity(domain_name, all_texts, base_domain)
+        verdict          = structural_result["verdict"]
+        confidence       = structural_result.get("confidence", 0.0)
+        checked_base_domain = base_domain
+        if verdict == "new_domain" or confidence < _STRUCTURAL_SIMILARITY_CONFIDENCE_THRESHOLD:
+            logger.warning(
+                f"[interpret] Stage1a.3 構造類似度チェックにより判定を上書き: "
+                f"{match_type}(base_domain={checked_base_domain}) → new_domain "
+                f"(verdict={verdict}, confidence={confidence}, "
+                f"reason={structural_result.get('reason', '')!r})"
+            )
+            match_type = "new_domain"
+            base_domain = None
+            classification["match_type"] = "new_domain"
+            classification["base_domain"] = None
+            classification.setdefault("missing_info", [])
+            classification["missing_info"].append(
+                f"既存ドメイン「{checked_base_domain}」への当てはめを実ソースコードで"
+                f"検証したところ、構造的に別業務である可能性が高いと判定されたため、"
+                f"新規ドメインとして扱うことにしました（参考: "
+                f"{structural_result.get('reason', '')}）。"
+            )
+        else:
+            logger.info(
+                f"[interpret] Stage1a.3 構造類似度チェック: 一次判定を追認 "
+                f"(verdict={verdict}, confidence={confidence})"
             )
 
     # Stage1a.4: 軸(a)適合チェック（2026-07-31分離、専用LLM呼び出し）。

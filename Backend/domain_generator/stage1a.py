@@ -44,8 +44,30 @@ def check_domain_exists(domain_name: str) -> dict:
         p = _SCENARIOS_DIR / f"{snake}_{suffix}.json"
         if p.exists():
             conflicts.append(f"Backend/dsl_repository/scenarios/{snake}_{suffix}.json")
+
+    # 2026-09-19追加（Koshoshi合意）: ドメイン名は分類LLM（classify_problem）に
+    # とって所詮弱いヒントに過ぎない。DB・ファイルからは完全に削除されていても、
+    # _STAGE1A_SYSTEM内に過去の誤分類事故の再発防止コメントとして実名で書かれた
+    # ドメイン名と同じ名前で登録しようとすると、LLMが自身のシステムプロンプト中の
+    # 事故事例をあたかも実在候補であるかのように読み込み、existing_domainへ誤って
+    # 分類する実例が確認された（PatientTransportPlanner再登録時、2026-09-19）。
+    # プロンプト全文を機械的に安全化する手段が無いため、せめて名前入力の時点で
+    # 気付けるよう、_STAGE1A_SYSTEMの固定文言中にこの名前がそのまま含まれて
+    # いないかをここで突き合わせる（新しい永続データは増やさない、その場限りの
+    # 文字列検査。conflictsとは異なり登録をブロックはしない、注意喚起のみ）。
+    prompt_name_warning = None
+    if len(domain_name) >= 4 and domain_name in _STAGE1A_SYSTEM:
+        prompt_name_warning = (
+            f"「{domain_name}」という名前は、ドメイン分類AIへの固定指示文の中に"
+            "過去の事例名としてそのまま書かれています。同じ名前で新規登録すると、"
+            "無関係な内容でも「既存ドメインの拡張」と誤判定される可能性があります。"
+            "別の名前を検討するか、あえて同じ名前で登録する場合は分類結果（既存/新規）"
+            "を必ず確認してください。"
+        )
+
     return {"exists": len(conflicts) > 0, "conflicts": conflicts,
-            "domain_name": domain_name, "snake_name": snake}
+            "domain_name": domain_name, "snake_name": snake,
+            "prompt_name_warning": prompt_name_warning}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -69,6 +91,12 @@ _STAGE1A_SYSTEM = """\
    base_domain として選ぶこと（match_type: "existing_domain"）。これは下記の固定4ドメインの
    判定基準より優先する。固定4ドメインへの汎用的な当てはめを理由に、より具体的に一致する
    追加候補ドメインを見送ってはならない。
+   [2026-09-18追加] ただし、候補ドメインの説明が「Xの標準シナリオ」のように名前を
+   繰り返しただけで、実際の業務内容・対応済み制約を一切示していない場合は、ドメイン名の
+   字面上の類似性だけで一致させてはならない（PatientTransportPlannerがRideshareMatchingPlanner
+   と誤って同一視された実例: 説明文に実質的な情報が無く、名前の意味的な近さだけで一致判定
+   されたことが根本原因だった）。この場合は安全側に倒し、match_type: "new_domain" を
+   選ぶこと（confidenceも0.5以下に設定すること）。
 1. 上記に該当せず、既存ドメイン（固定4ドメイン）のどれかに「そのまま当てはまる」場合
    → match_type: "existing_domain"
 2. 下記「基底問題との対応」に**既存ドメインへの転用先が明記されている**CSPLib基底問題
@@ -322,6 +350,170 @@ def classify_problem(domain_name: str, hearing_texts: list) -> dict:
     result = _resolve_hedged_technical_directive(result)
     logger.info(f"[classify] match_type={result.get('match_type')}, base_domain={result.get('base_domain')}")
     return result
+
+
+# ─────────────────────────────────────────────────────────────
+# Stage 1a.3: 構造(DSL)類似度チェック（専用LLM呼び出し、2026-09-18新設）
+#
+# 背景: PatientTransportPlanner登録時の誤分類事故（既存ドメイン
+# RideshareMatchingPlannerと誤って同一視され、Pattern 3の拡張生成が
+# 中途半端な差分しか作れないまま登録されてしまった）を受けた対応。
+#
+# classify_problem()は候補ドメインの名前＋説明文（DBの短い要約テキスト）
+# だけを見て判定しており、実際のDSL/ソースコードの構造を見ていない
+# （説明文が薄い・名前が似ているだけで誤爆する既知パターン、
+# HANDOFF_2026-07-31参照）。この誤爆を、新しいDSLを一切生成せずに
+# 検出するため、detect_extension_gaps()（Stage1a.5）と同じ手法
+# ——base_domainの実ソースコードをそのまま読ませ、ヒアリング文と
+# 直接比較させる——を、Stage1a.5より前段（gap detail算定の前）で
+# 「そもそもこの既存ドメインへの当てはめ自体が妥当か」という粗い
+# ゲート判定として先出しする。
+#
+# Koshoshi合意の設計方針（2026-09-18）:
+#   - 名前の一致・類似はあくまで「どの候補について実物を読みに行くか」の
+#     トリガーに留め、最終判断は実物（DSL/ソース）比較で行う。
+#   - ドメイン名が同一またはほぼ同一の場合は、LLM呼び出し無しで
+#     即座に same_scenario と判定する（安価な決定的ショートカット）。
+#   - 「差分がほぼ無い/名前がほぼ同一」→ same_scenario、
+#     「差分小・再利用可能」→ extension、
+#     それ以外（差分大・判断が難しい・確信が持てない）は全部 new_domain
+#     に倒す（疑わしきは新規ドメイン。confidenceが低い場合も同様に
+#     new_domain側に倒す非対称ルール）。
+# ─────────────────────────────────────────────────────────────
+
+_DOMAIN_NAME_IDENTITY_THRESHOLD = 0.9
+
+_STRUCTURAL_SIMILARITY_SYSTEM = """あなたは、新しい業務ヒアリングの内容と、既存に実装済みの最適化ドメインの実際の
+ソースコードを見比べて、両者がどれだけ構造的に近いかを判定する専門家です。
+
+背景: この判定の前段（別のLLM呼び出し）で、候補ドメインの「名前」と「短い説明文」
+だけを見て、この既存ドメインに当てはめられそうだという一次判定が既に出ています。
+しかしその一次判定は、業務用語がドメイン名と字面上似ているだけで、実際には全く
+別の業務構造を誤って同一視してしまうことがあります（実例: 「送迎」という言葉が
+似ているだけで、通院送迎の1対1割当を、乗合マッチングの別ドメインと誤って
+同一視した事故）。あなたの仕事は、実際のソースコード（変数構造・制約ファミリー・
+目的関数の形）とヒアリング文を直接見比べて、この一次判定が本当に正しいかを
+検証することです。
+
+判定基準:
+1. **same_scenario**: ヒアリング内容が、既存ドメインの実装が既にカバーしている
+   業務とほぼ同一（変数構造・制約・目的関数がほぼそのまま使え、新しいコードを
+   一切書く必要がない）。
+2. **extension**: 業務の骨格（主要な変数構造・制約ファミリー）は既存ドメインと
+   共通しているが、新しい制約や項目の追加が必要（既存コードへの部分的な拡張で
+   対応できる）。
+3. **new_domain**: 骨格から異なる（変数構造・制約ファミリー・目的関数の形が
+   別物）、または既存ドメインとの対応関係の判断に確信が持てない。
+
+**重要**: 2（extension）と判定してよいのは、既存コードの主要な構造をそのまま
+再利用できると高い確信を持てる場合のみです。少しでも「本当にこの既存ドメインを
+土台にしてよいか」に迷いがある場合、あるいは業務の対象・単位・粒度が違う
+（例: 個人単位 vs グループ単位、施設単位 vs 案件単位）場合は、無理に
+same_scenario/extensionに寄せず、3（new_domain）と判定してください。
+疑わしきは new_domain です。
+
+JSONのみを返してください。前置き・説明不要。
+
+{
+  "verdict": "same_scenario" または "extension" または "new_domain",
+  "confidence": 0.0〜1.0の数値（judgmentへの確信度。少しでも迷いがあれば0.5以下にすること）,
+  "reason": "判定理由を1〜2文で。実際のソースコードのどの部分（関数名・変数名・制約の形等）を
+             根拠にしたかを具体的に含めること。"
+}
+"""
+
+
+def check_structural_similarity(domain_name: str, hearing_texts: list, base_domain: str) -> dict:
+    """
+    Stage1a.3: classify_problem()がmatch_type="existing_domain"または
+    "base_problem"と判定した直後に呼ぶ。base_domainの実ソースコードを
+    直接読ませてヒアリング文と比較し、その一次判定が本当に妥当かを検証する。
+
+    戻り値: {"verdict": "same_scenario"|"extension"|"new_domain",
+             "confidence": float, "reason": str}
+    ソースファイルが見つからない場合は安全側に倒し、new_domain・confidence=0.0を返す
+    （実ソースで検証できない以上、既存ドメインへの当てはめを続ける根拠が無いため）。
+
+    [2026-09-18修正] 実装ファイルの存在確認を、ドメイン名一致ショートカットより
+    「先に」行うよう順序を変更した。修正前は名前が一致しさえすれば実装ファイルの
+    有無を一切見ずに same_scenario を確定させていたため、DBにレコードだけ残り
+    実装ファイルが存在しない「幽霊ドメイン」が候補になった場合（PatientTransportPlanner
+    再登録時に実機発生: post_register_fixが失敗し実装ファイルが失われた後も
+    dsl_definitionsの行だけが残り、同名で再登録するたびに名前一致ショートカットが
+    発火して「same_scenario」と誤認定し、実装コードの無いDSL定義だけが際限なく
+    積み上がった）、これを検出できなかった。「名前が同じだから中身も同じはず」という
+    前提そのものが、まさに幽霊ドメインでは成り立たないため、ファイル存在確認を
+    名前一致より優先する。
+    """
+    from llm.llm_client import call_llm, extract_json, default_model
+
+    _ensure_domain_registry_reconciled()
+    src = _DOMAIN_SOURCE_FILES.get(base_domain, {})
+    source_sections = []
+    for role, path in src.items():
+        if not path:
+            continue
+        try:
+            code = Path(path).read_text(encoding="utf-8")
+            source_sections.append(f"### {role}: {Path(path).name}\n```python\n{code}\n```")
+        except Exception as e:
+            logger.warning(f"[structural_similarity] ソース読み込み失敗: {path} — {e}")
+
+    if not source_sections:
+        logger.warning(
+            f"[structural_similarity] {base_domain} の実装ファイルが1つも見つからず"
+            f"検証不能（幽霊ドメインの疑い）。ドメイン名の一致有無に関わらず安全側に倒し "
+            f"new_domain と判定します。"
+        )
+        return {"verdict": "new_domain", "confidence": 0.0,
+                "reason": f"{base_domain} の実ソースコードが1つも見つからず構造検証が"
+                          f"できなかった（幽霊ドメインの疑い）"}
+
+    # 決定的ショートカット: 実装ファイルの存在を確認できた上で、ドメイン名が同一または
+    # ほぼ同一な場合のみ、LLM呼び出し無しで same_scenario と判定する
+    # （Koshoshi合意の設計方針）。
+    name_ratio = difflib.SequenceMatcher(
+        None, _to_snake(domain_name), _to_snake(base_domain)
+    ).ratio()
+    if name_ratio >= _DOMAIN_NAME_IDENTITY_THRESHOLD:
+        logger.info(
+            f"[structural_similarity] {domain_name} と {base_domain} のドメイン名が"
+            f"ほぼ同一（一致率{name_ratio:.2f}）、かつ実装ファイルの存在を確認できたため、"
+            f"LLM呼び出し無しで same_scenario と判定"
+        )
+        return {"verdict": "same_scenario", "confidence": 1.0,
+                "reason": f"ドメイン名がほぼ同一（一致率{name_ratio:.2f}）、"
+                          f"実装ファイルの存在も確認済み"}
+
+    hearing_combined = "\n\n---\n\n".join(hearing_texts)
+    user_prompt = f"""## 新しい業務名
+{domain_name}
+
+## 一次判定で候補になった既存ドメイン
+{base_domain}
+
+## 既存ドメインの実際のソースコード
+{chr(10).join(source_sections)}
+
+## 新しい業務のヒアリング内容
+{hearing_combined}
+
+上記を見比べて、JSON で判定してください。
+"""
+    messages = [{"role": "system", "content": _STRUCTURAL_SIMILARITY_SYSTEM},
+                {"role": "user", "content": user_prompt}]
+    raw    = call_llm(messages, model=default_model(), max_tokens=1024, temperature=0)
+    result = extract_json(raw)
+    verdict    = result.get("verdict", "new_domain")
+    confidence = result.get("confidence", 0.0)
+    reason     = result.get("reason", "")
+    if verdict not in ("same_scenario", "extension", "new_domain"):
+        verdict = "new_domain"
+    logger.info(
+        f"[structural_similarity] {domain_name} vs {base_domain}: "
+        f"verdict={verdict}, confidence={confidence}"
+    )
+    return {"verdict": verdict, "confidence": confidence, "reason": reason}
 
 
 # ─────────────────────────────────────────────────────────────

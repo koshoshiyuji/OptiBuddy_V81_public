@@ -93,6 +93,146 @@ def _check_no_overlap_without_sequence_var(code: str, path: str) -> list[str]:
     return warnings
 
 
+# 禁止パターン7: 同一ファイル内で no_overlap系（完全排他の順序制約）と
+# pulse/cumulative系（上限付き同時使用の容量制約）の両方が使われている場合、
+# 同じ資源に対して二重に排他制御をかけていないか要確認、という警告を出す。
+#
+# [2026-09-17] PatientTransportPlannerで実際に発生したバグが動機:
+# 各送迎車に対して sequence_var + no_overlap（同一車両上のフェーズは
+# 時間的に一切重ならない、という完全排他制約）と、pulse合計 <= 定員の
+# cumulative容量制約の両方が課されており、no_overlapが常にcumulativeより
+# 厳しく効くため、定員2以上の車両でも相乗り（同時に複数フェーズが走ること）
+# が構造的に一度も起こり得なかった（cumulative制約が事実上のデッドコードに
+# なっていた）。ヒアリングシート9節が「上限付きで複数」（相乗り可）を明示的に
+# 要求していたにもかかわらず、この二重制約により実現不可能になっていた。
+#
+# 本チェックは同じファイル内で両方のパターンが検出された場合に警告する
+# （どちらか一方のみの使用は正当なユースケースなので対象外）。
+# BaseConstraintApplier（9節a/bの排他選択を一元管理する共通コード）に
+# 実装を委譲しているファイルは、そちら側でa/bが排他的に選ばれるため対象外。
+_NO_OVERLAP_ANY_RE = re.compile(r'\b(?:mdl\.no_overlap|cp\.NoOverlap(?:Optional)?)\s*\(')
+_PULSE_OR_CUMULATIVE_RE = re.compile(r'\b(?:mdl\.pulse|cp\.Cumulative)\s*\(')
+_CONSTRAINT_APPLIER_USAGE_RE = re.compile(r'\bBaseConstraintApplier\b')
+
+
+# ─────────────────────────────────────────────────────────────
+# Gate2静的チェック（blocking）: mdl.pulse() のheight引数へのfloat値直渡し検出
+#
+# 背景（2026-08-09発見、EnergyCostAwareScheduler登録時に実機発生）:
+# CP OptimizerのAPI仕様上、mdl.pulse(interval_var, height) のheight引数は
+# 整数（またはタプルによる整数範囲）でなければならない。消費電力(kW)等、
+# 業務データがfloatのままheight引数に渡ると mdl.solve() が例外で失敗するが、
+# ソルバー側がこの例外を握りつぶして feasible=False を返すと、「本当に解が
+# 無い」のではなく「例外で落ちていた」ことが、もっともらしい「実行不可能」
+# という誤った結果として表示される（実機で2回、同一例外を確認済み）。
+# big_m_warnings/absent_value_warningsと同じ理由（誤検知パターンが薄く、
+# 実際に業務事故を起こした既知パターン）でblocking側に分離する
+# （Koshoshi合意、2026-09-18）。
+#
+# 検出範囲: (a) mdl.pulse(itv, float(...)) のような直接渡し、
+# (b) 「varname = float(...)」で代入された変数が、int()/round()で包まれずに
+# そのまま mdl.pulse(itv, varname) の第2引数に使われるケース。
+# 他の_check_*関数と同じ粒度のヒューリスティックであり、間接的な代入の連鎖
+# （別の変数を経由する等）までは追えない。
+# ─────────────────────────────────────────────────────────────
+
+_FLOAT_ASSIGN_RE = re.compile(r'^\s*(\w+)\s*=\s*float\(', re.MULTILINE)
+_PULSE_HEIGHT_CALL_RE = re.compile(r'\bmdl\.pulse\(\s*[^,]+,\s*([^)]+)\)')
+
+
+def _check_pulse_float_height(code: str, path: str) -> list[str]:
+    scan_code = _strip_line_comments(code)
+    float_assigned_vars = {m.group(1) for m in _FLOAT_ASSIGN_RE.finditer(scan_code)}
+    warnings: list[str] = []
+    for m in _PULSE_HEIGHT_CALL_RE.finditer(scan_code):
+        height_expr = m.group(1).strip()
+        if "int(" in height_expr or "round(" in height_expr:
+            # 呼び出し側で明示的に整数化されているため対象外
+            continue
+        is_direct_float = "float(" in height_expr
+        is_float_assigned_var = height_expr in float_assigned_vars
+        if not (is_direct_float or is_float_assigned_var):
+            continue
+        warnings.append(
+            f"{path}: {m.group(0)!r} のように、mdl.pulse()の第2引数（height、"
+            f"同時使用量）にfloat値が直接渡されている疑いがあります。CP Optimizerの"
+            f"API仕様上、pulse()のheight引数は整数（またはタプルによる整数範囲）で"
+            f"なければならず、float値を渡すと mdl.solve() が例外で失敗します。この"
+            f"例外がソルバー側で握りつぶされていると、『本当に解が無い』のではなく"
+            f"『例外で落ちていた』ことが、もっともらしい『実行不可能』という誤った"
+            f"結果として表示される既知の実害パターンです（EnergyCostAwareScheduler"
+            f"登録時に実機発生、2026-08-09）。該当する数量を適切な単位（例: 0.1kW"
+            f"単位）に量子化してから int() で整数化して渡してください。"
+        )
+    return warnings
+
+
+# ─────────────────────────────────────────────────────────────
+# Gate2静的チェック（blocking）: if_thenの第2引数への比較式直渡し検出（禁止パターン4）
+#
+# 背景: 従来は_CPO_WARN_PATTERNS（build_checks.py）のadvisory（参考情報止まり、
+# 確認不要）扱いだった。しかしEnergyCostAwareSchedulerの実装
+# （energy_cost_aware_scheduler_solver.py 250〜261行目）でこのパターンが
+# 実際に残ったまま登録されてしまった事例が2026-08-30に発覚し、advisoryでは
+# 見過ごされることが実証された。big_m_warnings/absent_value_warningsと同じ
+# 理由（誤検知パターンが薄く、実際に業務事故を起こした既知パターン）で
+# blocking側に分離する（Koshoshi合意、2026-09-18）。
+#
+# mdl.if_then(condition, mdl.xxx(...) <op> mdl.yyy(...)) という形は
+# if_thenの第2引数に比較式を渡せないというCP OptimizerのAPI制約に反する。
+# 代替として、solvers/base/constraint_applier.py の BaseConstraintApplier に
+# 2026-08-30追加された "containment" ハンドラ（if_thenを使わず直接mdl.add()
+# する共通レシピ）が既に存在する。
+# ─────────────────────────────────────────────────────────────
+
+_IF_THEN_COMPARISON_ARG_RE = re.compile(
+    r'mdl\.if_then\(\s*[^,]+,\s*mdl\.\w+\([^()]*\)\s*(?:<=|>=|==|!=|<|>)\s*mdl\.\w+\('
+)
+
+
+def _check_if_then_comparison_arg(code: str, path: str) -> list[str]:
+    scan_code = _strip_line_comments(code)
+    warnings: list[str] = []
+    for m in _IF_THEN_COMPARISON_ARG_RE.finditer(scan_code):
+        warnings.append(
+            f"{path}: {m.group(0)!r} のように、mdl.if_then()の第2引数に "
+            f"mdl.xxx(...) <op> mdl.yyy(...) という比較式が渡されている疑いが"
+            f"あります（禁止パターン4）。if_thenの第2引数に比較式は渡せません。"
+            f"EnergyCostAwareSchedulerの実装で実際に残ったまま登録されてしまった"
+            f"既知パターンです（2026-08-30発覚）。if_thenごと削除し、"
+            f"solvers/base/constraint_applier.py の BaseConstraintApplier が持つ"
+            f"'containment'ハンドラ（対象の制約を直接mdl.add()する共通レシピ、"
+            f"optional intervalがabsentの場合は制約自体が自動的に無効化される）"
+            f"を使うことを検討してください。"
+        )
+    return warnings
+
+
+def _check_no_overlap_cumulative_conflict(code: str, path: str) -> list[str]:
+    scan_code = _strip_line_comments(code)
+    if _CONSTRAINT_APPLIER_USAGE_RE.search(scan_code):
+        # BaseConstraintApplierに委譲している場合はそちら側でa/bの排他が
+        # 管理されるため対象外
+        return []
+    has_no_overlap = bool(_NO_OVERLAP_ANY_RE.search(scan_code))
+    has_cumulative = bool(_PULSE_OR_CUMULATIVE_RE.search(scan_code))
+    if has_no_overlap and has_cumulative:
+        return [
+            f"{path}: no_overlap系（sequence_var+no_overlap または "
+            f"cp.NoOverlapOptional）と pulse/cumulative系（mdl.pulse または "
+            f"cp.Cumulative）の両方が同一ファイル内で使われています（禁止パターン7）。"
+            f"同じ資源に対して両方を課すと、no_overlapの完全排他制約が常に"
+            f"cumulativeの容量制約より厳しく効くため、容量制約側が実質的に"
+            f"デッドコード化し、本来許容されるべき「上限付きで複数同時使用"
+            f"（相乗り等）」が構造的に不可能になります"
+            f"（PatientTransportPlannerで実際に発生: 2026-09-17）。"
+            f"両方が本当に別々の資源に対する制約であれば問題ありませんが、"
+            f"同一資源に対するものであれば、no_overlapを削除しcumulativeのみに"
+            f"統一するか、BaseConstraintApplierのa/b排他選択に委譲してください。"
+        ]
+    return []
+
+
 def _strip_line_comments(code: str) -> str:
     """各行の最初の '#' 以降を雑に除去する（コード中で言及・説明しているだけの
     コメント行を、実際の違反コードと誤検知しないようにするための簡易前処理）。

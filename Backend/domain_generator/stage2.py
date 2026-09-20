@@ -251,6 +251,40 @@ mdl.add(mdl.logical_or([
 ]))
 ```
 
+### ❌ 禁止パターン12: 時間帯によって単価・コストが変わる場合に、目的関数側だけ平均値で近似する
+```python
+# NG: ヒアリングシートが「電力の単価は時間帯によって変わる」ことを明示的に
+# 要求しているのに、目的関数（最適化の意思決定に使われる側）では
+# 時間帯別単価テーブルを平均した定数を使ってしまっている。
+# KPI表示用の別関数（_compute_energy_cost_for_orderのような正確な
+# 時間帯積分計算）が同じファイル内に既に存在していても、それが目的関数
+# 側の意思決定には一切使われず事後表示にしか使われていない場合、
+# ソルバーは実質的に時間帯を見ずにスケジューリングしてしまう
+# （2026-09-17 EnergyCostAwareScheduler実機投入前レビューで発覚。
+# 物理的な実行可能性は常に満たされるため、Gate2の動的検証や独立解
+# チェッカーでは検出されない）。
+def _average_tariff(tariff_table):
+    return sum(tariff_table) / len(tariff_table)
+
+avg_cost_per_kwh = _average_tariff(tariff_table)
+for lid, itv in order_itvs[oid].items():
+    cost_terms.append(mdl.presence_of(itv) * dur * req_power * avg_cost_per_kwh)
+```
+```python
+# OK: 開始時刻の候補ごとに正確なコストを事前計算し、element()で
+# 開始時刻（決定変数）からその値を引く。目的関数自体が時間帯を
+# 正しく考慮した上で最適化されるようになる。
+max_start = end_latest - dur
+cost_by_offset = [
+    int(round(_compute_energy_cost_for_order(t, t + dur, req_power, tariff_table, slot_min) * 100))
+    for t in range(earliest, max_start + 1)
+]
+for lid, itv in order_itvs[oid].items():
+    offset_expr = mdl.start_of(itv, absentValue=earliest) - earliest
+    energy_cost_expr = mdl.element(cost_by_offset, offset_expr)
+    cost_terms.append(mdl.presence_of(itv) * energy_cost_expr)
+```
+
 ## 数量要件（hard/soft）の実装ルール（必ず守ること）
 
 ヒアリングシート§4-1「人数・数量に関するルールの扱い」（a=解なし扱い=hard /
@@ -913,10 +947,20 @@ INSTRUCTION: convert_solver_to_ui の 4DSLドメイン分岐ブロックに {nam
 ===END===
 
 {dsl4_patches}
+[2026-09-18追加] 次のSCENARIOSブロックの各シナリオの "description" は、名前の反復
+（プレースホルダー）ではなく、この業務が実際に何を扱うか（対象・制約・目的）を1〜2文で
+要約した実質的な説明にすること。後日、別の新規ドメイン登録時にこの説明文だけを見て
+「既存ドメインとして流用できるか」を判定する仕組みがあり、名前を繰り返しただけの説明では
+正しい判定ができない（PatientTransportPlannerがRideshareMatchingPlannerの空同然の
+説明文のせいで誤って同一視された実例がある）。
+NG例: "description": "{name}の標準シナリオ"
+OK例: "description": "約20件の送迎依頼を4台の車両に割り当て、乗車定員内での相乗りを許可しつつ
+往復ペア・対応区分を考慮して配車するシナリオ"（実際の業務内容に即して書くこと。この例文を
+そのまま使い回さないこと）
 ===SCENARIOS===
 [
-  {{"name": "{name} — 標準",   "description": "{name}の標準シナリオ", "tag": "{name[:6].upper()}", "tag_color": "#8b5cf6", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_baseline.json"}},
-  {{"name": "{name} — 解なし", "description": "{name}のInfeasibleシナリオ", "tag": "{name[:6].upper()}", "tag_color": "#ef4444", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_infeasible.json"}}
+  {{"name": "{name} — 標準",   "description": "（この業務の対象・制約・目的を1〜2文で要約すること。上記OK例参照）", "tag": "{name[:6].upper()}", "tag_color": "#8b5cf6", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_baseline.json"}},
+  {{"name": "{name} — 解なし", "description": "（同上。実行不可能になる具体的な理由を含めること）", "tag": "{name[:6].upper()}", "tag_color": "#ef4444", "domain": "{snake}", "file": "Backend/dsl_repository/scenarios/{snake}_infeasible.json"}}
 ]
 ===END===
 """

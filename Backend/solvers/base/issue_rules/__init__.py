@@ -106,7 +106,6 @@ from .energy_cost_aware_scheduler import _ENERGY_COST_AWARE_SCHEDULER_RULES, bui
 from .lot_sizing_scheduler import _LOT_SIZING_SCHEDULER_RULES, build_lot_sizing_scheduler_contexts
 from .medical_appointment_scheduler import _MEDICAL_APPOINTMENT_SCHEDULER_RULES, build_medical_appointment_scheduler_contexts
 from .medical_appointment_sequence_scheduler import _MEDICAL_APPOINTMENT_SEQUENCE_SCHEDULER_RULES, build_medical_appointment_sequence_scheduler_contexts
-from .patient_transport_planner import _PATIENT_TRANSPORT_PLANNER_RULES, build_patient_transport_planner_contexts
 from .production_line_sequencing import _PRODUCTION_LINE_SEQUENCING_RULES, build_production_line_sequencing_contexts
 from .rideshare_matching_planner import _RIDESHARE_MATCHING_PLANNER_RULES, build_rideshare_matching_planner_contexts
 from .shift_rotation_scheduler import _SHIFT_ROTATION_SCHEDULER_RULES, build_shift_rotation_scheduler_contexts
@@ -141,7 +140,6 @@ ISSUE_RULES: Dict[str, List[IssueRule]] = {
     "LotSizingScheduler":            _LOT_SIZING_SCHEDULER_RULES,
     "MedicalAppointmentScheduler":         _MEDICAL_APPOINTMENT_SCHEDULER_RULES,
     "MedicalAppointmentSequenceScheduler": _MEDICAL_APPOINTMENT_SEQUENCE_SCHEDULER_RULES,
-    "PatientTransportPlanner":             _PATIENT_TRANSPORT_PLANNER_RULES,
     "ProductionLineSequencing":            _PRODUCTION_LINE_SEQUENCING_RULES,
     "RideshareMatchingPlanner":            _RIDESHARE_MATCHING_PLANNER_RULES,
     "ShiftRotationScheduler":               _SHIFT_ROTATION_SCHEDULER_RULES,
