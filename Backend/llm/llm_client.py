@@ -52,7 +52,7 @@ LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").lower()
 
 # Anthropic
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL   = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+ANTHROPIC_MODEL   = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
 ANTHROPIC_HAIKU   = os.environ.get("ANTHROPIC_HAIKU_MODEL", "claude-haiku-4-5-20251001")
 
 # OpenAI
