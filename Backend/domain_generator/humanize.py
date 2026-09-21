@@ -410,6 +410,79 @@ def _humanize_required_gap_findings(findings: list[str], domain_name: str) -> li
     return items if items is not None else findings
 
 
+# ─────────────────────────────────────────────────────────────
+# 2026-09-21追加（Koshoshi合意）: no_overlap/cumulative共存検出（禁止パターン7）の
+# LLMによる意味的な再判定。
+#
+# 背景: _check_no_overlap_cumulative_conflict()はファイル内の「共存」のみを見る
+# 正規表現ヒューリスティックで、対象が本当に同一資源かどうかは判定できない
+# （RideshareMatchingPlannerで実際に誤検知、既知ケースは静的マーカーで除外済み
+# だが、未知の新規ケースには使えない）。しかし「同一資源かどうか」はコードを
+# 読まないと判断できない質問であり、Gate2確認画面で業務担当者に問うのは
+# 不適切（プログラミング・CP最適化の知識がない前提の画面のため、答えようが
+# ない）。コードを実際に読んで意味的に判定できるLLMに、この一次判定を委ねる。
+#
+# フェイルセーフ方針: LLM呼び出し失敗・パース失敗・予期しない出力形式の場合は
+# same_resource=True（=blocking維持）を返す。本チェックは過去に実際の業務事故
+# （PatientTransportPlanner、2026-09-17）を見逃した実績があるカテゴリのため、
+# 判定不能な場合は必ず安全側（人間の目に触れさせる）に倒す。
+# ─────────────────────────────────────────────────────────────
+
+_RESOURCE_SHARING_CONFLICT_VERIFY_SYSTEM = """\
+あなたはCP Optimizer(docplex.cp)のコードレビュー担当です。
+
+与えられたソルバーコードには、no_overlap系の制約（sequence_var + no_overlap、
+または cp.NoOverlapOptional）と、pulse/cumulative系の制約（mdl.pulse または
+cp.Cumulative）の両方が含まれています。これらが実際に「同一の資源」
+（同じinterval_varの集合、または一方が他方から直接派生・spanした区間）に
+対してかかっているかを判定してください。
+
+同一資源であれば、no_overlapの完全排他制約（同時に1つしか使えない）が常に
+cumulativeの容量制約（上限付きで複数同時使用可）より厳しく効き、容量制約側が
+実質的にデッドコード化します（本来許容されるべき「上限付きで複数同時使用
+（相乗り等）」が構造的に不可能になる、既知のバグパターン）。
+
+判定基準:
+- no_overlapのsequence_varに渡されているinterval_varの集合と、pulse/cumulative
+  の対象interval_varが同一、または一方が他方から mdl.span() 等で直接派生した
+  区間であれば same_resource=true。
+- 明確に別々の変数・別々の資源概念（例: 瞬間的な点イベント用の変数と、
+  それとは別の占有期間用の変数で、後者が前者を含む一部区間から派生していない
+  独立した概念）であれば same_resource=false。
+- コードから確実に判断できない場合は same_resource=true（安全側）。
+
+JSON形式のみで出力してください:
+{"same_resource": true または false, "reasoning": "簡潔な根拠（日本語1-2文）"}
+"""
+
+
+def _verify_resource_sharing_conflict_with_llm(code: str, path: str) -> bool:
+    """
+    _check_no_overlap_cumulative_conflict()が共存を検出したファイルについて、
+    実際に同一資源への制約かどうかをLLMに判定させる。True=同一資源の疑いあり
+    （blocking維持）、False=別資源と判定（blockingから除外）。
+    """
+    from llm.llm_client import call_llm, extract_json, fast_model
+
+    messages = [
+        {"role": "system", "content": _RESOURCE_SHARING_CONFLICT_VERIFY_SYSTEM},
+        {"role": "user", "content": f"# {path}\n\n```python\n{code}\n```"},
+    ]
+    try:
+        raw = call_llm(messages, model=fast_model(), max_tokens=512, temperature=0)
+        result = extract_json(raw)
+        if isinstance(result, dict) and "same_resource" in result:
+            same_resource = bool(result["same_resource"])
+            logger.info(
+                f"[resource_sharing_conflict_verify] {path}: same_resource={same_resource}, "
+                f"reasoning={result.get('reasoning', '')!r}"
+            )
+            return same_resource
+    except Exception as e:
+        logger.warning(f"[resource_sharing_conflict_verify] {path}: LLM判定失敗（安全側でTrueを返す）: {e}")
+    return True
+
+
 def scan_diffs_for_warnings(diffs: list) -> dict:
     """
     diffs（generate_domain_filesの戻り値）を、ファイルを書き込む前にスキャンし、
@@ -479,7 +552,14 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             warnings.extend(_check_unwrapped_minimize(code, path))
             warnings.extend(_check_unnamed_expr_get_value(code, path))
             warnings.extend(_check_no_overlap_without_sequence_var(code, path))
-            resource_sharing_conflict_warnings.extend(_check_no_overlap_cumulative_conflict(code, path))
+            _resource_sharing_hits = _check_no_overlap_cumulative_conflict(code, path)
+            if _resource_sharing_hits:
+                # 2026-09-21追加: 正規表現ヒューリスティックが共存を検出した場合、
+                # 業務担当者には判断できない「同一資源か」をLLMに一次判定させ、
+                # blockingに回すかどうかを絞り込む（詳細は_verify_resource_sharing_
+                # conflict_with_llm()のdocstring参照）。
+                if _verify_resource_sharing_conflict_with_llm(code, path):
+                    resource_sharing_conflict_warnings.extend(_resource_sharing_hits)
             big_m_warnings.extend(_check_big_m_objective(code, path))
             absent_value_warnings.extend(_check_optional_interval_absent_value(code, path))
             pulse_float_warnings.extend(_check_pulse_float_height(code, path))

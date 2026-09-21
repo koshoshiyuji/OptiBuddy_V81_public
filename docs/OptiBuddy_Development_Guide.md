@@ -284,6 +284,23 @@ def _solve_new_domain(dsl, issue_statuses):
 
 両方の警告はGate1のmissing_infoと同じ`needs_confirmation`の`questions`に合流し、人間の確認画面は1回のまま。詳細と、警告が出た場合の再投入手順は `docs/DESIGN_2026-07-09_registration_gates_and_hard_soft.md`（7節）を参照。
 
+**設計原則（2026-09-21追加）: 「コードを読まないと判断できない」検出はLLMの一次判定を挟んでからblockingにする。**
+静的チェックの中には、大半のカテゴリ（数量hard/soft、フィールド未使用等）のように業務担当者が
+自分の入力・意図と照合して答えられるものと、「no_overlapとcumulativeが同一資源にかかっているか」
+のようにコードの構造そのものを読まないと判定できないものが混在する。後者をそのままblockingで
+確認画面に出しても、業務担当者には原理的に判断材料が無く、正しい応答を期待できない
+（2026-09-21、RideshareMatchingPlannerの`resource_sharing_conflict`誤検知で発覚、Koshoshi指摘）。
+
+このタイプのチェックを新設・昇格する場合は、正規表現/ASTによる一次検出の後段に、実際のコードを
+読んで意味的に判定するLLM検証関数を挟み、その判定が「真に問題あり」の場合のみblocking_questions
+に回す設計とする（参考実装: `humanize.py`の`_verify_resource_sharing_conflict_with_llm()`）。
+LLM呼び出し失敗・パース不能時は必ず安全側（blocking維持）にフェイルセーフすること。
+
+人間側の確認画面・`force_apply`による上書き機構（4-3c参照）は新設不要——既存のGate2 blocking
+フローがそのまま使える。LLM一次判定を挟むことで、人間が画面で行うのは「実質的な技術判断」ではなく
+「LLMが既に判定した内容の形式的な承認（必要ならforce_applyで上書きも可能）」になる、という位置づけ
+の変化である。
+
 ### 4-3c. Confirm／自動操縦モード（auto_resolve）（2026-09追加）
 
 `needs_confirmation` に到達した後の確認フローには2種類ある。

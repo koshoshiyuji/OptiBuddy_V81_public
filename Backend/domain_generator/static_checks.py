@@ -114,6 +114,21 @@ _NO_OVERLAP_ANY_RE = re.compile(r'\b(?:mdl\.no_overlap|cp\.NoOverlap(?:Optional)
 _PULSE_OR_CUMULATIVE_RE = re.compile(r'\b(?:mdl\.pulse|cp\.Cumulative)\s*\(')
 _CONSTRAINT_APPLIER_USAGE_RE = re.compile(r'\bBaseConstraintApplier\b')
 
+# [2026-09-21] 目視確認済みの誤検知に対する除外マーカー。本チェックはファイル内の
+# no_overlap系とpulse/cumulative系の「共存」のみを見る簡易ヒューリスティックであり、
+# 対象が同一資源かどうかは判定できない（RideshareMatchingPlannerで実際に誤検知:
+# no_overlapは乗車・降車の点イベント、pulse/cumulativeは別変数の乗車区間にかかって
+# おり、実際には別資源）。この「同一資源かどうか」はコードを読まないと判断できず、
+# 業務担当者向けのGate2確認画面で問うのは不適切（Koshoshi指摘、2026-09-21）。
+# LLMによる意味的な再判定（_verify_resource_sharing_conflict_with_llm、
+# humanize.py）を新設したため、新規ケースは基本的にそちらで自動判定されるが、
+# 目視確認済みの既存ファイルについては都度LLM呼び出しをせず、このマーカーで
+# 即座に除外する。マーカーはコード中のコメントとして残す（_strip_line_comments()
+# で除去される前の生コードに対して検索するため、コメント行に書いてよい）。
+_RESOURCE_SHARING_CONFLICT_EXEMPT_RE = re.compile(
+    r'no_overlap_cumulative_conflict:\s*exempt', re.IGNORECASE
+)
+
 
 # ─────────────────────────────────────────────────────────────
 # Gate2静的チェック（blocking）: mdl.pulse() のheight引数へのfloat値直渡し検出
@@ -209,6 +224,9 @@ def _check_if_then_comparison_arg(code: str, path: str) -> list[str]:
 
 
 def _check_no_overlap_cumulative_conflict(code: str, path: str) -> list[str]:
+    # 除外マーカーはコメントとして残るため、コメント除去前の生コードを見る
+    if _RESOURCE_SHARING_CONFLICT_EXEMPT_RE.search(code):
+        return []
     scan_code = _strip_line_comments(code)
     if _CONSTRAINT_APPLIER_USAGE_RE.search(scan_code):
         # BaseConstraintApplierに委譲している場合はそちら側でa/bの排他が

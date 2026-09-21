@@ -71,6 +71,17 @@ mdl.add(mdl.sum(mdl.pulse(itv, load) for itv in vehicle_itvs) <= capacity)
     assert warnings == [], f"BaseConstraintApplier usage should be exempted: {warnings}"
 
 
+def test_exempt_marker_suppresses_false_positive():
+    code = """
+# no_overlap_cumulative_conflict: exempt（目視確認済み、別資源）
+seq = mdl.sequence_var(pickup_and_dropoff_itvs)
+mdl.add(mdl.no_overlap(seq, transition_matrix))
+mdl.add(mdl.sum(mdl.pulse(ride, 1) for ride in ride_itvs) <= capacity)
+"""
+    warnings = _check_no_overlap_cumulative_conflict(code, "dummy.py")
+    assert warnings == [], f"exempt marker should suppress the finding: {warnings}"
+
+
 def test_commented_out_mentions_ignored():
     code = """
 # 過去はno_overlapとpulseを両方使っていたが今は使っていない
@@ -88,6 +99,7 @@ if __name__ == "__main__":
         test_no_overlap_only_not_flagged,
         test_cumulative_only_not_flagged,
         test_base_constraint_applier_usage_exempted,
+        test_exempt_marker_suppresses_false_positive,
         test_commented_out_mentions_ignored,
     ]
     for t in tests:

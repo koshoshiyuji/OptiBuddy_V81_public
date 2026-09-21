@@ -349,6 +349,16 @@ class RideshareMatchingPlannerSolver:
                 ))
 
         # (5) 座席容量制約（cumulative: 乗車+1、降車-1）
+        # no_overlap_cumulative_conflict: exempt（2026-09-21, Koshoshi確認済み）
+        # このpulse制約は下記(6)のsequence_var/no_overlapとは別資源に対する制約。
+        # (5)はride_itvs（乗車区間、pu.startからdo.endまでspanする実際の乗車時間、
+        # 座席占有の概念）に対する容量制約。(6)のno_overlapはpickup_itvs/
+        # dropoff_itvs（乗車・降車という一瞬の点イベント、size=1）のみを対象と
+        # しており、ride_itvs自体はno_overlapの対象集合(all_itvs_d)に含まれない。
+        # したがってPatientTransportPlannerのバグ（no_overlapが同一資源の
+        # cumulativeを常にデッドコード化する）とは構造が異なり、相乗り容量制約は
+        # 正しく機能する（禁止パターン7の静的チェックはファイル内の共存のみを見る
+        # ヒューリスティックのため誤検知するが、目視確認済み）。
         for d_idx, d in enumerate(drivers):
             capacity = int(d.get("seats", 4))
             pulses = []
