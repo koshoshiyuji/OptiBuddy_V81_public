@@ -16,7 +16,12 @@ CSPLib prob060 準拠。
     表現し、実際の走行距離をtype_of_next+elementで積算するために導入）
   - seq_d[d_idx]            : sequence_var（運転手dの巡回順序。要素の type は
     ロケーションindex。2026-08-16変更: 以前はp_idx由来の識別子だったが、
-    type_of_next()による距離集計に使うためロケーションindexに変更）
+    type_of_next()による距離集計に使うためロケーションindexに変更。
+    2026-09-21修正: no_overlap(seq)に地点間移動時間のtransition matrix(tm)が
+    渡されておらず、同一運転手の乗車・降車イベント間で実移動時間が一切
+    要求されていなかった欠陥を修正。TruckDispatcherのno_overlap(seq, tm)
+    パターンに倣い、dist_matrix由来のtravel_matrix/build_cpo_transition_matrix
+    をno_overlapに渡すよう変更）
 
 目的関数: lexicographic
   1位: 未割当乗客数の最小化
@@ -155,6 +160,7 @@ class RideshareMatchingPlannerSolver:
         issue_statuses: Dict,
     ) -> Tuple[Optional[Dict], List[Dict]]:
         from docplex.cp.model import CpoModel
+        from docplex.cp.modeler import build_cpo_transition_matrix
         from solvers.base.ce_limit_lns import is_ce_limit_exceeded, CeLimitExceededError as BaseCeLimitError
 
         mdl = CpoModel(name="RideshareMatchingPlanner")
@@ -199,6 +205,24 @@ class RideshareMatchingPlannerSolver:
             if speed > 0:
                 return max(1, int(math.ceil(km / speed * 60)))
             return max(1, int(math.ceil(km)))
+
+        # --- 地点間の移動時間行列（no_overlapのtransition matrix用） ---
+        # 2026-09-21修正: (6)のno_overlap(seq)に移動時間行列が渡されておらず、
+        # 同一運転手の乗車・降車イベント間で実際の移動時間が一切要求されていなかった
+        # （TruckDispatcherのno_overlap(seq, tm)パターンが未適用だった）。
+        # dist_to_min()は他箇所（direct_min等）向けにmax(1, ceil(...))のフロアを
+        # 持つが、ここでは同一地点間の連続イベントに人為的な1分待ちを強制しないよう、
+        # TruckDispatcherのtravel_min()に倣いフロア無しのround()を使う。
+        def _travel_min_between(loc_a_idx: int, loc_b_idx: int) -> int:
+            if loc_a_idx == loc_b_idx:
+                return 0
+            km = flat_dist[loc_a_idx * n_loc + loc_b_idx]
+            if speed > 0:
+                return int(round(km / speed * 60))
+            return int(round(km))
+
+        travel_matrix = [[_travel_min_between(i, j) for j in range(n_loc)] for i in range(n_loc)]
+        tm = build_cpo_transition_matrix(travel_matrix)
 
         # --- Interval変数の生成 ---
         # pickup_itvs[p][d], dropoff_itvs[p][d]: optional interval_var
@@ -381,7 +405,7 @@ class RideshareMatchingPlannerSolver:
 
             if len(all_itvs_d) > 0:
                 seq = mdl.sequence_var(all_itvs_d, types=types_d, name=f"seq_d{d_idx}")
-                mdl.add(mdl.no_overlap(seq))
+                mdl.add(mdl.no_overlap(seq, tm))
                 mdl.add(mdl.first(seq, depot_start))
                 mdl.add(mdl.last(seq, depot_end))
                 seq_vars.append(seq)

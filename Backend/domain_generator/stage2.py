@@ -285,6 +285,44 @@ for lid, itv in order_itvs[oid].items():
     cost_terms.append(mdl.presence_of(itv) * energy_cost_expr)
 ```
 
+### ❌ 禁止パターン13: sequence_var + no_overlap を地点・距離が絡むドメインで
+transition_matrix 無しの単一引数で呼ぶ
+```python
+# NG: 複数の地点（乗降地点・拠点・訪問先等）を巡回する順序を
+# sequence_var + no_overlap で表現しているのに、no_overlap に
+# transition_matrix を渡していない。この場合、no_overlapは
+# 「イベント同士が時刻的に重ならない」ことしか強制せず、異なる地点間を
+# 移動するのに必要な時間は一切要求されない（地点が変わっても移動時間
+# ゼロで直後のイベントに移行できてしまう、物理的に不可能なスケジュールを
+# 許容してしまう）。
+# （2026-09-21 RideshareMatchingPlannerで実機発生: 乗客の乗車・降車
+# イベント間でno_overlap(seq)がtransition_matrix無しで呼ばれており、
+# 実際の移動時間が一切考慮されていなかった）
+seq = mdl.sequence_var(all_itvs, types=loc_type_ids, name="seq_d")
+mdl.add(mdl.no_overlap(seq))
+```
+```python
+# OK: dist_matrixから地点間の移動時間行列を構築し、no_overlapに渡す
+from docplex.cp.modeler import build_cpo_transition_matrix
+
+def travel_min(dist_km: float, speed_kmh: float) -> int:
+    if speed_kmh > 0:
+        return int(round(dist_km / speed_kmh * 60))
+    return int(round(dist_km))
+
+travel_matrix = [
+    [travel_min(dist_matrix[i][j], speed_kmh) for j in range(n_loc)]
+    for i in range(n_loc)
+]
+tm = build_cpo_transition_matrix(travel_matrix)
+
+seq = mdl.sequence_var(all_itvs, types=loc_type_ids, name="seq_d")
+mdl.add(mdl.no_overlap(seq, tm))
+```
+地点・拠点間の移動が業務上無関係（例: 全イベントが常に同一地点で発生する）と
+明確にヒアリング内容から判断できる場合のみ、transition_matrix無しの単一引数
+呼び出しが許容される。その場合は理由をコメントで明示すること。
+
 ## 数量要件（hard/soft）の実装ルール（必ず守ること）
 
 ヒアリングシート§4-1「人数・数量に関するルールの扱い」（a=解なし扱い=hard /

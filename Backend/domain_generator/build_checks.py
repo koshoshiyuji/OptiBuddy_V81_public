@@ -20,6 +20,7 @@ from . import (
 from .static_checks import (
     _check_big_m_objective,
     _check_no_overlap_cumulative_conflict,
+    _check_no_overlap_missing_transition_matrix,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
     _check_if_then_comparison_arg,
@@ -155,6 +156,8 @@ def _sanitize_solver_code(code: str, path: str) -> str:
     for w in _check_if_then_comparison_arg(code, path):
         logger.warning(f"[sanitize] {w}")
     for w in _check_no_overlap_cumulative_conflict(code, path):
+        logger.warning(f"[sanitize] {w}")
+    for w in _check_no_overlap_missing_transition_matrix(code, path):
         logger.warning(f"[sanitize] {w}")
 
     if fixes:

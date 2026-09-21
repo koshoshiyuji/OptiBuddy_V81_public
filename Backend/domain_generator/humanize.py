@@ -23,6 +23,7 @@ from .static_checks import (
     _check_kpi_card_coverage,
     _check_mip_self_verification,
     _check_no_overlap_cumulative_conflict,
+    _check_no_overlap_missing_transition_matrix,
     _check_no_overlap_without_sequence_var,
     _check_objective_coverage,
     _check_if_then_comparison_arg,
@@ -81,6 +82,11 @@ _FINDING_CATEGORY_HINTS: dict[str, str] = {
         "書き方の一部が、システムの実行制約に反している可能性がある、という"
         "内容です。『条件分岐の書き方についての指摘であること』が伝わるように"
         "してください。"
+    ),
+    "resource_transition": (
+        "この指摘は、複数の地点を巡回する順序を決める計算で、地点間の移動に"
+        "かかる時間が考慮されていない可能性がある、という内容です。『地点間の"
+        "移動時間の扱いについての指摘であること』が伝わるようにしてください。"
     ),
     "missing_in_dsl_for_solver": (
         "この指摘は、入力データ（業務データ）の中の特定の設定項目が、実際の"
@@ -441,6 +447,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
     containment_warnings = []
     missing_in_dsl_for_solver_warnings = []
     mip_self_check_warnings = []
+    resource_transition_warnings = []
     solver_by_snake:       dict[str, tuple[str, str]] = {}
     converter_by_snake:    dict[str, tuple[str, str]] = {}
     ui_converter_by_snake: dict[str, tuple[str, str]] = {}
@@ -470,6 +477,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             absent_value_warnings.extend(_check_optional_interval_absent_value(code, path))
             pulse_float_warnings.extend(_check_pulse_float_height(code, path))
             containment_warnings.extend(_check_if_then_comparison_arg(code, path))
+            resource_transition_warnings.extend(_check_no_overlap_missing_transition_matrix(code, path))
             mip_self_check_warnings.extend(_check_mip_self_verification(code, path))
 
         elif path.endswith("_converter.py") and not path.endswith("_ui_converter.py"):
@@ -579,4 +587,5 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
         "containment_warnings": containment_warnings,
         "missing_in_dsl_for_solver_warnings": missing_in_dsl_for_solver_warnings,
         "mip_self_check_warnings": mip_self_check_warnings,
+        "resource_transition_warnings": resource_transition_warnings,
     }

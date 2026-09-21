@@ -233,6 +233,53 @@ def _check_no_overlap_cumulative_conflict(code: str, path: str) -> list[str]:
     return []
 
 
+# 禁止パターン13: no_overlap(seq) が transition_matrix（移動時間行列）無しの
+# 単一引数で呼ばれているのに、そのファイルが地点・距離ベースのスケジューリング
+# （dist_matrix/locations等の入力、またはtype_of_next等ロケーションindexベースの
+# 距離集計）を扱っている場合を検出する。
+#
+# [2026-09-21] RideshareMatchingPlannerで実際に発生したバグが動機:
+# no_overlap(seq)がtransition matrix無しで呼ばれており、同一運転手上の連続する
+# 乗車・降車イベント間で実際の移動時間が一切要求されていなかった（地点が変わって
+# も移動時間ゼロで直後のイベントに移行できる、物理的に不可能なスケジュールを
+# 許容していた）。禁止パターン1（_check_no_overlap_without_sequence_var）は
+# 「no_overlap(seq, tm)の形でtmの中身がおかしい」ケース（2引数以上）しか拾えず、
+# tmがまるごと欠落しているケース（引数が1個だけ）は正規表現の対象外だった。
+#
+# 地点・距離概念を持たないファイル（純粋な時間順序制約のみのリソース排他、
+# 例: 1台の機械の単純なジョブスケジューリング）では、no_overlap(seq)の単一引数
+# 呼び出しは正当なユースケースであり、対象外とする（_LOCATION_DISTANCE_HINT_RE
+# にマッチしないファイルは無条件でスキップ）。
+_NO_OVERLAP_SINGLE_ARG_RE = re.compile(r'\bmdl\.no_overlap\(\s*(\w+)\s*\)')
+_LOCATION_DISTANCE_HINT_RE = re.compile(
+    r'\b(?:dist_matrix\w*|distance_matrix\w*|dist_mat\w*|locations?|loc_type|type_of_next)\b'
+)
+
+
+def _check_no_overlap_missing_transition_matrix(code: str, path: str) -> list[str]:
+    scan_code = _strip_line_comments(code)
+    if not _LOCATION_DISTANCE_HINT_RE.search(scan_code):
+        return []
+    sequence_var_names = set(_SEQUENCE_VAR_ASSIGN_RE.findall(scan_code))
+    warnings = []
+    for m in _NO_OVERLAP_SINGLE_ARG_RE.finditer(scan_code):
+        seq_name = m.group(1)
+        if seq_name not in sequence_var_names:
+            continue
+        warnings.append(
+            f"{path}: no_overlap({seq_name}) が transition_matrix（移動時間行列）無しの"
+            f"単一引数で呼ばれています（禁止パターン13）。このファイルはdist_matrix/"
+            f"locations等、地点・距離の概念を扱っているため、{seq_name}上で連続する"
+            f"イベント間に実際の移動時間が一切要求されていない可能性があります"
+            f"（RideshareMatchingPlannerで実際に発生: 2026-09-21）。地点が変わっても"
+            f"瞬時に次のイベントへ移行できてしまう、物理的に不可能なスケジュールを"
+            f"許容している疑いがあります。dist_matrixからbuild_cpo_transition_matrix()"
+            f"で移動時間行列を構築し、no_overlap({seq_name}, tm) の形に修正するか、"
+            f"本当に地点間移動が無関係な資源であれば理由をコメントで明示してください。"
+        )
+    return warnings
+
+
 def _strip_line_comments(code: str) -> str:
     """各行の最初の '#' 以降を雑に除去する（コード中で言及・説明しているだけの
     コメント行を、実際の違反コードと誤検知しないようにするための簡易前処理）。

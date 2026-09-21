@@ -958,6 +958,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         containment_warnings = _scan_result["containment_warnings"]
         missing_in_dsl_for_solver_warnings = _scan_result["missing_in_dsl_for_solver_warnings"]
         mip_self_check_warnings = _scan_result["mip_self_check_warnings"]
+        resource_transition_warnings = _scan_result["resource_transition_warnings"]
     except Exception as e:
         logger.warning(f"[gate2_checks] 静的チェックをスキップ（実行エラー）: {e}", exc_info=True)
         sanitizer_warnings = []
@@ -968,6 +969,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         containment_warnings = []
         missing_in_dsl_for_solver_warnings = []
         mip_self_check_warnings = []
+        resource_transition_warnings = []
 
     required_gap_warnings: list[str] = []
     optional_gap_summary: list[str] = []
@@ -1187,6 +1189,19 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         logger.warning(f"[gate2_checks] containment指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         containment_humanized = containment_warnings
 
+    # 2026-09-21追加（対応C、Koshoshi合意）: no_overlap(seq)がtransition_matrix
+    # 無しの単一引数で呼ばれている検出（禁止パターン13）。RideshareMatchingPlanner
+    # で実際に発生した「地点間の実移動時間が一切要求されない」バグの再発防止が目的。
+    # containment/pulse_floatと同じ理由（実際の業務事故から直接生まれたパターンで
+    # 誤検知余地が薄い）でblocking側へ最初から分離する。
+    try:
+        resource_transition_humanized = humanize_technical_findings(
+            resource_transition_warnings, domain_name, category="resource_transition"
+        )
+    except Exception as e:
+        logger.warning(f"[gate2_checks] resource_transition指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
+        resource_transition_humanized = resource_transition_warnings
+
     # 2026-07-26追加: missing_in_dsl_for_solver（DSL⇔solver直接突き合わせ、ネストキー
     # 対応）も、unused_in_solver/big_mと同じ理由（既知の誤検知パターンが薄く、
     # work_limitsのようなパススルー構造で実際にハード制約が無効化された実機不具合の
@@ -1222,6 +1237,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_humanized]
         + [f"（数量の型に関する指摘）{w}" for w in pulse_float_humanized]
         + [f"（条件分岐の書き方に関する指摘）{w}" for w in containment_humanized]
+        + [f"（地点間移動時間の未考慮の疑い）{w}" for w in resource_transition_humanized]
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
@@ -1249,6 +1265,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（特殊な条件の扱いに矛盾の疑い）{w}" for w in absent_value_warnings]
         + [f"（数量の型に関する指摘）{w}" for w in pulse_float_warnings]
         + [f"（条件分岐の書き方に関する指摘）{w}" for w in containment_warnings]
+        + [f"（地点間移動時間の未考慮の疑い）{w}" for w in resource_transition_warnings]
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_warnings]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
@@ -1267,6 +1284,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         f"absent_value_warnings={len(absent_value_warnings)}件, "
         f"pulse_float_warnings={len(pulse_float_warnings)}件, "
         f"containment_warnings={len(containment_warnings)}件, "
+        f"resource_transition_warnings={len(resource_transition_warnings)}件, "
         f"missing_in_dsl_for_solver={len(missing_in_dsl_for_solver_warnings)}件, "
         f"required_gap={len(required_gap_warnings)}件, "
         f"optional_gap_summary={len(optional_gap_summary)}件, dynamic_warnings={len(dynamic_warnings)}件, "
