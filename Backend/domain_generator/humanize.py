@@ -88,6 +88,12 @@ _FINDING_CATEGORY_HINTS: dict[str, str] = {
         "かかる時間が考慮されていない可能性がある、という内容です。『地点間の"
         "移動時間の扱いについての指摘であること』が伝わるようにしてください。"
     ),
+    "resource_sharing_conflict": (
+        "この指摘は、複数人・複数台が同じ資源を『上限付きで同時に使ってよい』"
+        "はずの場面で、実際には『同時には1つしか使えない』という強い制約と"
+        "衝突している可能性がある、という内容です。『資源の同時使用（相乗り等）"
+        "に関するルールについての指摘であること』が伝わるようにしてください。"
+    ),
     "missing_in_dsl_for_solver": (
         "この指摘は、入力データ（業務データ）の中の特定の設定項目が、実際の"
         "計算処理で一度も使われていない可能性がある、という内容です。指摘に"
@@ -448,6 +454,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
     missing_in_dsl_for_solver_warnings = []
     mip_self_check_warnings = []
     resource_transition_warnings = []
+    resource_sharing_conflict_warnings = []
     solver_by_snake:       dict[str, tuple[str, str]] = {}
     converter_by_snake:    dict[str, tuple[str, str]] = {}
     ui_converter_by_snake: dict[str, tuple[str, str]] = {}
@@ -472,7 +479,7 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
             warnings.extend(_check_unwrapped_minimize(code, path))
             warnings.extend(_check_unnamed_expr_get_value(code, path))
             warnings.extend(_check_no_overlap_without_sequence_var(code, path))
-            warnings.extend(_check_no_overlap_cumulative_conflict(code, path))
+            resource_sharing_conflict_warnings.extend(_check_no_overlap_cumulative_conflict(code, path))
             big_m_warnings.extend(_check_big_m_objective(code, path))
             absent_value_warnings.extend(_check_optional_interval_absent_value(code, path))
             pulse_float_warnings.extend(_check_pulse_float_height(code, path))
@@ -588,4 +595,5 @@ def scan_diffs_for_warnings(diffs: list) -> dict:
         "missing_in_dsl_for_solver_warnings": missing_in_dsl_for_solver_warnings,
         "mip_self_check_warnings": mip_self_check_warnings,
         "resource_transition_warnings": resource_transition_warnings,
+        "resource_sharing_conflict_warnings": resource_sharing_conflict_warnings,
     }

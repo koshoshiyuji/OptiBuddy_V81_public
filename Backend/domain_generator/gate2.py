@@ -959,6 +959,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         missing_in_dsl_for_solver_warnings = _scan_result["missing_in_dsl_for_solver_warnings"]
         mip_self_check_warnings = _scan_result["mip_self_check_warnings"]
         resource_transition_warnings = _scan_result["resource_transition_warnings"]
+        resource_sharing_conflict_warnings = _scan_result["resource_sharing_conflict_warnings"]
     except Exception as e:
         logger.warning(f"[gate2_checks] 静的チェックをスキップ（実行エラー）: {e}", exc_info=True)
         sanitizer_warnings = []
@@ -970,6 +971,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         missing_in_dsl_for_solver_warnings = []
         mip_self_check_warnings = []
         resource_transition_warnings = []
+        resource_sharing_conflict_warnings = []
 
     required_gap_warnings: list[str] = []
     optional_gap_summary: list[str] = []
@@ -1202,6 +1204,21 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         logger.warning(f"[gate2_checks] resource_transition指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
         resource_transition_humanized = resource_transition_warnings
 
+    # 2026-09-21追加（対応A、Koshoshi合意）: no_overlap系とpulse/cumulative系の
+    # 同一ファイル内共存検出（禁止パターン7）。2026-09-17新設時はadvisory
+    # （静的field-check同様、汎用warningsに合流）だったが、PatientTransportPlanner
+    # で実際に発生したバグ（no_overlapがcumulativeを常にデッドコード化する）の
+    # 再発防止のため、既存26ドメイン全件dry-run（誤検知0件）を確認した上で
+    # blocking側へ昇格する。BaseConstraintApplier使用時は元々このチェックの
+    # 対象外（関数内部で除外済み）。
+    try:
+        resource_sharing_conflict_humanized = humanize_technical_findings(
+            resource_sharing_conflict_warnings, domain_name, category="resource_sharing_conflict"
+        )
+    except Exception as e:
+        logger.warning(f"[gate2_checks] resource_sharing_conflict指摘の言い換えをスキップ（実行エラー）: {e}", exc_info=True)
+        resource_sharing_conflict_humanized = resource_sharing_conflict_warnings
+
     # 2026-07-26追加: missing_in_dsl_for_solver（DSL⇔solver直接突き合わせ、ネストキー
     # 対応）も、unused_in_solver/big_mと同じ理由（既知の誤検知パターンが薄く、
     # work_limitsのようなパススルー構造で実際にハード制約が無効化された実機不具合の
@@ -1238,6 +1255,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（数量の型に関する指摘）{w}" for w in pulse_float_humanized]
         + [f"（条件分岐の書き方に関する指摘）{w}" for w in containment_humanized]
         + [f"（地点間移動時間の未考慮の疑い）{w}" for w in resource_transition_humanized]
+        + [f"（資源の同時使用制約に関する指摘）{w}" for w in resource_sharing_conflict_humanized]
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_humanized]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
@@ -1266,6 +1284,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（数量の型に関する指摘）{w}" for w in pulse_float_warnings]
         + [f"（条件分岐の書き方に関する指摘）{w}" for w in containment_warnings]
         + [f"（地点間移動時間の未考慮の疑い）{w}" for w in resource_transition_warnings]
+        + [f"（資源の同時使用制約に関する指摘）{w}" for w in resource_sharing_conflict_warnings]
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_warnings]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
@@ -1285,6 +1304,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         f"pulse_float_warnings={len(pulse_float_warnings)}件, "
         f"containment_warnings={len(containment_warnings)}件, "
         f"resource_transition_warnings={len(resource_transition_warnings)}件, "
+        f"resource_sharing_conflict_warnings={len(resource_sharing_conflict_warnings)}件, "
         f"missing_in_dsl_for_solver={len(missing_in_dsl_for_solver_warnings)}件, "
         f"required_gap={len(required_gap_warnings)}件, "
         f"optional_gap_summary={len(optional_gap_summary)}件, dynamic_warnings={len(dynamic_warnings)}件, "
