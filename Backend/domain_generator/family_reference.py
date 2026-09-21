@@ -79,6 +79,7 @@ JSON形式で出力してください:
   "objective_priority_type": "lexicographic | weighted | single | unknown",
   "objective_stages": ["目的を優先順位順に列挙。1つしかなければ1件のみ"],
   "resource_sharing_notes": "資源の同時使用に関するルール（同時に1つのみ／複数可で上限あり等）",
+  "depot_handling_notes": "拠点（車庫・営業所等の出発・帰着地点）に関する扱い（拠点⇔最初/最後の訪問地点間の移動時間を反映するか、稼働時間帯の制約さえ守れれば無視してよいか等）。拠点の概念が無ければ空文字列",
   "infeasible_handling_notes": "対応しきれない場合・解けない場合の扱いについての記述",
   "other_structural_notes": ["上記に当てはまらないが構造上重要な記述があれば列挙"]
 }

@@ -342,6 +342,32 @@ if shortfall is not None:
     understaffing_terms.append(PENALTY_WEIGHT * shortfall)  # soft時のみ目的関数に加算
 ```
 
+## 拠点（出発・帰着地点）の実装ルール（該当する場合は必ず守ること）
+
+ヒアリングシート§9「拠点（出発・帰着地点）に関するルール」で a（拠点発着の移動時間を
+反映したい）が選択されており、かつ車両・作業者等のリソースに拠点座標（base_location
+等）が存在する場合、拠点を疑似イベントとしてsequence_varに含め、移動時間行列付きの
+no_overlapで拠点⇔最初/最後の訪問地点間の移動時間を組み込むこと。自己判断で拠点を
+無視したり、拠点座標を読み込むだけで制約に一切使わない実装にしないこと
+（2026-09-21 RideshareMatchingPlannerの禁止パターン13と同根の欠陥として、
+拠点自体の未使用も過去に実機で確認されている）。
+
+TruckDispatcherの参考実装パターン:
+```python
+seq = mdl.sequence_var(seq_items, types=seq_types, name=f"seq_{vid}")
+mdl.add(mdl.no_overlap(seq, tm))          # tm = 地点間の移動時間行列（デポ含む）
+mdl.add(mdl.first(seq, depot_out[vid]))   # デポ出発を必ず最初に
+mdl.add(mdl.last(seq, depot_in[vid]))     # デポ帰着を必ず最後に
+```
+`depot_out`/`depot_in` は拠点位置・出発可能時刻/到着希望時刻を持つmandatory（常時
+present）のsize=0 interval_varとし、`mdl.first()`/`mdl.last()` でsequence_var上の
+位置を固定すること。
+
+bが選択された場合（拠点は概念上存在するが移動時間は無視してよい）は、拠点座標
+フィールドをスキーマ上保持するだけでよく、スケジューリングロジックで使う必要はない。
+この場合にGate2のフィールド突き合わせチェックが「宣言されたが未参照」として指摘するのは
+想定通りの挙動であり、bを選択した旨を承認画面で確認すればよい（禁止パターンではない）。
+
 ## 解が見つからない場合の結果フォーマット規約（必ず守ること）
 
 ソルブが失敗した場合（`msol is None` 等）も、`solve()` の戻り値の**トップレベル**に
@@ -892,6 +918,9 @@ INSTRUCTION: convert_solver_to_ui の 4DSLドメイン分岐ブロックに {nam
 
 ### 資源の同時使用に関するルール
 {structural_requirements.get('resource_sharing_notes') or '（記載なし）'}
+
+### 拠点（出発・帰着地点）に関する扱い
+{structural_requirements.get('depot_handling_notes') or '（記載なし・拠点概念なし）'}
 
 ### 対応しきれない場合・解けない場合の扱い
 {structural_requirements.get('infeasible_handling_notes') or '（記載なし）'}
