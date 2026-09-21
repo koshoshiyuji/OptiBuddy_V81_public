@@ -408,6 +408,24 @@ def _repair_object_partial_keys(text: str):
 # ── 統一メッセージ形式 ────────────────────────────────────
 # messages は OpenAI 互換: [{"role": "system"|"user"|"assistant", "content": "..."}]
 
+def _log_content_blocks(tag: str, content_blocks) -> None:
+    """
+    2026-09-21追加・診断用: max_tokens上限打ち切り（output=max_tokensちょうど・
+    本文空/極端に短い）の原因がthinkingブロックによる予算消費なのかを切り分ける
+    ための最小限のログ。ブロックのtypeと大まかな長さのみを記録し、本文そのものは
+    出力しない。
+    """
+    try:
+        summary = []
+        for block in content_blocks:
+            btype = getattr(block, "type", type(block).__name__)
+            text = getattr(block, "text", None) or getattr(block, "thinking", None) or ""
+            summary.append(f"{btype}:{len(text)}chars")
+        logger.info(f"[content_blocks][{tag}] {', '.join(summary) if summary else '(空)'}")
+    except Exception as e:
+        logger.warning(f"[content_blocks][{tag}] ログ記録失敗: {e}")
+
+
 def _extract_text_from_content(content_blocks) -> str:
     """
     2026-09-06追加（Koshoshi合意）: claude-sonnet-5系モデルへの切り替えに伴い、
@@ -613,6 +631,7 @@ def _call_anthropic(
 
     resp = _call_with_param_fallback(_stream_call, kwargs)
     _log_usage(f"_call_anthropic:{model}", resp.usage)
+    _log_content_blocks(f"_call_anthropic:{model}", resp.content)
     return _extract_text_from_content(resp.content)
 
 
@@ -1071,4 +1090,5 @@ def call_llm_with_file(
 
     response = _call_with_param_fallback(_stream_call, kwargs)
     _log_usage("call_llm_with_file(Stage2+repomix)", response.usage)
+    _log_content_blocks("call_llm_with_file(Stage2+repomix)", response.content)
     return _extract_text_from_content(response.content)

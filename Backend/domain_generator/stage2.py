@@ -323,6 +323,28 @@ mdl.add(mdl.no_overlap(seq, tm))
 明確にヒアリング内容から判断できる場合のみ、transition_matrix無しの単一引数
 呼び出しが許容される。その場合は理由をコメントで明示すること。
 
+### ❌ 禁止パターン14: optional interval の start_of/end_of/size_of/length_of に
+absent時デフォルト値（第2引数）を指定し、そのまま比較演算子でmdl.add()の制約に使う
+```python
+# NG: mdl.start_of(itv, absentValue=X) は「presentならその値、absentなら
+# デフォルト値X」を意味する。これをmdl.add()内の等式・不等式にそのまま
+# 使うと、absent（不採用）候補すべてに事実上presentを強制してしまう。
+# 1バッチにつき複数の候補interval_varがあり「exactly 1つだけpresent」で
+# あるべきところ、デフォルト値と一致しない候補が軒並みpresent強制され、
+# exactly-1制約と矛盾して必ずinfeasibleになる。
+# （2026-08-10 ProductionLineSequencingで実機発生、2026-09-21
+# MyPatientTransportPlannerでも再発）
+mdl.add(mdl.start_of(itv, absentValue=0) >= earliest)
+```
+```python
+# OK: presence条件付きにする（第2引数なしのstart_of(var)を使う）
+mdl.add(mdl.if_then(mdl.presence_of(itv), mdl.start_of(itv) >= earliest))
+```
+第2引数（absent時デフォルト値）を使ってよいのは、element()やpresence_of()との
+乗算のように、absent時にその項自体が無視される文脈に限る（禁止パターン12の
+OK例のenergy_cost_exprのような使い方）。比較演算子（==, <=, >=, !=, <, >）と
+直接組み合わせないこと。
+
 ## 数量要件（hard/soft）の実装ルール（必ず守ること）
 
 ヒアリングシート§4-1「人数・数量に関するルールの扱い」（a=解なし扱い=hard /
@@ -998,6 +1020,10 @@ INSTRUCTION: convert_solver_to_ui の 4DSLドメイン分岐ブロックに {nam
 {impl_note}
 
 {converter_solver_contract}
+[2026-09-21追加・簡潔性] コードコメントは実装意図の理解に必要な最小限に留めること。
+同じ説明を複数箇所で繰り返さない、自明な処理への逐次コメント、冗長な前置き文は避ける。
+出力トークン上限に達して生成が途中で打ち切られる不具合が実際に発生しており、
+冗長な出力はその再発リスクを直接高める。
 ## 出力形式（マーカー区切り・全ファイルを出力すること）
 
 ===FILE:Backend/solvers/{snake}_solver.py===
@@ -1171,10 +1197,10 @@ def generate_domain_files(domain_def: dict, attachment_overrides: dict = None) -
     if repomix_path and Path(repomix_path).exists():
         file_id = upload_repomix_if_changed()  # Anthropic以外では""が返る想定通りの挙動
         raw = call_llm_with_file(
-            messages, file_id, system=system, max_tokens=24000, repomix_path=repomix_path
+            messages, file_id, system=system, max_tokens=64000, effort="low", repomix_path=repomix_path
         )
     else:
-        raw = call_llm([{"role": "system", "content": system}] + messages, max_tokens=24000)
+        raw = call_llm([{"role": "system", "content": system}] + messages, max_tokens=64000, effort="low")
 
     parsed = _parse_marker_output(raw)
     diffs  = [compute_diff(f["path"], f["content"]) for f in parsed["files"] if f.get("path")]

@@ -542,7 +542,7 @@ def run_debug_agent(
     かかっていた。ask_humanツールにより、業務判断が必要な曖昧さはセッションを
     終えずにその場で質問できるようにした。
     """
-    from llm.llm_client import get_raw_anthropic_client, default_model, is_available, LLM_PROVIDER
+    from llm.llm_client import get_raw_anthropic_client, default_model, is_available, LLM_PROVIDER, _call_with_param_fallback
 
     actions: list[dict] = list((resume_state or {}).get("actions", []))
 
@@ -676,7 +676,18 @@ def run_debug_agent(
             messages_for_api = (
                 _summarize_stale_read_results(messages) if summarize_stale_reads else messages
             )
-            resp = client.beta.messages.create(
+            # 2026-09-21追加: 他のAnthropic呼び出し箇所（_call_anthropic/
+            # call_llm_with_file）は_call_with_param_fallbackで「temperature等の
+            # 非対応パラメータをエラー文から検知して外し、1回再試行する」保護を
+            # 受けているが、ここ（debug_agentの直接API呼び出し）だけ保護が無く、
+            # temperature非対応モデルへの切替時にターン開始直後で即クラッシュし
+            # （turns_used=0、actionsなし）、デバッグエージェントが一度も修正を
+            # 試みられないまま終了する実害があった（2026-09-21、
+            # MyPatientTransportPlanner登録で実機発生）。他箇所と同じ保護を適用する。
+            def _create_call(**kw):
+                return client.beta.messages.create(**kw)
+
+            resp = _call_with_param_fallback(_create_call, dict(
                 model=model, max_tokens=8000, temperature=0,
                 # systemはセッション内（file_list_block込みで）常に同一なのでキャッシュ対象に
                 # する。messagesは_cache_marked_messages()で末尾ブロックにのみ
@@ -685,7 +696,7 @@ def run_debug_agent(
                 tools=tools, messages=_cache_marked_messages(messages_for_api),
                 betas=["cache-diagnosis-2026-04-07"],
                 diagnostics={"previous_message_id": last_message_id},
-            )
+            ))
         except Exception as e:
             logger.warning(f"[debug_agent] LLM呼び出し失敗（{turn}ターン目）: {e}", exc_info=True)
             return {
