@@ -224,3 +224,59 @@ def sweep_peak_usage(events: "List[tuple[float, float]]") -> "tuple[float, Optio
             peak = running
             peak_time = t
     return peak, peak_time
+
+
+def find_transit_shortfalls(
+    events_by_resource: "Dict[Any, List[Dict[str, Any]]]",
+    travel_min: "Callable[[Any, Any], float]",
+    *,
+    tolerance_min: float = 0.0,
+) -> "List[Dict[str, Any]]":
+    """
+    同一資源上で時刻順に隣り合う2イベントの間に、地点間の移動時間ぶんの間隔が
+    あるかを検算する（O(n log n)、COST_O_NLOGN。2026-09-25追加）。
+
+    sequence_var + no_overlap(seq, transition_matrix) で「同じ資源は移動時間を
+    空けずに別地点の次のイベントを始められない」ことを課しているドメイン
+    （TruckDispatcher・RideshareMatchingPlanner）で、返ってきた解がそれを
+    満たしているかを独立に確かめるための汎用ヘルパー。静的チェック
+    （_check_no_overlap_missing_transition_matrix）が捕まえられない、
+    移動時間行列の値の誤り・抽出/変換ミス・フォールバック解の不整合を検出する。
+    solver/converterの内部は参照せず、呼び出し側が「返ってきた値」から作った
+    イベント列と、DSL宣言の値から計算し直した移動時間関数だけを受け取る。
+
+    Args:
+        events_by_resource: {resource_id: [event, ...]}。event は
+            {"label": str, "loc": 地点キー, "start": 開始時刻(分), "end": 終了時刻(分),
+             "order": 任意の整数（既定1）}。拠点の出発・帰着など、長さ0の仮想
+            イベントを含めてよい。同時刻のイベントは order の小さい順に並べる
+            （拠点出発=0、拠点帰着=2 のように指定すると、違反時でも先頭/末尾に固定できる）。
+        travel_min: (loc_a, loc_b) -> 移動時間(分)。
+        tolerance_min: 不足がこの値以下なら違反としない（丸め方の違いの吸収用）。
+
+    Returns:
+        違反のリスト。各要素は {"resource_id", "from_label", "to_label",
+        "from_loc", "to_loc", "required_min", "available_min", "deficit_min"}。
+        同じ地点が続く場合は移動時間0として扱い、検査しない。
+    """
+    shortfalls: List[Dict[str, Any]] = []
+    for resource_id, events in events_by_resource.items():
+        ordered = sorted(events, key=lambda e: (e["start"], e.get("order", 1), e["end"]))
+        for a, b in zip(ordered, ordered[1:]):
+            if a["loc"] == b["loc"]:
+                continue
+            required = travel_min(a["loc"], b["loc"])
+            available = b["start"] - a["end"]
+            deficit = required - available
+            if deficit > tolerance_min:
+                shortfalls.append({
+                    "resource_id":   resource_id,
+                    "from_label":    a["label"],
+                    "to_label":      b["label"],
+                    "from_loc":      a["loc"],
+                    "to_loc":        b["loc"],
+                    "required_min":  required,
+                    "available_min": available,
+                    "deficit_min":   deficit,
+                })
+    return shortfalls

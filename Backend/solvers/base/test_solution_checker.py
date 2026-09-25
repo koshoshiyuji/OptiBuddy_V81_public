@@ -19,6 +19,7 @@ from solvers.base.solution_checker import (
     run_or_defer,
     solver_bug_issue,
     sweep_peak_usage,
+    find_transit_shortfalls,
 )
 
 
@@ -132,3 +133,71 @@ class TestSweepPeakUsage:
         events = [(0, 1), (100, -1), (100, 1), (200, -1)]
         peak, _ = sweep_peak_usage(events)
         assert peak == 1  # 2にならない
+
+
+
+class TestFindTransitShortfalls:
+    """2026-09-25追加: 移動時間を含む資源排他性の汎用検算"""
+
+    @staticmethod
+    def _travel(a, b):
+        table = {frozenset({"A", "B"}): 20, frozenset({"B", "C"}): 10, frozenset({"A", "C"}): 25}
+        return table[frozenset({a, b})]
+
+    def test_detects_shortfall(self):
+        events = {"V1": [
+            {"label": "T1", "loc": "A", "start": 470, "end": 480},
+            {"label": "T2", "loc": "B", "start": 486, "end": 490},
+        ]}
+        res = find_transit_shortfalls(events, self._travel)
+        assert len(res) == 1
+        assert res[0] == {"resource_id": "V1", "from_label": "T1", "to_label": "T2",
+                          "from_loc": "A", "to_loc": "B", "required_min": 20,
+                          "available_min": 6, "deficit_min": 14}
+
+    def test_exact_gap_is_ok(self):
+        events = {"V1": [
+            {"label": "T1", "loc": "A", "start": 470, "end": 480},
+            {"label": "T2", "loc": "B", "start": 500, "end": 505},
+        ]}
+        assert find_transit_shortfalls(events, self._travel) == []
+
+    def test_same_location_needs_no_travel(self):
+        events = {"V1": [
+            {"label": "T1", "loc": "A", "start": 0, "end": 10},
+            {"label": "T2", "loc": "A", "start": 10, "end": 20},
+        ]}
+        assert find_transit_shortfalls(events, lambda a, b: 999) == []
+
+    def test_sorted_by_start_time_not_input_order(self):
+        events = {"V1": [
+            {"label": "T3", "loc": "C", "start": 520, "end": 525},
+            {"label": "T1", "loc": "A", "start": 470, "end": 480},
+            {"label": "T2", "loc": "B", "start": 500, "end": 505},
+        ]}
+        # A->B 20分(間隔20) OK、B->C 10分(間隔15) OK
+        assert find_transit_shortfalls(events, self._travel) == []
+
+    def test_resources_are_independent(self):
+        events = {
+            "V1": [{"label": "T1", "loc": "A", "start": 0, "end": 10}],
+            "V2": [{"label": "T2", "loc": "B", "start": 11, "end": 20}],
+        }
+        assert find_transit_shortfalls(events, self._travel) == []
+
+    def test_tolerance_absorbs_rounding_difference(self):
+        events = {"V1": [
+            {"label": "T1", "loc": "A", "start": 0, "end": 10},
+            {"label": "T2", "loc": "B", "start": 29, "end": 30},   # 必要20 / 間隔19 -> 1分不足
+        ]}
+        assert len(find_transit_shortfalls(events, self._travel)) == 1
+        assert find_transit_shortfalls(events, self._travel, tolerance_min=1) == []
+
+    def test_order_key_keeps_zero_length_depot_events_first_and_last(self):
+        # 拠点出発(order=0)と最初の訪問が同時刻でも、拠点出発を先に並べる
+        events = {"V1": [
+            {"label": "訪問", "loc": "B", "start": 0, "end": 5},
+            {"label": "拠点出発", "loc": "A", "start": 0, "end": 0, "order": 0},
+        ]}
+        res = find_transit_shortfalls(events, self._travel)
+        assert [(r["from_label"], r["to_label"], r["deficit_min"]) for r in res] == [("拠点出発", "訪問", 20)]

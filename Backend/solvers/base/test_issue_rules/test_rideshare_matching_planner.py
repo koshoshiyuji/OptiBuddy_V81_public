@@ -229,3 +229,65 @@ class TestRideshareMatchingPlannerChecker:
 
     def test_registered_in_issue_rules(self):
         assert "RideshareMatchingPlanner" in ISSUE_RULES
+
+
+
+# ---------------------------------------------------------------------------
+# テスト: RideshareMatchingPlanner 移動時間の検算 transit_shortfall（2026-09-25追加）
+# ---------------------------------------------------------------------------
+
+class TestRideshareTransitShortfall:
+    # 地点: S=出発地, P=乗車地, Q=降車地, E=目的地。speed 60km/h -> km=分
+    LOCATIONS = [{"id": "S"}, {"id": "P"}, {"id": "Q"}, {"id": "E"}]
+    DIST = [
+        [0, 10, 30, 40],
+        [10, 0, 20, 30],
+        [30, 20, 0, 10],
+        [40, 30, 10, 0],
+    ]
+    CONFIG = {"detour_factor": 1.5, "speed_kmh": 60}
+
+    def _ctxs(self, pickup, dropoff, depart=0, arrive_max=1000):
+        mp = {"passenger_id": "p1", "passenger_name": "P1", "driver_id": "d1", "driver_name": "D1",
+              "pickup_min": pickup, "dropoff_min": dropoff, "ride_min": dropoff - pickup,
+              "direct_min": 20, "pickup_loc": "P", "dropoff_loc": "Q",
+              "window_start_min": 0, "window_end_min": 1000}
+        routes = {"d1": {"driver_id": "d1", "driver_name": "D1", "seats": 4,
+                         "start_loc": "S", "end_loc": "E",
+                         "depart_min": depart, "arrive_max": arrive_max, "passengers": [mp]}}
+        return build_rideshare_matching_planner_contexts(
+            [mp], [], routes, [{"id": "p1"}], self.CONFIG,
+            dist_matrix=self.DIST, locations=self.LOCATIONS,
+        )
+
+    def _transit(self, ctxs):
+        return [i for i in run_issue_rules("RideshareMatchingPlanner", ctxs, {})
+                if i["id"].startswith("transit_shortfall")]
+
+    def test_feasible_no_fire(self):
+        # 出発0 -> P 10(10分) -> 乗車11終了 -> Q 31(20分) -> 32終了 -> E 42以降
+        assert self._transit(self._ctxs(10, 31)) == []
+
+    def test_pickup_to_dropoff_shortfall_fires(self):
+        issues = self._transit(self._ctxs(10, 25))   # 乗車11終了 -> 降車25（必要20、間隔14）
+        assert len(issues) == 1
+        assert issues[0]["id"] == "transit_shortfall_d1"
+        assert issues[0]["category"] == "SOLVER"
+        assert "P1乗車→P1降車（必要20分 / 間隔14分）" in issues[0]["message"]
+
+    def test_start_leg_checked(self):
+        issues = self._transit(self._ctxs(5, 31))    # 出発0 -> 乗車5（必要10）
+        assert "出発地→P1乗車（必要10分 / 間隔5分）" in issues[0]["message"]
+
+    def test_end_leg_checked(self):
+        issues = self._transit(self._ctxs(10, 31, arrive_max=38))   # 降車32終了 -> 目的地38（必要10）
+        assert "P1降車→目的地（必要10分 / 間隔6分）" in issues[0]["message"]
+
+    def test_not_checked_without_dist_matrix(self):
+        mp = {"passenger_id": "p1", "passenger_name": "P1", "driver_id": "d1", "driver_name": "D1",
+              "pickup_min": 0, "dropoff_min": 1, "ride_min": 1, "direct_min": 20,
+              "pickup_loc": "P", "dropoff_loc": "Q", "window_start_min": 0, "window_end_min": 1000}
+        routes = {"d1": {"driver_id": "d1", "driver_name": "D1", "seats": 4, "depart_min": 0,
+                         "arrive_max": 1000, "passengers": [mp]}}
+        ctxs = build_rideshare_matching_planner_contexts([mp], [], routes, [{"id": "p1"}], self.CONFIG)
+        assert not any(c["_rule_id"] == "transit_shortfall" for c in ctxs)

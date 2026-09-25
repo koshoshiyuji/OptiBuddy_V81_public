@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from solvers.base.solution_checker import solver_bug_issue, sweep_peak_usage
+from solvers.base.solution_checker import find_transit_shortfalls, solver_bug_issue, sweep_peak_usage
 from i18n.common_messages import t as _common_t
 from i18n.nurse_shift_weekly_cap_messages import t as _nurse_shift_t
 
@@ -24,6 +24,26 @@ from ._common import IssueRule, _rule
 # （スイープライン検算）で置き換える。
 # ---------------------------------------------------------------------------
 _RIDESHARE_MATCHING_PLANNER_RULES: List[IssueRule] = [
+    # 2026-09-25追加: 運転手ごとの移動時間の検算。solver は sequence_var +
+    # no_overlap(seq, tm) で「出発地→乗車/降車→…→目的地」の各区間に移動時間を
+    # 課している（ハード制約）ため、返ってきた解で不足していればバグの疑い。
+    _rule(
+        "transit_shortfall",
+        condition=lambda ctx: bool(ctx["shortfalls"]),
+        build=lambda ctx: solver_bug_issue(
+            f"transit_shortfall_{ctx['driver_id']}",
+            f"地点間の移動時間不足（解チェッカー）: {ctx['driver_name']}",
+            f"運転手「{ctx['driver_name']}」で、地点間の移動時間より短い間隔で次の地点に"
+            f"到着している区間が{len(ctx['shortfalls'])}件あります: "
+            + ", ".join(
+                f"{s['from_label']}→{s['to_label']}（必要{s['required_min']}分 / 間隔{s['available_min']}分）"
+                for s in ctx["shortfalls"][:5]
+            )
+            + ("..." if len(ctx["shortfalls"]) > 5 else "")
+            + "。移動時間行列付きのno_overlapが解で満たされておらず、解の抽出・変換または"
+              "移動時間計算の不整合の疑いがあります。",
+        ),
+    ),
     _rule(
         "seat_capacity_violation",
         condition=lambda ctx: ctx["peak"] > ctx["seats"],
@@ -112,11 +132,17 @@ def build_rideshare_matching_planner_contexts(
     driver_routes:        Any,   # dict-of-dicts または list-of-dicts のどちらでも受け付ける
     passengers:            List[Dict],
     config:                Dict,
+    *,
+    dist_matrix:           Optional[List[List[float]]] = None,
+    locations:             Optional[List[Dict]] = None,
 ) -> List[Dict[str, Any]]:
     """
     RideshareMatchingPlanner 用の独立検証contextを生成する。
     solver内部のinterval_var/mdl/sequence_varは一切参照せず、返ってきた
     matched_pairs・unmatched_passengers・driver_routes・DSL入力のみを使う。
+
+    dist_matrix / locations が渡された場合は、運転手ごとの移動時間の検算
+    （transit_shortfall、2026-09-25追加）の context も生成する。
     """
     import math
     from collections import Counter
@@ -179,6 +205,9 @@ def build_rideshare_matching_planner_contexts(
             "window_end_min":   mp["window_end_min"],
         })
 
+    if dist_matrix and locations:
+        ctxs.extend(_rideshare_transit_contexts(routes, dist_matrix, locations, config))
+
     assign_counts = Counter(mp["passenger_id"] for mp in matched_pairs)
     for pid, count in assign_counts.items():
         if count > 1:
@@ -199,4 +228,49 @@ def build_rideshare_matching_planner_contexts(
             "occurrence_count": occurrence_count,
         })
 
+    return ctxs
+
+
+
+def _rideshare_transit_contexts(
+    routes: List[Dict],
+    dist_matrix: List[List[float]],
+    locations: List[Dict],
+    config: Dict,
+) -> List[Dict[str, Any]]:
+    """
+    運転手ごとに「出発地(depart_min) → 乗車/降車（各1分）→ 目的地(arrive_max)」の
+    イベント列を作り、隣り合う区間の移動時間を検算する（2026-09-25追加）。
+    移動時間は solver の transition matrix と同じ式（speed_kmh>0 なら
+    round(km/speed*60)、それ以外は round(km)、同一地点は0）で DSL の値から
+    計算し直す。未知の地点IDは solver と同じく0番として扱う。
+    """
+    loc_idx = {loc["id"]: i for i, loc in enumerate(locations)}
+    speed = float(config.get("speed_kmh", 0))
+
+    def travel_min(i: int, j: int) -> int:
+        if i == j:
+            return 0
+        km = dist_matrix[i][j] if i < len(dist_matrix) and j < len(dist_matrix[i]) else 0.0
+        return int(round(km / speed * 60)) if speed > 0 else int(round(km))
+
+    ctxs: List[Dict[str, Any]] = []
+    for dr in routes:
+        events = [{"label": "出発地", "loc": loc_idx.get(dr.get("start_loc", ""), 0),
+                   "start": dr["depart_min"], "end": dr["depart_min"], "order": 0}]
+        for mp in dr["passengers"]:
+            name = mp.get("passenger_name", mp["passenger_id"])
+            events.append({"label": f"{name}乗車", "loc": loc_idx.get(mp["pickup_loc"], 0),
+                           "start": mp["pickup_min"], "end": mp["pickup_min"] + 1})
+            events.append({"label": f"{name}降車", "loc": loc_idx.get(mp["dropoff_loc"], 0),
+                           "start": mp["dropoff_min"], "end": mp["dropoff_min"] + 1})
+        events.append({"label": "目的地", "loc": loc_idx.get(dr.get("end_loc", ""), 0),
+                       "start": dr["arrive_max"], "end": dr["arrive_max"], "order": 2})
+        shortfalls = find_transit_shortfalls({dr["driver_id"]: events}, travel_min)
+        ctxs.append({
+            "_rule_id":    "transit_shortfall",
+            "driver_id":   dr["driver_id"],
+            "driver_name": dr["driver_name"],
+            "shortfalls":  shortfalls,
+        })
     return ctxs

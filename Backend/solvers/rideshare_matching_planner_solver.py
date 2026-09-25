@@ -592,7 +592,8 @@ class RideshareMatchingPlannerSolver:
         optimality = extract_optimality_metadata(msol)
 
         issues = self._detect_issues(
-            matched_pairs, unmatched_passengers, driver_routes, drivers, issue_statuses, passengers, config
+            matched_pairs, unmatched_passengers, driver_routes, drivers, issue_statuses, passengers, config,
+            dist_matrix=dist_matrix, locations=locations,
         )
 
         return {
@@ -620,6 +621,8 @@ class RideshareMatchingPlannerSolver:
         issue_statuses: Dict,
         passengers: List[Dict],
         config: Dict,
+        dist_matrix: Optional[List[List[float]]] = None,
+        locations: Optional[List[Dict]] = None,
     ) -> List[Dict]:
         from i18n.rideshare_matching_planner_messages import t
         from solvers.base.issue_rules import build_rideshare_matching_planner_contexts, run_issue_rules
@@ -643,8 +646,11 @@ class RideshareMatchingPlannerSolver:
         # 解チェッカー（2026-09-01追加、バッチ5）: 座席容量（スイープライン検算）・乗車時間上限・
         # 乗降順序・乗客時間窓・運転手稼働時間窓・乗客重複割当・乗客欠落の独立検証。
         # 旧「座席使用率 > 座席数」チェックは総数の近似で実際の同時刻重複を見ておらず、置き換える。
+        # 2026-09-25追加: dist_matrix/locations を渡すと、運転手ごとの移動時間の検算
+        # （transit_shortfall、category="SOLVER"）も実行される。
         checker_ctxs = build_rideshare_matching_planner_contexts(
             matched_pairs, unmatched_passengers, driver_routes, passengers, config,
+            dist_matrix=dist_matrix, locations=locations,
         )
         issues.extend(run_issue_rules(
             domain="RideshareMatchingPlanner", contexts=checker_ctxs, issue_statuses=issue_statuses,

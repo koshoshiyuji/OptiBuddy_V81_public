@@ -207,7 +207,8 @@ class TruckDispatcherSolver:
 
         summary = self._build_summary(routes, kpi, meta, vehicles, locations[0])
         unserved_reasons = self._classify_unserved(unserved, customers, vehicles, dist_matrix, locations, config)
-        issues  = self._build_issues(routes, unserved, feasible, config, unserved_reasons, vehicles)
+        issues  = self._build_issues(routes, unserved, feasible, config, unserved_reasons, vehicles,
+                                     customers=customers, dist_matrix=dist_matrix)
 
         engine_used = result.get(
             "_engine_used",
@@ -991,7 +992,9 @@ class TruckDispatcherSolver:
 
     def _build_issues(self, routes: list[dict], unserved: list[str], feasible: bool, config: dict,
                        unserved_reasons: dict[str, dict] | None = None,
-                       vehicles: list[dict] | None = None) -> list[dict]:
+                       vehicles: list[dict] | None = None,
+                       customers: list[dict] | None = None,
+                       dist_matrix: list[list[float]] | None = None) -> list[dict]:
         # 修正（2026-07-08, Koshoshiとの相談）: 以前はここで `if not feasible: ... return issues`
         # としており、1件でも未割当があると tw_tight/duty_overtime のチェックが
         # 一切実行されなかった（=既に組めているルートの検証が丸ごとスキップされていた）。
@@ -1057,13 +1060,21 @@ class TruckDispatcherSolver:
         # を見ており、実際の拘束時間ハード制約と食い違っていた不具合を修正済み。
         max_duty_by_vehicle = {v.get("id"): v.get("max_duty_min", 9999) for v in (vehicles or [])}
         from solvers.base.issue_rules import run_issue_rules, build_truck_dispatcher_contexts
-        contexts = build_truck_dispatcher_contexts(routes, max_duty_by_vehicle)
+        # 2026-09-25追加: customers/dist_matrix を渡すと、移動時間の検算
+        # （transit_shortfall、category="SOLVER"）も実行される。移動時間は
+        # DSL宣言の dist_matrix・config から issue_rules 側で計算し直す。
+        contexts = build_truck_dispatcher_contexts(
+            routes, max_duty_by_vehicle,
+            customers=customers, dist_matrix=dist_matrix, config=config,
+        )
         issues.extend(run_issue_rules(domain="TruckDispatcher", contexts=contexts, issue_statuses={}))
 
         overdue_exists  = any(s["arrival_min"] > s["tw_close_min"] for r in routes for s in r["stops"])
         overtime_exists = any(r["duty_min"] > max_duty_by_vehicle.get(r["vehicle_id"], 9999) for r in routes)
 
-        if feasible and not tight and not overtime_exists and not overdue_exists:
+        transit_exists  = any(i.get("id") == "transit_shortfall" for i in issues)
+
+        if feasible and not tight and not overtime_exists and not overdue_exists and not transit_exists:
             issues.append({"id": "optimal_route", "severity": "INFO",
                 "title": "最適ルート生成完了(CP Optimizer)",
                 "message": "CP Optimizerにより全件が実行可能な形で割り当てられました。",
