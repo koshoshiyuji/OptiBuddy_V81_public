@@ -111,6 +111,15 @@ print(f"  ファイル:               {len(targets['files'])} 件")
 print(f"  dispatch patch:         {len(targets['dispatch_patches'])} 件")
 print(f"  TAG_MAPエントリ:         {len(targets['tag_map_entries'])} 件")
 
+# ── 削除不可チェック（2026-09-26追加） ──────────────────────────
+if targets["import_blockers"]:
+    head("[中止] 削除すると他のファイルのimportが壊れます")
+    for b in targets["import_blockers"]:
+        yellow(f"削除対象のファイルをimport: {b}")
+    print(f"\n  削除対象のファイルを他の{len(targets['import_blockers'])}ファイルがモジュール先頭でimportしているため、"
+          "削除するとバックエンドが起動しなくなります。削除を中止します。")
+    sys.exit(1)
+
 if not any([targets["scenarios"], targets["dsl_definitions"], targets["files"],
             targets["extensions"], targets["dispatch_patches"], targets["tag_map_entries"]]):
     print("\n削除対象なし。終了します。")

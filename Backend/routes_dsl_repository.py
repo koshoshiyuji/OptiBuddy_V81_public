@@ -268,7 +268,7 @@ def delete_domain(domain_name: str):
         }
       }
     """
-    from dsl_repository.cleanup_domain import collect_deletion_targets, delete_domain_api
+    from dsl_repository.cleanup_domain import collect_deletion_targets, delete_domain_api, DomainDeletionBlocked
     
     preview = request.args.get("preview", "false").lower() == "true"
     
@@ -291,6 +291,10 @@ def delete_domain(domain_name: str):
                 "preview": False,
                 "deleted": result
             })
+    except DomainDeletionBlocked as e:
+        # 2026-09-26追加: 削除すると他ファイルのimportが壊れるため中止（DB・ファイルは未変更）。
+        # サーバー不具合ではないので409で返し、エラーログには残さない。
+        return jsonify({"status": "error", "message": str(e)}), 409
     except Exception as e:
         logger.error(f"/dsl_repository/domain/{domain_name} DELETE error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500

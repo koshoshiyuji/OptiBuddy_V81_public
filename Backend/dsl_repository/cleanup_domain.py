@@ -190,6 +190,56 @@ def _remove_tag_map_entry(content: str, pascal: str) -> Tuple[str, bool]:
     return content[:tag_map_start] + new_section + content[tag_map_end + 2:], True
 
 
+class DomainDeletionBlocked(Exception):
+    """削除すると他のファイルのimportが壊れるため、削除を中止した"""
+
+
+# ── 削除候補ファイルを他のファイルがimportしていないかの確認 ─────────
+# 2026-09-26追加: i18n/nurse_shift_weekly_cap_messages.py は名前上NurseShiftWeeklyCap
+# 専用だが、app_core.py・routes_*.py・issue_rules/全ファイルがモジュール先頭で
+# importする事実上の共通ファイル。2026-09-16(aebe327)で {snake}_messages.py を
+# 削除対象に加えた結果、NurseShiftWeeklyCapを削除するとこのファイルが消え、
+# 次回起動時にapp_core.pyのimportでImportErrorになりバックエンドが起動しなくなる
+# 状態だった（未発生。2026-09-26のコード読解で発見）。
+# 削除候補の.pyを他の.pyがモジュール先頭（インデント無し）でimportしていたら、
+# 削除全体を中止する。以下は対象外:
+#   - 関数内の遅延import（route_decomposer.py→truck_dispatcher_solver 等。
+#     そのドメイン自身からしか呼ばれないファイルが大半で、含めると誤検知になる）
+#   - test_*.py（削除後に失敗するだけでアプリは壊れない）
+#   - business_to_solver.py / solver_to_ui.py のうち、削除時に一緒に除去する
+#     ディスパッチブロック内のimport
+def _find_import_blockers(backend_root: Path, candidate_files: List[Path], pascal: str) -> List[str]:
+    stems = {f.stem for f in candidate_files if f.suffix == ".py" and f.exists()}
+    if not stems:
+        return []
+    pattern = re.compile(
+        r"^(?:from|import)\s+[\w.]*\b(" + "|".join(map(re.escape, sorted(stems))) + r")\b",
+        re.M,
+    )
+    candidate_set = {f.resolve() for f in candidate_files}
+    blockers = []
+    for f in backend_root.rglob("*.py"):
+        if "__pycache__" in f.parts or f.name.startswith("test_") or f.resolve() in candidate_set:
+            continue
+        text = f.read_text(encoding="utf-8", errors="ignore")
+        if f.name in ("business_to_solver.py", "solver_to_ui.py"):
+            text, _ = _remove_dispatch_block(text, pascal)
+        m = pattern.search(text)
+        if m:
+            line_no = text.count("\n", 0, m.start()) + 1
+            blockers.append(f"{f.relative_to(backend_root.parent)}:{line_no} ({m.group(1)})")
+    return sorted(blockers)
+
+
+def _py_candidates(backend_root: Path, snake: str) -> List[Path]:
+    return [
+        backend_root / "solvers" / f"{snake}_solver.py",
+        backend_root / "dsl_transformer" / f"{snake}_converter.py",
+        backend_root / "dsl_transformer" / f"{snake}_ui_converter.py",
+        backend_root / "i18n" / f"{snake}_messages.py",
+    ]
+
+
 # ── カラー出力 ────────────────────────────────────────────────
 def red(msg):    print(f"  \033[31m🗑  DELETE\033[0m  {msg}")
 def yellow(msg): print(f"  \033[33m⚠️  SKIP\033[0m    {msg}")
@@ -330,6 +380,9 @@ def collect_deletion_targets(domain_name: str, fuzzy: bool = False) -> Dict[str,
     if home_screen_path.exists() and _find_tag_map_entry(home_screen_path.read_text(encoding="utf-8"), pascal):
         result["tag_map_entries"].append({"file": str(home_screen_path.relative_to(project_root)), "problem_class": pascal})
 
+    # 削除候補の.pyを他のファイルがモジュール先頭でimportしていないか（2026-09-26追加）
+    result["import_blockers"] = _find_import_blockers(backend_root, _py_candidates(backend_root, snake), pascal)
+
     return result
 
 
@@ -369,6 +422,16 @@ def delete_domain_api(domain_name: str, fuzzy: bool = False) -> Dict[str, any]:
     business_to_solver_path = transformer_dir / "business_to_solver.py"
     solver_to_ui_path = transformer_dir / "solver_to_ui.py"
     home_screen_path = project_root / "Frontend" / "src" / "app" / "HomeScreenNew.tsx"
+
+    # 削除すると他のファイルのimportが壊れる場合は、DBにもファイルにも触れる前に中止する
+    # （2026-09-26追加。詳細は _find_import_blockers() のコメント参照）
+    blockers = _find_import_blockers(backend_root, _py_candidates(backend_root, snake), pascal)
+    if blockers:
+        shown = ", ".join(blockers[:5]) + (f" ほか{len(blockers) - 5}件" if len(blockers) > 5 else "")
+        raise DomainDeletionBlocked(
+            f"{pascal} は削除できません。削除対象のファイルを他のファイルがモジュール先頭で"
+            f"importしており、削除するとバックエンドが起動しなくなります: {shown}"
+        )
 
     # DB接続
     conn = sqlite3.connect(str(db_path))
@@ -556,6 +619,9 @@ def _print_targets(targets: Dict[str, any]) -> None:
     else:
         yellow("TAG_MAP: 該当なし")
 
+    for b in targets.get("import_blockers", []):
+        yellow(f"削除不可（他ファイルがimport）: {b}")
+
 
 def main() -> None:
     import argparse
@@ -578,6 +644,11 @@ def main() -> None:
     head(f"ドメイン削除: {args.domain_name}" + ("（--fuzzy: 部分一致あり）" if args.fuzzy else "（完全一致のみ）"))
     targets = collect_deletion_targets(args.domain_name, fuzzy=args.fuzzy)
     _print_targets(targets)
+
+    if targets.get("import_blockers"):
+        yellow(f"削除対象のファイルを他の{len(targets['import_blockers'])}ファイルがモジュール先頭でimportしているため、"
+               "削除すると他のファイルのimportが壊れバックエンドが起動しなくなります。削除を中止します。")
+        return
 
     total = (len(targets["scenarios"]) + len(targets["dsl_definitions"])
              + len(targets["evolution_logs"]) + len(targets["extensions"]) + len(targets["files"])
