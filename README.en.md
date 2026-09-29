@@ -52,10 +52,16 @@ For installation, startup, and loading sample data, see [Install.md](./Install.m
 - [OptiBuddy_Development_Guide.md](./docs/OptiBuddy_Development_Guide.md) — For developers (architecture, DSL design, how extensions work) (Japanese)
 - [CSPLIB_REFERENCE.md](./docs/CSPLIB_REFERENCE.md) — Reference for the base mathematical problems each domain builds on (Japanese)
 
+## About this version (V1)
+
+This repository is OptiBuddy V1 (`v1.0.0`). Its feature set is final: from here on, V1 receives security fixes only. New features will be added only to a separately offered paid edition (V2).
+
+V1 remains available under the BSL 1.1 terms below. The introduction of V2 does not change the terms under which V1 may be used.
+
 ## License
 
 OptiBuddy is released under the [Business Source License 1.1](./LICENSE) (BSL 1.1). Production use for your own business is free for anyone, for any of the built-in domains as well as domains you define yourself. The only restriction applies to third parties in the business of IT/consulting services who provide repeated, paid services (building domains on behalf of clients, hosting, system integration, etc.) to multiple customers — that use case requires a separate commercial license agreed with the Licensor in advance. See [LICENSE-FAQ.md](./LICENSE-FAQ.md) for examples and a quick-reference table (Japanese). Under BSL 1.1, the entire Licensed Work automatically converts to the Apache License 2.0 on the Change Date stated in `LICENSE`.
 
-IBM CPLEX / CP Optimizer (`docplex`), an optional optimization engine, is separately licensed (IBM) and is not bundled or redistributed with OptiBuddy itself. The default engine is OR-Tools CP-SAT (Apache 2.0, no extra install needed). See [Install.md](./Install.md) for details on switching engines.
+IBM CPLEX / CP Optimizer (the `cplex` package), an optional optimization engine, is separately licensed (IBM) and is not bundled or redistributed with OptiBuddy itself. The default engines are OR-Tools CP-SAT and SCIP (Apache 2.0, no extra install needed). The modeling library `docplex` (Apache 2.0) is included in the base install. See [Install.md](./Install.md) for details on switching engines.
 
 For a list of the licenses of the OSS libraries OptiBuddy depends on, see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
