@@ -327,6 +327,18 @@
     "categoryGuidance_unusedInSolver": "Some field you provided may not be referenced by the actual calculation.",
     "categoryGuidance_bigM": "This is about how multiple objectives are prioritized in the calculation. Please check whether the priority order and the numbers in the finding match your intent.",
     "categoryGuidance_absentValue": "This is a calculation-logic finding about how candidates that weren't selected are handled.",
-    "categoryGuidance_mipSelfCheck": "This flags that the generated code appears to be missing a step that self-verifies whether the solution satisfies its constraints. Due to quirks in solver implementations, a constraint-violating solution can rarely be returned, so please check the actual output."
+    "categoryGuidance_mipSelfCheck": "This flags that the generated code appears to be missing a step that self-verifies whether the solution satisfies its constraints. Due to quirks in solver implementations, a constraint-violating solution can rarely be returned, so please check the actual output.",
+    "checkTitle": "Automated check results after registration",
+    "checkIntro": "Registration is complete. The business rules and calculations were verified by actually solving the scenarios before registration. Below are points the automated check suggests you double-check.",
+    "checkIntroCritical": "Registration is complete, but problems remain in the results of actually solving the scenarios. Please review the items affecting solution correctness below.",
+    "criticalTitle": "Items affecting solution correctness ({{count}})",
+    "criticalGuide": "These problems were not fixed by the automatic repair before registration. Results may be incorrect, so we recommend pressing “Let AI fix”.",
+    "hearingTitle": "Items related to what you specified in the hearing sheet ({{count}})",
+    "hearingGuide1": "- If it is a problem that something you specified in the hearing sheet is not met, press “Let AI fix” (takes a few minutes).",
+    "hearingGuide2": "- The automated check can be wrong.",
+    "fixButtonNote": "* The “Let AI fix” button is no longer available once you close this screen.",
+    "nothingToConfirm": "Nothing needs your confirmation. You can close this screen.",
+    "otherTitle": "Other automated check results ({{count}}) — no effect on registration or results; may include false positives",
+    "fixRemainingNow": "Let AI fix"
   }
 }

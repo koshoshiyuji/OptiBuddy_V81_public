@@ -1206,7 +1206,10 @@ def _auto_decide_confirm_action(
     try:
         result = call_llm_json(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            temperature=0.3, max_tokens=1024,
+            # 2026-09-29: 1024→4096。claude-sonnet-5は思考に使ったトークンもmax_tokensから
+            # 消費するため、1024では思考だけで使い切り本文が空になり、読み取り失敗→安全側の
+            # cancelになる事故が実機で発生した（WorkerLoadBalancer登録、output=1024・本文なし）。
+            temperature=0.3, max_tokens=4096,
         )
         action = str(result.get("action", "")).strip()
         reasoning = str(result.get("reasoning", "")).strip() or "（理由の生成に失敗）"

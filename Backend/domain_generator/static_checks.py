@@ -721,6 +721,56 @@ def _check_kpi_card_coverage(ui_converter_code: str, i18n_code: str, snake: str)
     return warnings
 
 
+_KPI_COVERAGE_WARNING_RE = re.compile(r"'kpi\.([a-zA-Z0-9_]+)\.label' という翻訳キー")
+
+
+def reclassify_kpi_card_warnings(
+    warnings: list[str], kpi_card_ids, i18n_code: str, hearing_texts, kpi_card_labels=None,
+) -> tuple[list[str], list[str]]:
+    """
+    2026-09-29追加（Koshoshi合意）: _check_kpi_card_coverage()の推測による指摘を、
+    Gate2動的検証でbaselineを実際にUIへ変換した結果（kpi_card_ids）で確かめる。
+
+    背景: 2026-09-29のWorkerLoadBalancer登録で「『最大負荷』のカードが表示されて
+    いない可能性」と指摘されたが、実際の画面には表示されていた（誤検知）。
+    静的チェックは ui_converter のコード中の "id": "<name>" という文字列だけで
+    判定しているため、書き方によって誤検知する。
+
+    戻り値: (残す指摘, ヒアリングで表示を求められた項目の指摘)
+      - kpi_card_ids が None（UI出力が得られなかった）→ 何もせずそのまま返す
+      - カードが実在（idが一致、またはidの無いカードで表示ラベルがkpi.<name>.labelの値と一致）
+        → 指摘を除く
+      - カードが無く、表示名（kpi.<name>.label の値）がヒアリング本文に出てくる
+        → 2つ目のリストへ（利用者向けの平易な文に書き換える）
+      - カードが無く、ヒアリングにも無い → 従来通り残す
+    """
+    if kpi_card_ids is None:
+        return list(warnings), []
+    present = {str(i) for i in kpi_card_ids}
+    present_labels = {str(lb) for lb in (kpi_card_labels or [])}
+    hearing_joined = "\n".join(hearing_texts or [])
+    kept: list[str] = []
+    hearing_display: list[str] = []
+    for w in warnings:
+        m = _KPI_COVERAGE_WARNING_RE.search(w)
+        if not m:
+            kept.append(w)
+            continue
+        name = m.group(1)
+        labels = re.findall(r'"kpi\.' + re.escape(name) + r'\.label"\s*:\s*"([^"]+)"', i18n_code or "")
+        if name in present or any(lb in present_labels for lb in labels):
+            continue  # 実際の出力にカードがある＝誤検知
+        matched = next((lb for lb in labels if len(lb) >= 2 and lb in hearing_joined), None)
+        if matched:
+            hearing_display.append(
+                f"ヒアリングで画面に表示したいと指定された『{matched}』が、標準シナリオを実際に解いた"
+                f"結果の画面（上部のカード）に表示されていません。"
+            )
+        else:
+            kept.append(w)
+    return kept, hearing_display
+
+
 def _check_table_sections_wiring(code: str, path: str) -> list[str]:
     """
     build_table_section()/build_table_sections_from_issues() を呼んでいるのに、

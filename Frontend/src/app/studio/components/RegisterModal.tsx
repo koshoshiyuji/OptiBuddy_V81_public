@@ -118,6 +118,35 @@ const CATEGORY_GUIDANCE_PREFIXES: [string, string][] = [
   ['（解の自己検証が未実装の疑い）', 'categoryGuidance_mipSelfCheck'],
 ];
 
+// 2026-09-29追加（Koshoshi合意）: 登録完了画面の指摘（result.gate2_warnings）を
+// 「重大」「ヒアリング関連」「その他」に分ける。接頭辞はBackend/domain_generator/gate2.py
+// の blocking_questions / advisory_questions 組み立て、およびBackend/routes_domain_registration.py
+// の "[Gate2動的検証]" と同じ文字列に保つこと。
+// 重大・ヒアリング関連は開いた状態で「AIに直させる」ボタンと一緒に出し、
+// その他は畳む（ボタンの対象にもしない）。
+const CRITICAL_WARNING_PREFIXES = [
+  ...DYNAMIC_STRUCTURAL_PREFIXES,
+  '[Gate2動的検証]',
+];
+const HEARING_DISPLAY_PREFIX = '（ヒアリングで指定した表示項目が画面に出ていません）';
+const HEARING_RELATED_PREFIXES = [
+  '（ヒアリング内容が未反映）',   // 必須節の未反映（「・任意項目」付きの要約はその他）
+  HEARING_DISPLAY_PREFIX,
+];
+
+function groupRegistrationWarnings(warnings: string[]): { critical: string[]; hearing: string[]; other: string[] } {
+  const critical: string[] = [];
+  const hearing: string[] = [];
+  const other: string[] = [];
+  for (const w of warnings) {
+    if (typeof w !== 'string') continue;
+    if (CRITICAL_WARNING_PREFIXES.some(p => w.startsWith(p))) critical.push(w);
+    else if (HEARING_RELATED_PREFIXES.some(p => w.startsWith(p))) hearing.push(w);
+    else other.push(w);
+  }
+  return { critical, hearing, other };
+}
+
 function getPresentCategoryGuidanceKeys(job: JobState | null | undefined): string[] {
   if (!job) return [];
   const questions = job.questions ?? [];
@@ -557,7 +586,11 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           domain_name: result.domain_name,
-          warnings: result.gate2_warnings ?? [],
+          // 2026-09-29: AIに渡すのは「重大」「ヒアリング関連」の指摘だけ（その他は畳んで表示のみ）
+          warnings: (() => {
+            const g = groupRegistrationWarnings(result.gate2_warnings ?? []);
+            return [...g.critical, ...g.hearing];
+          })(),
         }),
       });
       const data = await res.json();
@@ -1087,33 +1120,90 @@ export function RegisterModal({ onClose }: RegisterModalProps) {
               )}
             </div>
 
-            {(result.gate2_warnings ?? []).length > 0 && (
-              <div style={{ ...card, borderColor: '#f97316' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#f97316', marginBottom: '8px' }}>
-                  ⚠ {t('registerModal.gate2Warnings', { count: result.gate2_warnings.length })}
-                </div>
-                <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px' }}>
-                  {t('registerModal.gate2WarningsHint')}
-                </div>
-                {result.gate2_warnings.map((w: string, i: number) => (
-                  <div key={i} style={{ fontSize: '11px', color: '#ffb86c', marginBottom: '4px', lineHeight: 1.5 }}>
-                    {w}
+            {(result.gate2_warnings ?? []).length > 0 && (() => {
+              // 2026-09-29（Koshoshi合意）: 指摘を「重大」「ヒアリング関連」「その他」に分けて表示する。
+              const g = groupRegistrationWarnings(result.gate2_warnings ?? []);
+              const actionable = g.critical.length + g.hearing.length;
+              const itemStyle: React.CSSProperties = { fontSize: '11px', color: '#ffb86c', marginBottom: '4px', lineHeight: 1.5 };
+              const noteStyle: React.CSSProperties = { fontSize: '10px', color: '#888', marginTop: '6px', lineHeight: 1.6 };
+              return (
+                <div style={{ ...card, borderColor: actionable > 0 ? '#f97316' : '#333' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: actionable > 0 ? '#f97316' : '#5DCAA5', marginBottom: '8px' }}>
+                    {actionable > 0 ? `⚠ ${t('registerModal.checkTitle')}` : `✓ ${t('registerModal.checkTitle')}`}
                   </div>
-                ))}
-                {result.post_fix_summary && (
-                  <div style={{ fontSize: '10px', color: '#5DCAA5', marginTop: '8px', marginBottom: '4px', lineHeight: 1.6 }}>
-                    {t('registerModal.postFixSummaryLabel')}: {result.post_fix_summary}
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '10px', lineHeight: 1.6 }}>
+                    {g.critical.length > 0 ? t('registerModal.checkIntroCritical') : t('registerModal.checkIntro')}
                   </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                  <button onClick={handleFixRemaining} disabled={startingFix}
-                    style={{ ...btnGhost, opacity: startingFix ? 0.5 : 1 }}
-                    title={t('registerModal.fixRemainingHint')}>
-                    {startingFix ? t('registerModal.applying') : `🛠 ${t('registerModal.fixRemainingNow')}`}
-                  </button>
+
+                  {g.critical.length > 0 && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#ff9999', marginBottom: '6px' }}>
+                        ▼ {t('registerModal.criticalTitle', { count: g.critical.length })}
+                      </div>
+                      {g.critical.map((w, i) => <div key={`c${i}`} style={itemStyle}>・{w}</div>)}
+                      <div style={noteStyle}>{t('registerModal.criticalGuide')}</div>
+                    </div>
+                  )}
+
+                  {g.hearing.length > 0 && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#f97316', marginBottom: '6px' }}>
+                        ▼ {t('registerModal.hearingTitle', { count: g.hearing.length })}
+                      </div>
+                      {g.hearing.map((w, i) => (
+                        <div key={`h${i}`} style={itemStyle}>
+                          ・{w.startsWith(HEARING_DISPLAY_PREFIX) ? w.slice(HEARING_DISPLAY_PREFIX.length) : w}
+                        </div>
+                      ))}
+                      <div style={noteStyle}>
+                        <div>{t('registerModal.hearingGuide1')}</div>
+                        <div>{t('registerModal.hearingGuide2')}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {actionable === 0 && (
+                    <div style={{ fontSize: '11px', color: '#5DCAA5', marginBottom: '10px' }}>
+                      {t('registerModal.nothingToConfirm')}
+                    </div>
+                  )}
+
+                  {result.post_fix_summary && (
+                    <div style={{ fontSize: '10px', color: '#5DCAA5', marginTop: '8px', marginBottom: '4px', lineHeight: 1.6 }}>
+                      {t('registerModal.postFixSummaryLabel')}: {result.post_fix_summary}
+                    </div>
+                  )}
+
+                  {actionable > 0 && (
+                    <>
+                      <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px', lineHeight: 1.6 }}>
+                        {t('registerModal.fixButtonNote')}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', marginBottom: '8px' }}>
+                        <button onClick={handleFixRemaining} disabled={startingFix}
+                          style={{ ...btnGhost, opacity: startingFix ? 0.5 : 1 }}
+                          title={t('registerModal.fixRemainingHint')}>
+                          {startingFix ? t('registerModal.applying') : `🛠 ${t('registerModal.fixRemainingNow')}`}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {g.other.length > 0 && (
+                    <details style={{ marginTop: '6px' }}>
+                      <summary style={{ fontSize: '11px', color: '#888', cursor: 'pointer' }}>
+                        {t('registerModal.otherTitle', { count: g.other.length })}
+                      </summary>
+                      <div style={{ marginTop: '6px' }}>
+                        {g.other.map((w, i) => (
+                          <div key={`o${i}`} style={{ ...itemStyle, color: '#999' }}>・{w}</div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {result.extensions_written_zero_warning && (
               <div style={{ ...card, borderColor: '#f97316' }}>

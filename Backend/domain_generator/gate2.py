@@ -534,14 +534,39 @@ def run_gate2_dynamic_verification(
                 ui_converter_module = _import_fresh(f"dsl_transformer.{snake}_ui_converter")
                 convert_to_ui = getattr(ui_converter_module, f"convert_{snake}_to_ui")
                 solutions_for_ui = result.get("solutions", [])
+                # 2026-09-29追加: 変換結果のKPIカードidを記録する（KPIカード配線の
+                # 静的チェックの誤検知を、実際の出力で確かめて除くため。
+                # static_checks.reclassify_kpi_card_warnings()参照）。
+                kpi_card_ids: set = set()
+                kpi_card_labels: set = set()
+                ui_outputs = []
                 if solutions_for_ui:
                     for plan in solutions_for_ui:
                         plan_output = {**result, "solutions": [plan]}
-                        convert_to_ui(plan_output, business_dsl=business_dsl)
+                        ui_outputs.append(convert_to_ui(plan_output, business_dsl=business_dsl))
                 else:
-                    convert_to_ui(result, business_dsl=business_dsl)
-            except (ImportError, AttributeError):
-                pass  # ui_converter未実装（4DSL非準拠ドメイン）は対象外
+                    ui_outputs.append(convert_to_ui(result, business_dsl=business_dsl))
+                for ui_out in ui_outputs:
+                    for card in ((ui_out or {}).get("kpi_cards") or []) if isinstance(ui_out, dict) else []:
+                        if isinstance(card, dict) and card.get("id") is not None:
+                            kpi_card_ids.add(str(card["id"]))
+                        if isinstance(card, dict) and card.get("label"):
+                            kpi_card_labels.add(str(card["label"]))
+                entry["kpi_card_ids"] = sorted(kpi_card_ids)
+                # idを持たないカード定義のドメインもあるため、表示ラベルも記録する
+                entry["kpi_card_labels"] = sorted(kpi_card_labels)
+                logger.info(
+                    f"[gate2_dynamic] {snake}/{suffix}: UI出力のKPIカード "
+                    f"id={entry['kpi_card_ids']} labels={entry['kpi_card_labels']}"
+                )
+            except (ImportError, AttributeError) as ui_err:
+                # ui_converter未実装（4DSL非準拠ドメイン）は対象外。ただし変換処理の中で
+                # 起きたAttributeError等もここで読み飛ばされるため、原因が追えるよう
+                # ログに残す（2026-09-29、KPIカード記録がMac実機でだけ効かなかった件の調査用）。
+                logger.info(
+                    f"[gate2_dynamic] {snake}/{suffix}: UI変換を読み飛ばしました"
+                    f"（{type(ui_err).__name__}: {ui_err}）"
+                )
         except Exception:
             entry["status"]    = "exception"
             entry["traceback"] = tb_module.format_exc()
@@ -662,7 +687,7 @@ def run_gate2_dynamic_verification(
 def write_files_for_dynamic_check(diffs: list, snake: str) -> list[str]:
     """
     run_gate2_dynamic_verification() が実際にimport・実行できるよう、
-    承認前のdiffsのうち動的検証に必要な最小限のファイル（solver.py / converter.py /
+    承認前のdiffsのうち動的検証に必要な最小限のファイル（solver.py / converter.py / ui_converter.py /
     baseline・infeasibleシナリオJSON）だけを実ファイルとして書き出す。
 
     apply_domain_files() と異なり、patches適用・TAG_MAP登録・DB上のシナリオ登録は
@@ -675,6 +700,10 @@ def write_files_for_dynamic_check(diffs: list, snake: str) -> list[str]:
     wanted_paths = {
         f"Backend/solvers/{snake}_solver.py",
         f"Backend/dsl_transformer/{snake}_converter.py",
+        f"Backend/dsl_transformer/{snake}_ui_converter.py",  # 2026-09-29追加: 2026-08-03追加のUI変換検証
+                                                              # （solver出力→UI DSL、KPIカード実出力の取得）が
+                                                              # 新規ドメインでは未書き出しのためModuleNotFoundErrorで
+                                                              # 黙ってスキップされていた（WorkerLoadBalancer登録で発覚）。
         f"Backend/i18n/{snake}_messages.py",  # 2026-08-21追加: 2026-08-11のi18n必須化(_I18N_MESSAGE_DICT_INSTRUCTION)
                                                   # 以降、solver.pyがsolve()内でこのモジュールに依存するため、
                                                   # 動的検証時点でもディスクに存在させる必要がある
@@ -1083,6 +1112,9 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     # 疑い」を機械的に区別できるようにする。
     dynamic_warnings: list[str] = []
     dynamic_exception_warnings: list[str] = []
+    hearing_display_warnings: list[str] = []
+    baseline_kpi_card_ids: list | None = None
+    baseline_kpi_card_labels: list = []
     written_paths: list[str] = []
     _emit_stage("verifying_dynamic_check")
     try:
@@ -1090,6 +1122,10 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         if written_paths:
             gate2_report = run_gate2_dynamic_verification(snake)
             dynamic_warnings.extend(gate2_report.get("warnings", []))
+            _baseline_entry = gate2_report.get("scenarios", {}).get("baseline") or {}
+            if _baseline_entry.get("status") == "ok" and "kpi_card_ids" in _baseline_entry:
+                baseline_kpi_card_ids = _baseline_entry["kpi_card_ids"]
+                baseline_kpi_card_labels = _baseline_entry.get("kpi_card_labels") or []
             for suffix, entry in gate2_report.get("scenarios", {}).items():
                 if entry.get("status") == "exception":
                     tb_text   = entry.get("traceback") or ""
@@ -1116,6 +1152,26 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
     # static findingsとoptionalなcoverage要約は「advisory（参考情報）」として区別
     # して返す。呼び出し元は、advisoryしか残っていない場合は人間に判断を求めずに
     # 進めてよい（ただし記録には残す）。
+    # 2026-09-29追加（Koshoshi合意）: KPIカード配線の静的チェック（推測）を、
+    # baselineを実際に解いてUIへ変換した結果（kpi_card_ids）で確かめる。
+    # カードが実在すれば指摘を除き、無くてもヒアリングで表示を求められた項目なら
+    # 「ヒアリングで指定した表示項目が画面に出ていません」として分けて扱う。
+    # UI出力が得られなかった場合（baselineが例外等）は従来通り推測のまま残す。
+    try:
+        from domain_generator.static_checks import reclassify_kpi_card_warnings
+        _i18n_path = f"Backend/i18n/{snake}_messages.py"
+        _i18n_code = next((d.get("new_content") or "" for d in diffs if str(d.get("path", "")).endswith(_i18n_path)), "")
+        logger.info(
+            f"[gate2_checks] KPIカード指摘の実出力による確認: baseline_kpi_card_ids={baseline_kpi_card_ids}, "
+            f"labels={baseline_kpi_card_labels}, i18nファイル={'あり' if _i18n_code else 'なし'}"
+        )
+        sanitizer_warnings, hearing_display_warnings = reclassify_kpi_card_warnings(
+            sanitizer_warnings, baseline_kpi_card_ids, _i18n_code, hearing_texts,
+            kpi_card_labels=baseline_kpi_card_labels,
+        )
+    except Exception as e:
+        logger.warning(f"[gate2_checks] KPIカード指摘の実出力による確認をスキップ（実行エラー）: {e}", exc_info=True)
+
     _emit_stage("verifying_humanize")
     try:
         static_humanized = humanize_technical_findings(repair_notes + sanitizer_warnings, domain_name)
@@ -1288,8 +1344,13 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         + [f"（設定項目の反映漏れの疑い）{w}" for w in missing_in_dsl_for_solver_warnings]
         + [f"（解の自己検証が未実装の疑い）{w}" for w in mip_self_check_warnings]
     )
+    # 2026-09-29追加: 実際の出力で確かめた「ヒアリングで表示を求められたKPIが
+    # 画面に出ない」指摘。登録はブロックしない（advisory）が、登録完了画面では
+    # 「ヒアリング関連」として開いた状態で表示される（RegisterModal.tsxの
+    # HEARING_RELATED_PREFIXESと同じ文字列に保つこと）。
     advisory_questions = (
-        [f"（参考情報）{w}" for w in static_humanized]
+        [f"（ヒアリングで指定した表示項目が画面に出ていません）{w}" for w in hearing_display_warnings]
+        + [f"（参考情報）{w}" for w in static_humanized]
         + [f"（ヒアリング内容が未反映・任意項目）{w}" for w in optional_gap_summary]
         + tech_conformance_warnings
         + i18n_coverage_warnings
@@ -1311,6 +1372,7 @@ def run_gate2_checks(diffs: list, snake: str, domain_name: str, hearing_texts: l
         f"dynamic_exception_warnings={len(dynamic_exception_warnings)}件, "
         f"tech_conformance={len(tech_conformance_warnings)}件, "
         f"i18n_coverage={len(i18n_coverage_warnings)}件, "
+        f"hearing_display={len(hearing_display_warnings)}件, "
         f"mip_self_check={len(mip_self_check_warnings)}件 "
         f"→ blocking={len(blocking_questions)}件, advisory={len(advisory_questions)}件"
     )
