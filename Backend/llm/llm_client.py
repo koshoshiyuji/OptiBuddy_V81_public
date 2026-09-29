@@ -11,6 +11,7 @@
 import hashlib
 import json
 import logging
+import threading
 import os
 import re
 import subprocess
@@ -535,6 +536,16 @@ def _find_offending_param(error_text: str, candidate_keys) -> str | None:
     return None
 
 
+# 2026-09-29追加（Koshoshi合意）: モデルごとに「非対応と判明したパラメータ」を
+# Flaskプロセスが動いている間だけ覚えておく。従来は判明しても覚えておらず、
+# claude-sonnet-5を呼ぶたびに temperature付きで送信 → 400
+# （`temperature` is deprecated for this model）→ 外して再送、という往復が毎回
+# 1回余分に発生していた（2026-09-29のWorkerLoadBalancer登録1回で10回以上）。
+# キーはkwargsの"model"。モデルが無い呼び出しは記録しない（従来通りの動き）。
+_UNSUPPORTED_PARAMS_BY_MODEL: dict[str, set[str]] = {}
+_UNSUPPORTED_PARAMS_LOCK = threading.Lock()
+
+
 def _call_with_param_fallback(call_fn, kwargs: dict, max_retries: int = 2):
     """
     call_fn(**kwargs) を呼び出し、非対応パラメータが原因と思われる例外が
@@ -553,6 +564,12 @@ def _call_with_param_fallback(call_fn, kwargs: dict, max_retries: int = 2):
     握りつぶさない）。
     """
     attempt_kwargs = dict(kwargs)
+    model = attempt_kwargs.get("model")
+    if isinstance(model, str):
+        with _UNSUPPORTED_PARAMS_LOCK:
+            known = set(_UNSUPPORTED_PARAMS_BY_MODEL.get(model, ()))
+        for key in known:
+            attempt_kwargs.pop(key, None)
     last_err: Exception | None = None
     for _ in range(max_retries + 1):
         try:
@@ -564,8 +581,11 @@ def _call_with_param_fallback(call_fn, kwargs: dict, max_retries: int = 2):
                 raise
             logger.warning(
                 f"[_call_with_param_fallback] パラメータ'{offending}'が非対応の"
-                f"ため外して再試行します: {e}"
+                f"ため外して再試行します（以後このプロセスでは model={model} に送りません）: {e}"
             )
+            if isinstance(model, str):
+                with _UNSUPPORTED_PARAMS_LOCK:
+                    _UNSUPPORTED_PARAMS_BY_MODEL.setdefault(model, set()).add(offending)
             attempt_kwargs.pop(offending, None)
     raise last_err
 

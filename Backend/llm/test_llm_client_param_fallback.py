@@ -35,6 +35,12 @@ from llm import llm_client
 from llm.llm_client import _call_with_param_fallback, _find_offending_param
 
 
+def _reset_param_cache():
+    # 2026-09-29: 非対応パラメータの記憶（プロセス内キャッシュ）がテスト間で
+    # 持ち越されないよう、各テストの冒頭で消す。
+    llm_client._UNSUPPORTED_PARAMS_BY_MODEL.clear()
+
+
 def _assert_raises(exc_type, fn, match=None):
     try:
         fn()
@@ -48,24 +54,28 @@ def _assert_raises(exc_type, fn, match=None):
 # ── _find_offending_param ──────────────────────────────────────────
 
 def test_finds_temperature_when_deprecated_mentioned():
+    _reset_param_cache()
     # 2026-09-06に実際に発生したエラー文言のパターン
     err = "Error: `temperature` is deprecated for this model"
     assert _find_offending_param(err, ["model", "temperature", "max_tokens"]) == "temperature"
 
 
 def test_generalizes_to_a_different_parameter_name():
+    _reset_param_cache()
     # temperature専用ではないことの証明: 全く別のパラメータ名でも検出できる
     err = "top_p is not permitted for this model version"
     assert _find_offending_param(err, ["model", "top_p", "max_tokens"]) == "top_p"
 
 
 def test_returns_none_when_no_unsupported_hint_present():
+    _reset_param_cache()
     # キー名が文面に出てきても、非対応を示す語が無ければ誤爆しない
     err = "temperature must be between 0 and 1"
     assert _find_offending_param(err, ["model", "temperature"]) is None
 
 
 def test_returns_none_when_hint_present_but_no_candidate_key_matches():
+    _reset_param_cache()
     err = "some_unrelated_field is deprecated"
     assert _find_offending_param(err, ["model", "temperature", "max_tokens"]) is None
 
@@ -73,6 +83,7 @@ def test_returns_none_when_hint_present_but_no_candidate_key_matches():
 # ── _call_with_param_fallback ──────────────────────────────────────
 
 def test_succeeds_on_first_try_without_touching_kwargs():
+    _reset_param_cache()
     calls = []
 
     def fake_call(**kw):
@@ -85,6 +96,7 @@ def test_succeeds_on_first_try_without_touching_kwargs():
 
 
 def test_removes_offending_param_and_retries_temperature_case():
+    _reset_param_cache()
     calls = []
 
     def fake_call(**kw):
@@ -104,6 +116,7 @@ def test_removes_offending_param_and_retries_temperature_case():
 
 
 def test_generalizes_to_non_temperature_parameter():
+    _reset_param_cache()
     # temperature以外のパラメータでも同じ機構が働くことの証明
     calls = []
 
@@ -120,6 +133,7 @@ def test_generalizes_to_non_temperature_parameter():
 
 
 def test_absorbs_two_chained_incompatible_params_within_max_retries():
+    _reset_param_cache()
     calls = []
 
     def fake_call(**kw):
@@ -141,6 +155,7 @@ def test_absorbs_two_chained_incompatible_params_within_max_retries():
 
 
 def test_does_not_swallow_unidentifiable_errors():
+    _reset_param_cache()
     def fake_call(**kw):
         raise RuntimeError("connection reset by peer")
 
@@ -152,6 +167,7 @@ def test_does_not_swallow_unidentifiable_errors():
 
 
 def test_raises_last_error_when_retries_exhausted():
+    _reset_param_cache()
     # 常に別の非対応パラメータ(temperature→top_p→top_k)が見つかり続け、
     # max_retries回外しても解決しない場合、無限にリトライせず最後のエラーを送出する。
     # a/b/cのような架空のキー名ではなく、実際にホワイトリストされている
@@ -241,6 +257,7 @@ def test_call_anthropic_recovers_from_temperature_deprecated_end_to_end():
     ことを確認する。実APIは呼ばず、_anthropic_clientをモックに差し替えるのみ
     （pytestのmonkeypatchではなく、手動でsave/restoreする）。
     """
+    _reset_param_cache()
     fake_client = _FakeAnthropicClient(
         side_effects=[
             RuntimeError("`temperature` is deprecated for this model"),
@@ -259,6 +276,43 @@ def test_call_anthropic_recovers_from_temperature_deprecated_end_to_end():
         assert result == "こんにちは"
     finally:
         llm_client._anthropic_client = original_client
+
+
+
+def test_remembers_unsupported_param_per_model():
+    """2026-09-29: 一度非対応と判明したパラメータは、同じモデルの次の呼び出しでは
+    最初から送らない（毎回400→再送する往復をしない）。"""
+    _reset_param_cache()
+    calls = []
+
+    def fake_call(**kw):
+        calls.append(dict(kw))
+        if "temperature" in kw:
+            raise RuntimeError("`temperature` is deprecated for this model")
+        return "ok"
+
+    _call_with_param_fallback(fake_call, {"model": "claude-sonnet-5", "temperature": 0.0})
+    assert len(calls) == 2
+    calls.clear()
+    _call_with_param_fallback(fake_call, {"model": "claude-sonnet-5", "temperature": 0.0})
+    assert calls == [{"model": "claude-sonnet-5"}]
+
+
+def test_memory_is_per_model():
+    """別のモデル（例: temperatureを受け付けるhaiku）には影響しない。"""
+    _reset_param_cache()
+    calls = []
+
+    def fake_call(**kw):
+        calls.append(dict(kw))
+        if kw.get("model") == "claude-sonnet-5" and "temperature" in kw:
+            raise RuntimeError("`temperature` is deprecated for this model")
+        return "ok"
+
+    _call_with_param_fallback(fake_call, {"model": "claude-sonnet-5", "temperature": 0.0})
+    calls.clear()
+    _call_with_param_fallback(fake_call, {"model": "claude-haiku-4-5", "temperature": 0.0})
+    assert calls == [{"model": "claude-haiku-4-5", "temperature": 0.0}]
 
 
 if __name__ == "__main__":
