@@ -2,24 +2,24 @@
 #
 # requirements.txtとあわせてインストールすると、CP Optimizer(docplex.cp)を
 # 使う各ドメインのソルバーと、CPLEX MIP(docplex.mp)のネイティブエンジンが
-# 有効になります。
+# 使えるようになります。使うには .env で SOLVER_BACKEND=cplex を指定します。
 #
 #   pip install -r requirements.txt -r requirements-cplex.txt
 #
 # cplexパッケージにはCommunity Edition(評価版)エンジンが同梱されているため、
 # IBM CPLEX Optimization Studioを別途インストールする必要はありません。
 # ただしCommunity Editionにはモデルサイズ上限(1000変数/1000制約、
-# CP Optimizerは探索空間2^1000)があります。
+# CP Optimizerは探索空間2^1000)があります。MIP系ドメインは上限を超えると
+# 自動でOR-Tools同梱のSCIPに切り替えて解きます。CP系ドメインは自動では
+# 切り替えません(ドメインにより分割して解く、またはエラーを返します)。
 #
-# このファイルを入れずにrequirements.txtだけをインストールした場合:
-#   - MIP系ドメイン: docplex.mpが無いため動作しません
-#     (base installにはHiGHSのみが入りますが、現状HiGHSはCE上限検知時の
-#      自動フォールバック先としてのみ実装されており、cplex/docplex無しの
-#      単独ソルバーとしては未対応です)。
-#   - CP Optimizer系ドメイン: 同様にdocplex.cpが無いため動作しません。
-#     例外はTruckDispatcher(貪欲法+2-optへ自動フォールバック、解の質は
-#     CP Optimizerより劣ります)。
+# このファイルを入れずにrequirements.txtだけをインストールした場合
+# (SOLVER_BACKEND=oss、既定):
+#   - MIP系ドメイン: OR-Tools同梱のSCIPで解きます。
+#   - CP系ドメイン: OR-Tools CP-SAT版を持つドメインのみ動きます。
+#     CP Optimizer専用のドメインと、CP系の新規ドメイン登録には本ファイルが必要です。
 #   - 商用利用の場合、cplexパッケージ自体の利用条件・上限緩和にはIBMとの
 #     別途契約が必要です。詳細はIBMの利用規約を確認してください。
+#
+# 2026-09-29: docplex(Apache License 2.0)はrequirements.txtへ移しました。
 cplex==22.1.2.0
-docplex==2.30.251

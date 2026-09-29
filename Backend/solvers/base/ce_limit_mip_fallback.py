@@ -1,5 +1,5 @@
 """
-ce_limit_mip_fallback.py — 層A: CPLEX(MIP, docplex.mp)向けCE上限フォールバック
+ce_limit_mip_fallback.py — 層A: CPLEX(MIP, docplex.mp)向けソルバー経路（SOLVER_BACKEND／CE上限フォールバック）
 ===============================================================================
 
 【対象】
@@ -22,7 +22,7 @@ DOcplexLimitsExceededが発生する）。
 分解しないため、CPドメインのような「どの軸で分割するか」というドメイン
 固有の判断が一切不要（層Bアダプタ不要）。
 
-【手順】
+【手順】（2026-09-01時点の旧実装の記録。現行は下記【2026-09-29の変更】を参照）
   1. mdl.solve()を試す。
   2. CE上限例外を検知した場合のみ、mdl.export_as_mps()で完成済みモデルを
      MPS形式（free format）でエクスポートする（この操作はCPLEXエンジンを
@@ -35,7 +35,7 @@ DOcplexLimitsExceededが発生する）。
      結合する。これにより、呼び出し元が元々書いている
      `sol.get_value(some_var)`のような結果抽出コードは一切変更不要で動く。
 
-【2026-09-01の変更】単体`highspy`パッケージからortools内蔵HiGHSへの切替
+【2026-09-01の変更】（旧実装の記録）単体`highspy`パッケージからortools内蔵HiGHSへの切替
 単体`highspy`パッケージ（独自ビルドのHiGHS）と、ortoolsが内部に静的リンクして
 持つHiGHS（CP-SAT等が使う`ortools`本体とは別に、MIP/LPバックエンドの1つとして
 同梱）は、別ビルドの同一ライブラリであり、同一プロセス内で両方が読み込まれると
@@ -53,6 +53,35 @@ ortools内蔵HiGHSのみを使えば、この衝突が起きないことを確�
 これに伴い、旧`threads=1`によるsegfault回避策（HiGHSのワーカースレッド経由
 コードパスを避ける対症療法だった）も、highspy自体を使わなくなったため削除した。
 
+【2026-09-29の変更】SOLVER_BACKEND対応、フォールバック先をSCIPへ、MPS経由を廃止
+DESIGN_2026-09-28_v2_paid_license_and_repo_split.md 8節（V1修正）。
+
+1. SOLVER_BACKEND（engine_select.get_solver_backend()）で経路を分ける。
+   - oss  : mdl.solve()を呼ばず、最初からOSSのMIPソルバー（SCIP）で解く。
+            CPLEX本体（cplexパッケージ）が無い環境でもMIP系ドメインが解ける。
+   - cplex: 従来通りmdl.solve()。CE上限を超えたときだけSCIPへフォールバック。
+            CPLEX本体が無い（"no CPLEX runtime found"）場合はSolverEngineUnavailableError
+            を投げ、CPLEXの導入かSOLVER_BACKEND=ossへの変更を案内する（以前はこの
+            例外がCE上限判定に一致せず、ドメイン側で「ソルバー内部エラー」扱いになっていた）。
+2. フォールバック先をHiGHSからSCIP（どちらもortools同梱）に変えた。ortools 9.15の
+   HiGHSラッパー（model_builder / pywraplp とも）は、時間制限に達すると暫定解が
+   あってもUNKNOWN_STATUSを返し値を取得できない（2026-09-29クラウドで実測: 30制約×
+   300変数の多次元ナップサック、3秒制限。highspy単体ではgap0.6%の解が得られていた）。
+   SCIPは同条件でFEASIBLEと暫定解を返す。時間制限を渡すと「偽の解なし」になるHiGHSは使わない。
+3. mdl.export_as_mps()をやめ、docplexのモデルオブジェクトから直接ortoolsモデルを組み立てる。
+   export_as_mps()は "Exporting to MPS requires CPLEX" でCPLEX本体が無いと失敗する
+   （2026-09-29実測）ため、旧実装のフォールバックはCPLEX無し環境では動かなかった。
+   LP形式（export_as_lp_string、純Python）もortoolsのLPパーサーが読めなかった。
+   直接変換では変数オブジェクトどうしで値を対応付けるため、名前・列順に依存した
+   値の取り違え（2026-08-31 MysteryShopperSchedulerの2段階solve）が原理的に起きない。
+   対応する要素: 連続・整数・0-1変数、線形制約、範囲制約、線形目的関数。それ以外
+   （インジケータ制約、二次、PWL、論理制約など）を含むモデルはOssMipUnsupportedModelError
+   （「このモデルはCPLEXが必要」）を投げ、解なし扱いにはしない。
+4. 時間制限: highs_time_limit引数 → mdl.solve()に渡すtime_limit引数 →
+   mdl.parameters.timelimit（docplex既定の1e75は無制限扱い）の順で決める。
+   従来は8ドメインとも時間制限がOSS側に渡っていなかった。
+5. 返す解にsolve_details（時間・状態）とsolve_statusを付ける（従来はNone）。
+
 【使い方】
     from solvers.base.ce_limit_mip_fallback import solve_with_ce_fallback
 
@@ -65,25 +94,66 @@ ortools内蔵HiGHSのみを使えば、この衝突が起きないことを確�
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
-from typing import Any, Optional
+import math
+import time
+from typing import Any, Dict, Optional
 
 from solvers.base.ce_limit_lns import is_ce_limit_exceeded
+from solvers.base.engine_select import BACKEND_OSS, get_solver_backend
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["solve_with_ce_fallback"]
+__all__ = [
+    "solve_with_ce_fallback",
+    "SolverEngineUnavailableError",
+    "OssMipUnsupportedModelError",
+]
 
-# ortools model_builder.SolveStatus のうち、解を使ってよいと判断するもの
-# （2026-09-01、highspy単体からortools内蔵HiGHSへ切替）。
-# OPTIMAL（証明済み最適解）に加え、時間制限などで打ち切られても
-# 実行可能解（インカンベント）が得られている場合（FEASIBLE）を含める。
-# INFEASIBLE/UNBOUNDED/ABNORMAL/NOT_SOLVED/MODEL_INVALID等は含めない。
-_HIGHS_USABLE_STATUSES = {
-    "OPTIMAL",
-    "FEASIBLE",
-}
+# OSS側のMIPソルバー（ortools model_builder経由、ortools同梱）。
+_OSS_MIP_SOLVER = "SCIP"
+
+# ortools model_builder.SolveStatus のうち、解を使ってよいもの。
+# FEASIBLE = 時間制限などで打ち切られたが暫定解（インカンベント）がある。
+_OSS_USABLE_STATUSES = {"OPTIMAL", "FEASIBLE"}
+
+# docplexの timelimit 既定値（1e+75）など、実質無制限とみなす閾値。
+_UNLIMITED_TIME = 1e20
+# docplexの変数上下限の「無限大」（±1e+20）
+_INF_BOUND = 1e20
+
+
+class SolverEngineUnavailableError(RuntimeError):
+    """
+    SOLVER_BACKENDで指定されたエンジンがこの環境で使えない場合の例外。
+    solver_error_result.build_solver_crash_issue() が「プログラムの不具合」ではなく
+    「エンジン設定の問題」として表示する。
+    """
+
+
+class OssMipUnsupportedModelError(SolverEngineUnavailableError):
+    """OSSのMIPソルバーへ変換できない要素（インジケータ制約等）をモデルが含む場合。"""
+
+
+def _is_no_cplex_runtime(exc: BaseException) -> bool:
+    return "no cplex runtime" in str(exc).lower()
+
+
+def _resolve_time_limit(mdl: Any, explicit: Optional[float], solve_kwargs: Dict[str, Any]) -> Optional[float]:
+    candidates = [explicit, solve_kwargs.get("time_limit")]
+    try:
+        candidates.append(mdl.parameters.timelimit.get())
+    except Exception:
+        pass
+    for v in candidates:
+        if v is None:
+            continue
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            continue
+        if 0 < v < _UNLIMITED_TIME:
+            return v
+    return None
 
 
 def solve_with_ce_fallback(
@@ -92,154 +162,204 @@ def solve_with_ce_fallback(
     **solve_kwargs: Any,
 ) -> Any:
     """
-    docplex.mp.model.Model用。通常通りmdl.solve()を試み、CPLEXの無料版
-    （Community Edition）の上限を検知した場合のみ、HiGHSへのフォールバックに
-    切り替える。
+    docplex.mp.model.Model用。SOLVER_BACKENDに応じて解く。
+      - oss  : OSSのMIPソルバー（SCIP）で直接解く。
+      - cplex: mdl.solve()。CE上限を検知した場合のみSCIPへフォールバック。
 
     Args:
         mdl:              docplex.mp.model.Model インスタンス（完成済み、
                            mdl.minimize()/mdl.maximize()呼び出し後）。
-        highs_time_limit:  HiGHS側の時間制限（秒）。Noneなら制限なし。
+        highs_time_limit:  OSSソルバー側の時間制限（秒）。名前は互換のため据え置き
+                           （2026-09-29以降の実体はSCIP）。Noneなら time_limit 引数、
+                           mdl.parameters.timelimit の順に使う。
         **solve_kwargs:    mdl.solve()にそのまま渡す引数（log_output等）。
 
     Returns:
         docplex.mp.solution.SolveSolution 相当のオブジェクト、または解なしの
         場合はNone（mdl.solve()がNoneを返す場合と同じ挙動に合わせる）。
+
+    Raises:
+        SolverEngineUnavailableError: SOLVER_BACKEND=cplex だがCPLEX本体が無い。
+        OssMipUnsupportedModelError:  OSSソルバーへ変換できない要素をモデルが含む。
     """
+    time_limit = _resolve_time_limit(mdl, highs_time_limit, solve_kwargs)
+
+    if get_solver_backend() == BACKEND_OSS:
+        return _solve_via_oss_checked(mdl, time_limit=time_limit)
+
     try:
         return mdl.solve(**solve_kwargs)
     except Exception as e:
+        if _is_no_cplex_runtime(e):
+            raise SolverEngineUnavailableError(
+                "SOLVER_BACKEND=cplex が指定されていますが、CPLEX本体（cplexパッケージ）が"
+                "見つかりません。`pip install -r requirements-cplex.txt` でCPLEXを導入するか、"
+                ".env の SOLVER_BACKEND を oss に変更してください。"
+            ) from e
         if not is_ce_limit_exceeded(e):
             raise
         logger.warning(
             f"[ce_limit_mip_fallback] CPLEXの無料版の上限を検知: {e}。"
-            f"HiGHS（オープンソース、上限なし）へフォールバックします。"
+            f"OSSのMIPソルバー（{_OSS_MIP_SOLVER}、上限なし）へフォールバックします。"
         )
-        solution = _solve_via_highs(mdl, time_limit=highs_time_limit)
-
-        # 自己検証（2026-08-31、MysteryShopperSchedulerのsolution checker
-        # パイロットで実際に発生）: _solve_via_highs()の変数値復元（位置ベース
-        # 優先、列数不一致時のみ名前ベース）は、HiGHSのLP列順序と
-        # mdl.iter_variables()の順序が一致している前提に依存しており、この
-        # 前提が崩れると値が消えるのではなく「別の変数の値と取り違える」形の
-        # サイレントな不具合になる（訪問枠の重複割当のような制約違反が、何の
-        # エラーも出さずに返る）。実機で確認した唯一の再現条件は、同一のmdlに
-        # 対してsolve_with_ce_fallback()を複数回呼び、呼び出しの間に新しい
-        # 変数を追加するケース（MysteryShopperSchedulerのlexicographic
-        # 2段階solve）。ここで一度だけis_valid_solution()（決定的・低コスト）
-        # により、返す解が実際にmdlの制約を満たしているかを確認する。
-        #
-        # 検証コードは_solve_via_highs()の呼び出しが完全に終わった後（この
-        # 関数のスタックフレーム内）でのみ行う。_solve_via_highs()の内部で
-        # SolveSolutionを複数回組み立てて検証する実装を最初に試したところ、
-        # CE上限例外を投げた直後のmdl（CPLEXエンジン側が例外直後の状態）に
-        # 対してその場でis_valid_solution()を呼ぶとセグメンテーション違反が
-        # 発生した（2026-08-31、Koshoshi実機で確認）。ここでの1回限りの
-        # 呼び出しは、この不具合を最初に見つけた際の呼び出し方（ドメイン
-        # 側のsolve()内で、_solve_via_highs()の呼び出しが終わった後に
-        # sol.is_valid_solution()を呼ぶ）と同じタイミング・構造にしてあり、
-        # そちらは実機で問題なく動作している。
-        if solution is not None and not solution.is_valid_solution(tolerance=1e-6):
-            logger.error(
-                "[ce_limit_mip_fallback] HiGHSでの解復元が制約充足検証に失敗しました。"
-                "HiGHS自体は解を見つけていますが、docplex側への値の復元"
-                "（位置ベース/名前ベースの対応付け）に失敗している可能性があるため、"
-                "解なしとして扱います。"
-            )
-            return None
-
-        return solution
+        return _solve_via_oss_checked(mdl, time_limit=time_limit)
 
 
-def _solve_via_highs(mdl: Any, time_limit: Optional[float] = None) -> Any:
+def _solve_via_oss_checked(mdl: Any, time_limit: Optional[float]) -> Any:
+    """
+    _solve_via_oss()の呼び出しが完全に終わった後、このスタックフレームで一度だけ
+    is_valid_solution()による自己検証を行う（2026-08-31導入の安全網を維持）。
+    _solve_via_oss()の内部で検証しないのは、CE上限例外の直後のmdlに対して内部で
+    is_valid_solution()を呼ぶとsegfaultした実績（2026-08-31、Koshoshi実機）があり、
+    問題なく動いていた旧実装と同じ呼び出し位置・構造に合わせるため。
+    変数オブジェクトで値を対応付けるため取り違えは起きないはずだが、検証に失敗
+    した場合は誤った解を返さず解なしとして扱う。
+    """
+    solution = _solve_via_oss(mdl, time_limit=time_limit)
+    if solution is not None and not solution.is_valid_solution(tolerance=1e-6):
+        logger.error(
+            f"[ce_limit_mip_fallback] {_OSS_MIP_SOLVER}の解がdocplex側の制約充足検証に"
+            "失敗しました。誤った解を返さないため解なしとして扱います。"
+        )
+        return None
+    return solution
+
+
+def _linear_parts(expr: Any):
+    """docplexの式を (項のリスト[(var, coef)], 定数) に分解する。線形でなければ例外。"""
+    if hasattr(expr, "to_linear_expr"):
+        expr = expr.to_linear_expr()
+    if not hasattr(expr, "iter_terms"):
+        raise OssMipUnsupportedModelError(
+            f"線形式に変換できない式を含んでいます（{type(expr).__name__}: {expr}）。"
+            "このモデルはCPLEXが必要です（SOLVER_BACKEND=cplex）。"
+        )
+    return list(expr.iter_terms()), float(expr.get_constant())
+
+
+def _build_oss_model(mdl: Any):
+    """docplexのモデルから ortools model_builder.Model を直接組み立てる。"""
+    from ortools.linear_solver.python import model_builder
+    from docplex.mp.constr import LinearConstraint, RangeConstraint
+
+    def _unsupported(what: str) -> OssMipUnsupportedModelError:
+        return OssMipUnsupportedModelError(
+            f"このモデルはOSSのMIPソルバー（{_OSS_MIP_SOLVER}）では扱えない{what}を含んでいます。"
+            "CPLEXが必要です（requirements-cplex.txt を導入し SOLVER_BACKEND=cplex）。"
+        )
+
+    omodel = model_builder.Model()
+    ovars: Dict[Any, Any] = {}
+    for dv in mdl.iter_variables():
+        kind = dv.vartype.short_name
+        lb = dv.lb if dv.lb > -_INF_BOUND else -math.inf
+        ub = dv.ub if dv.ub < _INF_BOUND else math.inf
+        if kind == "binary":
+            ovars[dv] = omodel.new_bool_var(dv.name)
+        elif kind == "integer":
+            ovars[dv] = omodel.new_int_var(lb, ub, dv.name)
+        elif kind == "continuous":
+            ovars[dv] = omodel.new_num_var(lb, ub, dv.name)
+        else:
+            raise _unsupported(f"変数型（{kind}: {dv.name}）")
+
+    def _expr(terms, const):
+        e = const
+        for v, coef in terms:
+            e = e + float(coef) * ovars[v]
+        return e
+
+    for ct in mdl.iter_constraints():
+        if isinstance(ct, RangeConstraint):
+            terms, const = _linear_parts(ct.expr)
+            e = _expr(terms, const)
+            omodel.add(e >= float(ct.lb))
+            omodel.add(e <= float(ct.ub))
+        elif isinstance(ct, LinearConstraint):
+            lt, lc = _linear_parts(ct.left_expr)
+            rt, rc = _linear_parts(ct.right_expr)
+            e = _expr(lt, lc) - _expr(rt, rc)
+            sense = ct.sense.name
+            if sense == "LE":
+                omodel.add(e <= 0)
+            elif sense == "GE":
+                omodel.add(e >= 0)
+            elif sense == "EQ":
+                omodel.add(e == 0)
+            else:
+                raise _unsupported(f"比較演算（{sense}: {ct}）")
+        else:
+            raise _unsupported(f"制約（{type(ct).__name__}: {ct}）")
+
+    # iter_constraints()に現れない種類（SOS、PWL、二次制約など）の検出
+    for attr in ("number_of_sos", "number_of_pwl_constraints", "number_of_quadratic_constraints"):
+        n = getattr(mdl, attr, 0) or 0
+        if n:
+            raise _unsupported(f"要素（{attr}={n}）")
+
+    ot, oc = _linear_parts(mdl.objective_expr)
+    obj = _expr(ot, oc)
+    if mdl.is_maximized():
+        omodel.maximize(obj)
+    else:
+        omodel.minimize(obj)
+    return omodel, ovars
+
+
+def _solve_via_oss(mdl: Any, time_limit: Optional[float] = None) -> Any:
     from ortools.linear_solver.python import model_builder
     from docplex.mp.solution import SolveSolution
+    from docplex.mp.sdetails import SolveDetails
+    from docplex.util.status import JobSolveStatus
 
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".mps", delete=False) as f:
-            tmp_path = f.name
-        # export_as_mps()はCPLEXエンジンを呼ばないため、上限を超えたモデルでも
-        # 問題なく完成済みモデルをファイルに書き出せる。MPS(free format)は
-        # 変数名に制限がなく、LP形式で起きていたハイフン入り変数名の
-        # サニタイズ問題（2026-08-09参照）が起きない（2026-09-01実機確認済み）。
-        mdl.export_as_mps(tmp_path)
+    omodel, ovars = _build_oss_model(mdl)
 
-        omodel = model_builder.Model()
-        omodel.import_from_mps_file(tmp_path)
-
-        solver = model_builder.Solver("HIGHS")
-        if not solver.solver_is_supported():
-            logger.error(
-                "[ce_limit_mip_fallback] ortools内蔵HiGHSバックエンド"
-                "（model_builder.Solver('HIGHS')）が利用できません。"
-            )
-            return None
-        solver.enable_output(False)
-        if time_limit is not None:
-            solver.set_time_limit_in_seconds(float(time_limit))
-
-        status = solver.solve(omodel)
-        status_name = status.name
-
-        if status_name not in _HIGHS_USABLE_STATUSES:
-            logger.warning(
-                f"[ce_limit_mip_fallback] HiGHS(ortools内蔵)でも解が得られません"
-                f"でした（status={status_name}）。"
-            )
-            return None
-
-        # 変数値の復元は名前ベースで行う。MPS(free format)は名前をそのまま
-        # 保持するため（2026-09-01実機確認済み）、旧実装（LP形式+位置ベース
-        # 優先、列数不一致時のみ名前ベース）のような苦肉の策は不要で、
-        # 名前ベースの対応を正式な主経路として使える。
-        ovar_by_name = {v.name: v for v in omodel.get_variables()}
-        mdl_vars = list(mdl.iter_variables())
-        var_value_map = {}
-        missing_names = []
-        for dv in mdl_vars:
-            ov = ovar_by_name.get(dv.name)
-            if ov is None:
-                missing_names.append(dv.name)
-                continue
-            var_value_map[dv] = solver.value(ov)
-
-        if missing_names:
-            logger.warning(
-                f"[ce_limit_mip_fallback] {len(missing_names)}個の変数がHiGHS"
-                f"(ortools内蔵)側の変数名に見つかりませんでした"
-                f"（先頭5件: {missing_names[:5]}）。該当変数は0として扱われます。"
-            )
-
-        # solver.objective_value はそのまま使わない。MPS形式には元々
-        # 「maximize」を明示する標準的な手段が乏しく、docplexのMPSライターは
-        # maximizeモデルの目的関数係数を符号反転して書き出し「読む側は常に
-        # minimizeする」前提に依存することがある。ortools側は素直にminimize
-        # するため、変数の割り当て自体は（数学的に等価な問題なので）正しく
-        # 求まるが、solver.objective_valueは符号反転したまま返ってくる
-        # （2026-09-01実機で確認: 最大化500のモデルで-500が返った、変数値は
-        # 正しいのに）。
-        #
-        # objを省略してSolveSolutionに自動計算させる案も試したが、docplexは
-        # 自動計算せず「未設定」を表す極端な値（-1e+75）を返すだけだった
-        # （同じく2026-09-01実機で確認）。そこで、まずobjなしでSolveSolutionを
-        # 作って変数値だけを保持させ、mdl自身の目的関数式(mdl.objective_expr、
-        # 正しいmaximize/minimizeの向きを知っている)をsolution.get_value()で
-        # 明示的に評価させることで、MPS形式の符号変換を一切経由しない、
-        # 確実に正しい目的関数値を得る。
-        provisional = SolveSolution(mdl, var_value_map)
-        obj_value = provisional.get_value(mdl.objective_expr)
-        solution = SolveSolution(mdl, var_value_map, obj=obj_value)
-        logger.info(
-            f"[ce_limit_mip_fallback] HiGHS(ortools内蔵)での解決完了: "
-            f"status={status_name}, "
-            f"objective(mdlの目的関数式から再計算)={obj_value}, "
-            f"objective(solver生値、参考)={solver.objective_value}"
+    solver = model_builder.Solver(_OSS_MIP_SOLVER)
+    if not solver.solver_is_supported():
+        raise SolverEngineUnavailableError(
+            f"ortools同梱の{_OSS_MIP_SOLVER}（model_builder.Solver('{_OSS_MIP_SOLVER}')）が利用できません。"
+            "ortoolsのインストールを確認してください。"
         )
-        return solution
-    finally:
-        if tmp_path is not None:
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+    solver.enable_output(False)
+    if time_limit is not None:
+        solver.set_time_limit_in_seconds(float(time_limit))
+
+    t0 = time.perf_counter()
+    status = solver.solve(omodel)
+    elapsed = time.perf_counter() - t0
+    status_name = status.name
+
+    if status_name not in _OSS_USABLE_STATUSES:
+        logger.warning(
+            f"[ce_limit_mip_fallback] {_OSS_MIP_SOLVER}で解が得られませんでした"
+            f"（status={status_name}, time_limit={time_limit}）。"
+        )
+        return None
+
+    # 変数オブジェクトどうしで対応付ける（名前・列順に依存しない）。
+    # 整数・0-1変数はソルバーの許容誤差内の値（0.9999999等）を丸める。
+    var_value_map = {}
+    for dv, ov in ovars.items():
+        val = float(solver.value(ov))
+        if dv.vartype.short_name in ("binary", "integer"):
+            r = round(val)
+            if abs(val - r) <= 1e-6:
+                val = float(r)
+        var_value_map[dv] = val
+
+    # 目的関数値はmdl自身の目的関数式から計算する（maximize/minimizeの向きを
+    # mdlが正しく知っているため、ソルバー側の符号の扱いに依存しない）。
+    obj_value = SolveSolution(mdl, var_value_map).get_value(mdl.objective_expr)
+    job_status = (JobSolveStatus.OPTIMAL_SOLUTION if status_name == "OPTIMAL"
+                  else JobSolveStatus.FEASIBLE_SOLUTION)
+    details = SolveDetails(time=elapsed, status_string=status_name.lower(),
+                           problem_type=f"MILP({_OSS_MIP_SOLVER})")
+    solution = SolveSolution.make_engine_solution(
+        mdl, var_value_map, obj_value, None, _OSS_MIP_SOLVER, details, job_status,
+    )
+
+    logger.info(
+        f"[ce_limit_mip_fallback] {_OSS_MIP_SOLVER}で解決: status={status_name}, "
+        f"objective={obj_value}, time={elapsed:.2f}s, time_limit={time_limit}"
+    )
+    return solution

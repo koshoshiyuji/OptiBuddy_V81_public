@@ -205,7 +205,9 @@ class CapitalProjectSelectorSolver:
                 "relatedContainerIds": [],
             })
 
-        is_optimal = mdl.solve_status is not None and "optimal" in str(mdl.solve_status).lower()
+        # 2026-09-29: mdl側ではなくsolから取る（SOLVER_BACKEND=oss／CE上限フォールバックの
+        # SCIP経路ではmdl.solve()を通らないため、mdl.solve_status等はNoneのまま）。
+        is_optimal = sol.solve_status is not None and "optimal" in str(sol.solve_status).lower()
 
         selected = []
         total_value = 0.0
@@ -225,8 +227,7 @@ class CapitalProjectSelectorSolver:
                 total_value += float(proj.get("value", 0.0))
                 total_weight += float(proj.get("weight", 0.0))
 
-        solve_time = float(getattr(mdl, "_solve_details", None) and
-                           mdl._solve_details.time or 0.0)
+        solve_time = float(sol.solve_details.time) if sol.solve_details is not None else 0.0
 
         return selected, total_value, total_weight, solve_time, is_optimal, mip_check_issues
 

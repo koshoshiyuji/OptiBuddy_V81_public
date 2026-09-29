@@ -53,6 +53,15 @@ CPLEX CP Optimizerは高性能だが、正規ライセンスがないと動か�
 制約が抜け落ちる既知の機能ギャップがあるドメインも将来的に増え得るため、
 サイレントな切り替えは避ける）。
 
+【2026-09-29追記: SOLVER_BACKEND への統一】
+環境変数を SOLVER_BACKEND=cplex|oss の1つに統一した（DESIGN_2026-09-28_v2_paid_license_and_repo_split.md 8節）。
+    cplex : CP=CPO（docplex.cp）、MIP=CPLEX（docplex.mp）
+    oss   : CP=CP-SAT（CPMpy/OR-Tools）、MIP=SCIP（OR-Tools同梱、ce_limit_mip_fallback.py）
+既定は oss。旧 DEFAULT_SOLVER_ENGINE は SOLVER_BACKEND が未設定のときだけ互換として読む
+（cpo→cplex、cpsat→oss）。両方が設定されていて意味が食い違う場合は SOLVER_BACKEND を優先し、
+警告ログを出す（Koshoshi決定、2026-09-29）。ドメイン単位の config.solver_engine（CP）は
+これまで通り最優先。
+
 【使い方】
     from solvers.base.engine_select import get_solver_engine, CPO, CPSAT
 
@@ -77,7 +86,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["CPO", "CPSAT", "get_solver_engine", "cpmpy_optimality_metadata"]
+__all__ = [
+    "CPO", "CPSAT", "BACKEND_CPLEX", "BACKEND_OSS",
+    "get_solver_backend", "get_solver_engine", "cpmpy_optimality_metadata",
+]
 
 CPO = "cpo"
 CPSAT = "cpsat"
@@ -89,13 +101,69 @@ _VALID_ENGINES = {CPO, CPSAT}
 # （従来は "cpo" だったが、Koshoshiとの相談によりデプロイ時デフォルトを変更）。
 _HARDCODED_DEFAULT_ENGINE = CPSAT
 
+BACKEND_CPLEX = "cplex"
+BACKEND_OSS = "oss"
+_VALID_BACKENDS = {BACKEND_CPLEX, BACKEND_OSS}
+_HARDCODED_DEFAULT_BACKEND = BACKEND_OSS
+
+# 旧 DEFAULT_SOLVER_ENGINE（CP側のみ）→ SOLVER_BACKEND の互換対応
+_LEGACY_ENGINE_TO_BACKEND = {CPO: BACKEND_CPLEX, CPSAT: BACKEND_OSS}
+_BACKEND_TO_CP_ENGINE = {BACKEND_CPLEX: CPO, BACKEND_OSS: CPSAT}
+
+# 食い違い警告を1プロセスで1回だけ出すためのフラグ
+_conflict_warned = False
+
+
+def get_solver_backend() -> str:
+    """
+    デプロイ環境単位のソルバーバックエンド（"cplex" / "oss"）を返す。
+        1. 環境変数 SOLVER_BACKEND
+        2. 環境変数 DEFAULT_SOLVER_ENGINE（旧設定の互換読み: cpo→cplex、cpsat→oss）
+        3. _HARDCODED_DEFAULT_BACKEND（"oss"）
+    未知の値は例外（サイレントに既定値へ落とさない。get_solver_engine と同じ方針）。
+    """
+    global _conflict_warned
+    backend_env = os.environ.get("SOLVER_BACKEND")
+    legacy_env = os.environ.get("DEFAULT_SOLVER_ENGINE")
+
+    legacy_backend = None
+    if legacy_env:
+        if legacy_env not in _LEGACY_ENGINE_TO_BACKEND:
+            if not backend_env:
+                raise ValueError(
+                    f"[engine_select] 未知の DEFAULT_SOLVER_ENGINE='{legacy_env}' が指定されました。"
+                    f"有効な値: {sorted(_LEGACY_ENGINE_TO_BACKEND)}（新しい設定は SOLVER_BACKEND=cplex|oss）"
+                )
+        else:
+            legacy_backend = _LEGACY_ENGINE_TO_BACKEND[legacy_env]
+
+    if backend_env:
+        if backend_env not in _VALID_BACKENDS:
+            raise ValueError(
+                f"[engine_select] 未知の SOLVER_BACKEND='{backend_env}' が指定されました。"
+                f"有効な値: {sorted(_VALID_BACKENDS)}"
+            )
+        if legacy_env and legacy_backend != backend_env and not _conflict_warned:
+            logger.warning(
+                f"[engine_select] SOLVER_BACKEND={backend_env} と DEFAULT_SOLVER_ENGINE={legacy_env} が"
+                f"食い違っています。SOLVER_BACKEND を優先し、DEFAULT_SOLVER_ENGINE は無視します"
+                f"（.env から DEFAULT_SOLVER_ENGINE の行を削除してください）。"
+            )
+            _conflict_warned = True
+        return backend_env
+
+    if legacy_backend is not None:
+        return legacy_backend
+    return _HARDCODED_DEFAULT_BACKEND
+
 
 def get_solver_engine(config: Dict[str, Any]) -> str:
     """
     次の優先順位で solver_engine を決定する:
         1. config.solver_engine（明示指定、最優先）
-        2. 環境変数 DEFAULT_SOLVER_ENGINE（.env、デプロイ環境単位の既定値）
-        3. _HARDCODED_DEFAULT_ENGINE（"cpsat"）
+        2. get_solver_backend()（SOLVER_BACKEND、旧DEFAULT_SOLVER_ENGINEは互換読み）
+           が cplex なら "cpo"、oss なら "cpsat"
+        3. どちらも未設定なら oss → "cpsat"
 
     未知の値が指定された場合はサイレントにデフォルトへフォールバックせず、
     明示的に例外を投げる（solvers/registry.py V7.1のsolver_hint未検出時の
@@ -107,13 +175,12 @@ def get_solver_engine(config: Dict[str, Any]) -> str:
         engine = config["solver_engine"]
         source = "config.solver_engine"
     else:
-        env_engine = os.environ.get("DEFAULT_SOLVER_ENGINE")
-        if env_engine:
-            engine = env_engine
-            source = "環境変数 DEFAULT_SOLVER_ENGINE"
-        else:
-            engine = _HARDCODED_DEFAULT_ENGINE
-            source = "ハードコードされたフォールバック"
+        # 2026-09-29: 環境変数は get_solver_backend() に一本化（SOLVER_BACKEND、
+        # 旧 DEFAULT_SOLVER_ENGINE は互換読み）。未設定時は "oss" → CP-SAT で、
+        # 従来のハードコード既定（_HARDCODED_DEFAULT_ENGINE = cpsat）と同じ。
+        backend = get_solver_backend()
+        engine = _BACKEND_TO_CP_ENGINE[backend]
+        source = f"SOLVER_BACKEND={backend}"
 
     if engine not in _VALID_ENGINES:
         raise ValueError(

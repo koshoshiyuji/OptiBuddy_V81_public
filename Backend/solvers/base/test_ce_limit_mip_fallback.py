@@ -17,7 +17,16 @@ HiGHSバックエンドへ切替（同一プロセス内で単体highspyとortoo
     python -m pytest solvers/base/test_ce_limit_mip_fallback.py -v
 
 前提: `pip install docplex cplex ortools` が必要（cplexは無料版で十分）。
+
+2026-09-29: SOLVER_BACKEND対応（フォールバック先をSCIPへ、MPS経由を廃止。
+ce_limit_mip_fallback.py冒頭の【2026-09-29の変更】参照）。docplexが基本インストール
+（requirements.txt）に入ったため、CPLEX本体（cplexパッケージ）が無いCI環境でも
+本ファイルが実行される。既存テストは `backend` フィクスチャで
+SOLVER_BACKEND=oss（常に実行）と cplex（CPLEX本体がある環境のみ実行。CE上限を
+超えるモデルでSCIPへのフォールバックを検証）の両方で実行する。
 """
+
+import random
 
 import pytest
 
@@ -26,10 +35,47 @@ pytest.importorskip("ortools.linear_solver.python.model_builder")
 
 from docplex.mp.model import Model
 
-from solvers.base.ce_limit_mip_fallback import solve_with_ce_fallback
+from solvers.base.ce_limit_mip_fallback import (
+    OssMipUnsupportedModelError,
+    SolverEngineUnavailableError,
+    _resolve_time_limit,
+    solve_with_ce_fallback,
+)
 
 
-def test_small_model_solves_normally_without_fallback():
+def _cplex_runtime_available() -> bool:
+    try:
+        import cplex  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+_CPLEX_AVAILABLE = _cplex_runtime_available()
+
+
+@pytest.fixture(params=["oss", "cplex"])
+def backend(request, monkeypatch):
+    if request.param == "cplex" and not _CPLEX_AVAILABLE:
+        pytest.skip("CPLEX本体（cplexパッケージ）が無い環境のためcplex経路はスキップ")
+    monkeypatch.setenv("SOLVER_BACKEND", request.param)
+    monkeypatch.delenv("DEFAULT_SOLVER_ENGINE", raising=False)
+    return request.param
+
+
+@pytest.fixture
+def oss_backend(monkeypatch):
+    monkeypatch.setenv("SOLVER_BACKEND", "oss")
+    monkeypatch.delenv("DEFAULT_SOLVER_ENGINE", raising=False)
+
+
+@pytest.fixture
+def cplex_backend(monkeypatch):
+    monkeypatch.setenv("SOLVER_BACKEND", "cplex")
+    monkeypatch.delenv("DEFAULT_SOLVER_ENGINE", raising=False)
+
+
+def test_small_model_solves_normally_without_fallback(backend):
     """CE上限未満のモデルは、通常通りmdl.solve()の結果がそのまま返ること。"""
     mdl = Model(name="small")
     x = mdl.binary_var(name="x")
@@ -43,7 +89,7 @@ def test_small_model_solves_normally_without_fallback():
     assert sol.get_value(x) + sol.get_value(y) == 1
 
 
-def test_oversized_model_falls_back_to_highs_and_solves():
+def test_oversized_model_falls_back_to_highs_and_solves(backend):
     """
     CPLEX無料版の上限（1000変数/1000制約）を超えるモデルで、
     実際にHiGHSへフォールバックし正しい解が得られること。
@@ -63,7 +109,7 @@ def test_oversized_model_falls_back_to_highs_and_solves():
     assert sol.get_value(xs[0]) in (0.0, 1.0)
 
 
-def test_oversized_infeasible_model_returns_none_cleanly():
+def test_oversized_infeasible_model_returns_none_cleanly(backend):
     """
     フォールバック後も解けない（infeasible）場合、例外を投げずNoneを返すこと
     （mdl.solve()自体がNoneを返す既存の挙動と合わせる）。
@@ -78,7 +124,7 @@ def test_oversized_infeasible_model_returns_none_cleanly():
     assert sol is None
 
 
-def test_oversized_model_with_hyphenated_names_recovers_correct_values():
+def test_oversized_model_with_hyphenated_names_recovers_correct_values(backend):
     """
     変数名にLP形式で無効な文字（ハイフン、日付文字列等）を含むオーバーサイズ
     モデルでも、フォールバック後に正しい変数値が復元されること。
@@ -113,7 +159,7 @@ def test_oversized_model_with_hyphenated_names_recovers_correct_values():
     assert total == 500
 
 
-def test_non_ce_limit_exceptions_are_not_swallowed():
+def test_non_ce_limit_exceptions_are_not_swallowed(cplex_backend):
     """
     CE上限以外の例外（モデル自体の記述ミス等）は、フォールバックせずそのまま
     再送出すること（is_ce_limit_exceeded()で無関係の例外まで握りつぶさない）。
@@ -126,7 +172,7 @@ def test_non_ce_limit_exceptions_are_not_swallowed():
         solve_with_ce_fallback(_FakeModel(), log_output=False)
 
 
-def test_repeated_fallback_calls_on_same_model_with_new_variables_added_between_calls():
+def test_repeated_fallback_calls_on_same_model_with_new_variables_added_between_calls(backend):
     """
     2026-08-31、MysteryShopperSchedulerで実際に発生した不具合の再現テスト:
     同一のmdlに対してsolve_with_ce_fallback()を複数回呼び、呼び出しの間に
@@ -171,3 +217,109 @@ def test_repeated_fallback_calls_on_same_model_with_new_variables_added_between_
     assert total_x >= best
     assert sol2.get_value(slack) == total_x - best
     assert sol2.is_valid_solution(tolerance=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-29追加: SOLVER_BACKEND / SCIP直接変換
+# ---------------------------------------------------------------------------
+
+def test_no_cplex_runtime_raises_engine_unavailable(cplex_backend):
+    """SOLVER_BACKEND=cplex でCPLEX本体が無い場合、案内付きの専用例外になること
+    （CE上限判定にも一致せず「ソルバー内部エラー」扱いになっていた旧挙動の修正）。"""
+    from docplex.mp.utils import DOcplexException
+
+    class _FakeModel:
+        def solve(self, **kwargs):
+            raise DOcplexException("Cannot solve model: no CPLEX runtime found.")
+
+    with pytest.raises(SolverEngineUnavailableError, match="SOLVER_BACKEND"):
+        solve_with_ce_fallback(_FakeModel(), log_output=False)
+
+
+def test_oss_does_not_call_mdl_solve(oss_backend):
+    """SOLVER_BACKEND=oss ではmdl.solve()（CPLEX）を呼ばないこと。"""
+    mdl = Model(name="oss_only")
+    x = mdl.binary_var(name="x")
+    mdl.maximize(x)
+
+    def _fail(**kwargs):
+        raise AssertionError("mdl.solve() が呼ばれた")
+
+    mdl.solve = _fail
+    sol = solve_with_ce_fallback(mdl, log_output=False)
+    assert sol is not None and sol.get_value(x) == 1
+
+
+def test_oss_mixed_model_objective_sign_ranges_and_bounds(oss_backend):
+    """連続・整数・0-1変数、負の下限、範囲制約、等式、目的関数の定数項、maximize。"""
+    mdl = Model(name="mixed")
+    x = mdl.integer_var(0, 10, "x")
+    y = mdl.binary_var("y-1")
+    z = mdl.continuous_var(-3, 5, "z[a,b]")
+    mdl.add_constraint(x + 5 * y <= 12 - z, "c-1")
+    mdl.add_range(1, x + y, 20)
+    mdl.add_constraint(x == 2 * y + z + 1)
+    mdl.maximize(x + 3 * y + 7)
+
+    sol = solve_with_ce_fallback(mdl, log_output=False)
+    assert sol is not None
+    # x=5, y=1, z=2 が唯一の最適解（目的値15。y=0では最大13）
+    assert sol.get_objective_value() == pytest.approx(15.0)
+    assert sol.get_value(x) == 5
+    assert sol.get_value(y) == 1
+    assert sol.get_value(z) == pytest.approx(2.0)
+    assert sol.is_valid_solution(tolerance=1e-6)
+    # solve_details / solve_status が付くこと（capital_project_selector等が参照）
+    assert sol.solve_details is not None and sol.solve_details.time >= 0
+    assert "optimal" in str(sol.solve_status).lower()
+
+
+def test_oss_minimize_with_constant_objective(oss_backend):
+    """目的関数が定数（mystery_shopper_schedulerの調査員1人ケース）でも解けること。"""
+    mdl = Model(name="const_obj")
+    x = mdl.binary_var(name="x")
+    mdl.add_constraint(x >= 1)
+    mdl.minimize(mdl.linear_expr(constant=0))
+    sol = solve_with_ce_fallback(mdl, log_output=False)
+    assert sol is not None and sol.get_value(x) == 1
+
+
+def test_oss_unsupported_indicator_constraint_raises(oss_backend):
+    """OSSソルバーへ変換できない制約は「解なし」ではなく明示的な例外になること。"""
+    mdl = Model(name="indicator")
+    x = mdl.integer_var(0, 10, "x")
+    y = mdl.binary_var("y")
+    mdl.add_indicator(y, x >= 3)
+    mdl.maximize(x + y)
+    with pytest.raises(OssMipUnsupportedModelError, match="CPLEX"):
+        solve_with_ce_fallback(mdl, log_output=False)
+
+
+def test_oss_time_limit_keeps_incumbent(oss_backend):
+    """時間制限で打ち切られても、暫定解があれば返すこと（Noneにしない）。
+    ortools 9.15のHiGHSラッパーはこの条件でUNKNOWN_STATUSを返し値を失うため、
+    SCIPへ切り替えた（2026-09-29）。30制約×300変数の多次元ナップサックは
+    1秒では最適性を証明できない規模。"""
+    rnd = random.Random(3)
+    mdl = Model(name="mkp")
+    xs = mdl.binary_var_list(300, name="x")
+    for _ in range(30):
+        mdl.add_constraint(mdl.sum(rnd.randint(1, 100) * v for v in xs) <= 5000)
+    mdl.maximize(mdl.sum(rnd.randint(1, 100) * v for v in xs))
+    mdl.parameters.timelimit = 1
+
+    sol = solve_with_ce_fallback(mdl, log_output=False)
+    assert sol is not None
+    assert sol.get_objective_value() > 0
+    assert sol.is_valid_solution(tolerance=1e-6)
+
+
+def test_resolve_time_limit_priority():
+    """時間制限の決め方: 引数 → solve()のtime_limit → mdl.parameters.timelimit。
+    docplex既定（1e75）は無制限扱い。"""
+    mdl = Model(name="tl")
+    assert _resolve_time_limit(mdl, None, {}) is None
+    mdl.parameters.timelimit = 12
+    assert _resolve_time_limit(mdl, None, {}) == 12
+    assert _resolve_time_limit(mdl, None, {"time_limit": 7}) == 7
+    assert _resolve_time_limit(mdl, 3, {"time_limit": 7}) == 3

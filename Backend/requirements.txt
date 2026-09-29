@@ -1,13 +1,14 @@
 # 2026-08-12: OptiBuddy本体はApache License 2.0でOSS配布。
-# IBM CPLEX/CP Optimizer(cplex, docplex)は別ライセンスのため、
+# IBM CPLEX/CP Optimizerのエンジン本体(cplex)は別ライセンスのため、
 # 本ファイルには含めない(requirements-cplex.txtを参照)。
-# 本ファイルだけのpip installでもFlaskは起動し、CPLEXを使わないドメイン
-# (TruckDispatcherの貪欲法フォールバック等)やMIP系ドメインのHiGHS
-# フォールバック(ortools内蔵HiGHS経由、2026-09-01よりhighspy単体パッケージは
-# 不要。ce_limit_mip_fallback.py参照)は動作する。ただし現時点では
-# CP Optimizer系ドメインの大半はcplex/docplexが無いと動かない
-# (docs/DESIGN_2026-08-12_cp_sat_backend_support.md参照、OR-Tools CP-SAT
-# 対応で解消予定)。
+#
+# 2026-09-29: docplex(Apache License 2.0、モデリング用のPythonライブラリ)を
+# 本ファイルへ移した(下記docplex行)。本ファイルだけのpip install
+# (.envのSOLVER_BACKEND=oss、既定)で、MIP系ドメインはdocplex.mpでモデルを組み、
+# ortools同梱のSCIPで解く(Backend/solvers/base/ce_limit_mip_fallback.py)。
+# CP系ドメインはOR-Tools CP-SAT版を持つドメインのみ動く。CP Optimizer
+# (docplex.cp)専用のドメインと、CP系の新規ドメイン登録にはCP Optimizer
+# (requirements-cplex.txt、Community Editionで可)が必要。
 #
 # cpmpy/ortools(下記6行)は Backend/tools/pilot_cpmpy_*.py のCPMpyパイロット
 # 検証用。Apache 2.0のみでCPLEX不要、OSS版base installに含めて問題ない。
@@ -47,6 +48,8 @@ contourpy==1.3.2
 cycler==0.12.1
 distlib==0.4.0
 distro==1.9.0
+# 2026-09-29: requirements-cplex.txtから移動(ファイル冒頭のコメント参照)。
+docplex==2.30.251
 docstring_parser==0.18.0
 exceptiongroup==1.3.0
 filelock==3.19.1

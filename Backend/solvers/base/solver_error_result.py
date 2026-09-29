@@ -36,7 +36,24 @@ def build_solver_crash_issue(exc: Exception) -> Dict[str, Any]:
     """
     except Exception ハンドラ内で使う、クラッシュ用issueオブジェクトを返す。
     id は Frontend 互換のため "solve_failed" のまま。
+
+    2026-09-29追加: SOLVER_BACKENDで指定したエンジンが使えない場合
+    （SolverEngineUnavailableError。例: SOLVER_BACKEND=cplex でCPLEX本体が無い、
+    OSSのMIPソルバーでは扱えない制約を含むモデル）は、「プログラムの不具合」では
+    なく設定・環境の問題として、案内を含む専用の title/message を返す。
     """
+    from solvers.base.ce_limit_mip_fallback import SolverEngineUnavailableError
+    if isinstance(exc, SolverEngineUnavailableError):
+        return {
+            "id": "solve_failed",
+            "severity": "CRITICAL",
+            "title": "ソルバーエンジンが利用できません（設定・環境の問題）",
+            "message": (
+                f"{exc}\n"
+                "これは「現在の制約では業務上の解が存在しない」という判定ではありません。"
+            ),
+            "relatedContainerIds": [],
+        }
     return {
         "id": "solve_failed",
         "severity": "CRITICAL",

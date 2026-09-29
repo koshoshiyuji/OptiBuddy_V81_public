@@ -48,7 +48,9 @@ jobs:
           cache: "pip"
           cache-dependency-path: Backend/requirements.txt
 
-      - name: Install dependencies (CPLEX/docplexなし、CP-SATのみ)
+      # 2026-09-29: docplex(Apache 2.0)がrequirements.txtに入ったため、docplexは入る。
+      # CPLEX本体(cplex)は入らないので、MIP系はSOLVER_BACKEND=oss(SCIP)で解く。
+      - name: Install dependencies (CPLEX本体なし、SOLVER_BACKEND=oss)
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -56,8 +58,8 @@ jobs:
 
       - name: Run tests
         env:
-          # CP系ドメインの既定ソルバーエンジンをCP-SATに固定(requirements.txt
-          # 側のデフォルトと同じだが、CI環境では明示しておく)。
-          DEFAULT_SOLVER_ENGINE: cpsat
+          # 2026-09-29: DEFAULT_SOLVER_ENGINEからSOLVER_BACKENDへ統一。
+          # CP=CP-SAT、MIP=SCIP(コード側の既定と同じだが、CI環境では明示しておく)。
+          SOLVER_BACKEND: oss
         run: |
           python -m pytest -v
