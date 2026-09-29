@@ -237,6 +237,12 @@ logger = logging.getLogger(__name__)
 registry = SolverRegistry()
 logger.info(f"SolverRegistry 初期化完了: {registry}")
 
+# 2026-09-29追加（V1修正 第2弾）: cpoptimizerの絶対パスをdocplexへ設定する。
+# venvを有効化せずに起動した場合（PATHにvenvのbinが無い）でもCP Optimizerで解けるようにする。
+# 詳細は solvers/base/engine_availability.py 冒頭参照。
+from solvers.base.engine_availability import configure_cpo_execfile
+configure_cpo_execfile()
+
 _PROJECT_ROOT = Path(__file__).parent.parent
 _BACKEND_ROOT = Path(__file__).parent
 

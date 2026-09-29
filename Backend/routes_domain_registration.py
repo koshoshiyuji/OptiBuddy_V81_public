@@ -166,6 +166,19 @@ def _run_hearing_pipeline(job_id: str, domain_name: str, hearing_texts: list, ov
                     conflicts=scenario_conflicts)
                 return
 
+            # 2026-09-29追加（V1修正 第2弾、DESIGN_2026-09-28 9節・10節）: CP系ドメインの拡張は
+            # CP Optimizer版のコードを生成・検証するため、cpoptimizerが無い環境では
+            # 人間への確認を求める前に止める（SOLVER_BACKENDの値に関わらず、Koshoshi決定）。
+            if extension_gaps:
+                from domain_generator import get_domain_engine
+                from solvers.base.engine_availability import cpo_available
+                if get_domain_engine(base_domain) in ("cp", "both") and not cpo_available():
+                    _job_set(job_id, stage="error", error=_cpo_required_error(
+                        f"既存ドメイン「{base_domain}」（CP Optimizerを使うCP系ドメイン）の拡張"))
+                    logger.error(f"[domain_job:{job_id}] CP系ドメインの拡張だがcpoptimizerが無いため中断 "
+                                 f"(base_domain={base_domain})")
+                    return
+
             gap_questions = [
                 f"（拡張差分検出）既存の{base_domain}実装では対応できない可能性がある要件: "
                 f"{g.get('description','')}（該当箇所: {g.get('hearing_evidence','')}）"
@@ -247,6 +260,20 @@ def _run_hearing_pipeline(job_id: str, domain_name: str, hearing_texts: list, ov
                 f"[domain_job:{job_id}] scenario_registrations が空のため中断"
                 "（Stage2出力が途中で打ち切られた可能性）"
             )
+            return
+
+        # 2026-09-29追加（V1修正 第2弾）: 新規ドメインでCP/MIPのどちらを使うかはStage2のLLMが
+        # 決めるため、Stage2より前には判定できない（Stage1a.4のrecommended_engineは既存ドメイン
+        # 拡張の場合にしか計算されない）。生成されたsolverがdocplex.cpを使っていて
+        # cpoptimizerが無い場合は、Gate2（動的検証で実際に解く）の前に止める。
+        # 生成物はまだディスクに書き込まれていない（Gate2のwrite_files_for_dynamic_checkより前）。
+        from solvers.base.engine_availability import cpo_available, generated_solver_uses_cpo
+        _snake_for_engine = domain_def.get("snake_name") or _to_snake(domain_name)
+        if generated_solver_uses_cpo(s2["diffs"], _snake_for_engine) and not cpo_available():
+            _job_set(job_id, stage="error", error=_cpo_required_error(
+                "Stage2が生成したソルバー（CP Optimizerを使うCP系モデル）の検証・登録"))
+            logger.error(f"[domain_job:{job_id}] 生成ソルバーがdocplex.cpを使うがcpoptimizerが無いため"
+                         "Gate2前に中断")
             return
 
         # 2026-07-16 再設計（デバッグチャット構想）: Gate2チェック一式は
@@ -657,6 +684,16 @@ _DYNAMIC_STRUCTURAL_PREFIXES = (
 # （learnings.md: 測定してから最適化、の方針通り）。
 _DEBUG_AGENT_MAX_TURNS_DEFAULT = 8
 _DEBUG_AGENT_MAX_TURNS_WITH_DIAGNOSTIC_FINDING = 12
+
+
+def _cpo_required_error(what: str) -> str:
+    """CP Optimizer（cpoptimizer）が無いため登録を止める時のエラーメッセージ（2026-09-29追加）。"""
+    return (
+        f"{what}にはCP Optimizerが必要ですが、この環境に見つかりません。"
+        "`pip install -r requirements-cplex.txt`（Community Editionで可）でCP Optimizerを導入してから"
+        "再実行してください。インストール済みの場合は、.env の CPOPTIMIZER_PATH に cpoptimizer の"
+        "絶対パスを指定してください。これは業務要件の問題ではなく、実行環境の問題です。"
+    )
 
 
 def _run_confirm_job(job_id: str, domain_name: str, pending: dict, questions: list, answers: str,

@@ -32,6 +32,11 @@ car_sequencing_solver.py 内の2026-07-25付コメント（独自id化で「制�
 from typing import Any, Dict
 
 
+def _is_cpoptimizer_missing(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return "cpoptimizer" in msg and ("does not exist" in msg or "not found" in msg)
+
+
 def build_solver_crash_issue(exc: Exception) -> Dict[str, Any]:
     """
     except Exception ハンドラ内で使う、クラッシュ用issueオブジェクトを返す。
@@ -43,6 +48,24 @@ def build_solver_crash_issue(exc: Exception) -> Dict[str, Any]:
     なく設定・環境の問題として、案内を含む専用の title/message を返す。
     """
     from solvers.base.ce_limit_mip_fallback import SolverEngineUnavailableError
+    # 2026-09-29追加（V1修正 第2弾）: cpoptimizer実行ファイルが見つからない場合の
+    # docplex.cpの例外（CpoException: "Executable file 'cpoptimizer' does not exists"）も
+    # 同じ扱いにする。docplexは基本インストールに入っているため、CP Optimizer専用の
+    # ドメインはimportまでは成功し、solve()で初めてこの例外になる。
+    if _is_cpoptimizer_missing(exc):
+        return {
+            "id": "solve_failed",
+            "severity": "CRITICAL",
+            "title": "ソルバーエンジンが利用できません（設定・環境の問題）",
+            "message": (
+                "このドメインはCP Optimizerで解きますが、この環境にcpoptimizerが見つかりません。"
+                "`pip install -r requirements-cplex.txt`（Community Editionで可）で導入してください。"
+                "インストール済みの場合は、.env の CPOPTIMIZER_PATH に cpoptimizer の絶対パスを"
+                f"指定してください（詳細: {type(exc).__name__}: {exc}）。\n"
+                "これは「現在の制約では業務上の解が存在しない」という判定ではありません。"
+            ),
+            "relatedContainerIds": [],
+        }
     if isinstance(exc, SolverEngineUnavailableError):
         return {
             "id": "solve_failed",

@@ -11,7 +11,7 @@
 
 ## 重要な注記
 
-1. **IBM CPLEX / CP Optimizer（`cplex`・`docplex`、`Backend/requirements-cplex.txt`）はこのリストに含まれません。** これらは独自の商用ライセンス（IBM Community Edition評価版）であり、OSSではありません。base installとは意図的に分離しており、同梱・再配布は行いません。利用者が任意でインストールする場合は、IBMの利用規約に従っていただく必要があります。
+1. **IBM CPLEX / CP Optimizer（`cplex`、`Backend/requirements-cplex.txt`）はこのリストに含まれません。** これは独自の商用ライセンス（IBM Community Edition評価版）であり、OSSではありません。（2026-09-29追記: モデリング用ライブラリの`docplex`はApache 2.0のため`requirements.txt`へ移し、下表に追加しました。MIP系の既定ソルバーであるSCIP（SCIP Optimization Suite。バージョン8.0.3以降Apache License 2.0、同梱版は10.0.0）は`ortools`のwheelに同梱されています。）base installとは意図的に分離しており、同梱・再配布は行いません。利用者が任意でインストールする場合は、IBMの利用規約に従っていただく必要があります。
 2. **GPL/AGPL系の依存物は検出されませんでした。** 唯一の例外として`chardet`（`requests`の依存先）が**LGPLv2+**（Lesser GPL）です。LGPLはライブラリとして動的に利用する分には自作コードのライセンスに影響しないため、OptiBuddy側の対応は不要です（`chardet`自体を改変して再配布する場合のみ、その改変部分の公開義務が生じます）。
 3. **ライセンス表記が「UNKNOWN」の一部パッケージ**（`charset-normalizer`・`flask-cors`・`fonttools`・`lxml`・`protobuf`・`python-dotenv`・`tzdata`）は、PyPIメタデータのclassifier欄が未設定のため機械的に抽出できませんでした。いずれも著名なOSSプロジェクトで、公開リポジトリ上は概ねMIT/BSD系の許容ライセンスですが、**本ファイルでは正式な確認が取れていない旨を明記します**。正式な最終確認は、各プロジェクトのリポジトリ同梱`LICENSE`ファイルを直接参照するか、専門家レビューを推奨します。
 4. 現行の配布形態（ソースリポジトリのpush、`requirements.txt`/`package.json`を参照させるのみ）では、以下のライセンス表示義務は厳密には発生しません（詳細は`claude/PLAN_2026-08-17_...`のA6 2026-08-25追記を参照）。本ファイルはあくまで透明性確保のための任意の情報開示です。PyInstallerでのバイナリ配布や、フロントエンドのビルド済みJSを配信するホスティングサービスを将来始める場合は、その時点でこのファイルを配布物に同梱する対応が必要になります。
@@ -20,7 +20,7 @@
 
 ## Backend（Python）
 
-`Backend/requirements.txt`の直接依存および推移的依存、計77パッケージ（開発専用ツールとして削除済みの`pyinstaller`・`bandit`・`safety`・`vulture`一式は対象外）。
+`Backend/requirements.txt`の直接依存および推移的依存、計77パッケージ（2026-09-29に`docplex`を追加、2026-09-01から使っていない`highspy`を削除）（開発専用ツールとして削除済みの`pyinstaller`・`bandit`・`safety`・`vulture`一式は対象外）。
 
 | パッケージ | バージョン | ライセンス |
 |---|---|---|
@@ -40,6 +40,7 @@
 | cycler | 0.12.1 | BSD License |
 | distlib | 0.4.0 | Python Software Foundation License |
 | distro | 1.9.0 | Apache Software License |
+| docplex | 2.30.251 | Apache 2.0 |
 | docstring_parser | 0.18.0 | MIT License |
 | exceptiongroup | 1.3.0 | MIT License |
 | filelock | 3.19.1 | Unlicense |
@@ -47,7 +48,6 @@
 | flask-cors | 6.0.1 | UNKNOWN（実態はMIT、上記注記3参照） |
 | fonttools | 4.63.0 | UNKNOWN（実態はMIT、上記注記3参照） |
 | h11 | 0.16.0 | MIT License |
-| highspy | 1.15.1 | MIT |
 | httpcore | 1.0.9 | BSD-3-Clause |
 | httpx | 0.28.1 | BSD License |
 | idna | 3.10 | BSD License |

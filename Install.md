@@ -6,7 +6,7 @@ OptiBuddy は「業務担当者が AI と対話しながら最適化問題を定
 
 - **フロントエンド**: React + Vite（ブラウザで動作）
 - **バックエンド**: Python + Flask（最適化エンジン）
-- **最適化エンジン**: Google OR-Tools CP-SAT（Apache 2.0、追加インストール不要）が既定。IBM CPLEX CP Optimizer／CPLEX MIP（`docplex`経由）は明示指定時のみ使用し、上限超過時はHiGHS（MIP、OSS）にも自動フォールバック
+- **最適化エンジン**: `.env`の`SOLVER_BACKEND`で選択。既定の`oss`はGoogle OR-Tools CP-SAT（CP系）とSCIP（MIP系、OR-Tools同梱）で、どちらもApache 2.0・追加インストール不要。`cplex`はIBM CPLEX CP Optimizer／CPLEX MIP（`requirements-cplex.txt`、別ライセンス）
 
 本リポジトリは Business Source License 1.1（BSL 1.1）で公開しています（詳細はリポジトリルートの `LICENSE` を参照）。既存のどのドメイン・自分で定義したドメインを問わず、自社の業務のための本番利用はどなたでも無償です。制限がかかるのは、IT/コンサルティングサービスを生業とする第三者が複数の顧客に反復的に有償サービスを提供する場合のみで、その場合は事前にLicensorとの商用ライセンス契約が必要です（詳細は `LICENSE-FAQ.md` を参照）。
 
@@ -19,7 +19,15 @@ OptiBuddy は「業務担当者が AI と対話しながら最適化問題を定
 | Python | 3.11以上 | |
 | Node.js | 18以上 | |
 
-> **CPLEXのインストールは、通常は不要です。** OptiBuddy本体からCPLEX/docplexは完全に分離されており、最適化エンジンの既定値がGoogle OR-Tools CP-SAT（Apache 2.0・無料・モデルサイズ上限なし）のため、`requirements.txt`だけの`pip install`でほとんどのドメインが動作します。CPLEX/docplexが必須なのは`yard`（設計上CP Optimizer専用）と`store_site`（MIP、docplex.mp必須）の2ドメインのみです。この2つを試す場合、または他ドメインで明示的にCPLEXエンジン（`config.solver_engine="cpo"`）を使いたい場合のみ、`requirements.txt`に加えて`requirements-cplex.txt`を追加でインストールしてください（手順2参照）。IBM CPLEX Optimization Studioを別途インストールする必要はありません（`cplex`パッケージ同梱のCommunity Edition評価版を使います）。
+> **既存ドメインを解くだけなら、CPLEXのインストールは不要です。** `requirements.txt`だけの`pip install`（`.env`の`SOLVER_BACKEND=oss`、既定）で、CP系ドメインはOR-Tools CP-SAT、MIP系ドメインはSCIP（OR-Tools同梱）で解けます。どちらもApache 2.0・無料・モデルサイズ上限なしです。
+>
+> 次の場合は、`requirements.txt`に加えて`requirements-cplex.txt`（IBM CPLEX / CP Optimizer）が必要です（手順2参照）。
+>
+> - CP Optimizer専用のドメイン（`yard`、`rideshare_matching_planner`）を使う
+> - **CP系の新規ドメインを登録する、またはCP系ドメインを拡張する**（生成されるソルバーはCP Optimizer版のため、登録時の検証にCP Optimizerが必要。無い場合は登録が途中で止まり、その旨が表示されます）
+> - `.env`で`SOLVER_BACKEND=cplex`にする（CP系・MIP系ともCPLEXで解く）
+>
+> IBM CPLEX Optimization Studioを別途インストールする必要はありません（`cplex`パッケージ同梱のCommunity Edition評価版を使います）。MIP系の新規ドメインの登録には不要です。
 
 ### OS別の補足
 
@@ -53,21 +61,21 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 
-# 上記だけで、yard・store_siteを除くほぼ全てのドメインが
-# CPLEXなしで動作します（既定エンジンがCP-SATのため）。
+# 上記だけで、yard・rideshare_matching_planner を除く既存ドメインが
+# CPLEXなしで動作します（SOLVER_BACKEND=oss: CP系はCP-SAT、MIP系はSCIP）。
 #
-# yard・store_siteを試す場合、または他ドメインで明示的にCPLEXエンジン
-# （config.solver_engine="cpo"）を使いたい場合のみ、以下も実行してください。
+# CP Optimizer専用ドメインを使う、CP系の新規ドメインを登録・拡張する、
+# または SOLVER_BACKEND=cplex にする場合は、以下も実行してください。
 pip install -r requirements-cplex.txt
 ```
 
 インストール確認（`requirements-cplex.txt`を入れた場合のみ）:
 ```bash
 python -c "import cplex; print('CPLEX OK')"
-python -c "import docplex; print('docplex OK')"
+python -c "from solvers.base.engine_availability import find_cpoptimizer; print(find_cpoptimizer())"
 ```
 
-`requirements-cplex.txt`を入れなかった場合、上記コマンドは`ModuleNotFoundError`になりますが、これは想定通りです。`yard`・`store_site`以外のドメインはCPLEXなしで正常に動作します。
+2行目は`Backend/`で実行し、`cpoptimizer`のパスが表示されればCP Optimizerが使えます（`None`なら見つかっていません。トラブルシューティング参照）。`requirements-cplex.txt`を入れなかった場合、1行目は`ModuleNotFoundError`、2行目は`None`になりますが、これは想定通りです。
 
 ### 3. フロントエンドのセットアップ
 
@@ -95,7 +103,8 @@ cp .env.customer.example .env
 `.env`を開き、必要な値を設定してください。
 
 - `ANTHROPIC_API_KEY`等のLLM APIキー。「新規業務登録」（AIによるドメイン自動生成）だけでなく、既存ドメインでInfeasible（解なし）になったシナリオに対して「制約見直し／緩和案」を求める`/relax`機能でもLLMを呼び出すため、いずれかを使う場合は設定が必要です（未設定でも、シナリオを選んで解くだけの基本的なソルバー機能は動作します）
-- `CPLEX_PATH` / `CPOPTIMIZER_PATH`（CPLEXを使わない場合は無視して構いません。通常は空欄のままで問題なく、`requirements-cplex.txt`同梱のCommunity Edition cpoptimizerが使われます）
+- `SOLVER_BACKEND`（`oss`＝既定：CP系はCP-SAT、MIP系はSCIP／`cplex`：CP系はCP Optimizer、MIP系はCPLEX。`cplex`には`requirements-cplex.txt`が必要）。旧設定の`DEFAULT_SOLVER_ENGINE`が残っている場合は削除してください（両方あると`SOLVER_BACKEND`が優先され、ログに警告が出ます）
+- `CPOPTIMIZER_PATH`（通常は空欄のままで問題ありません。PATH上、または仮想環境の`bin`フォルダにある`requirements-cplex.txt`同梱のcpoptimizerを自動で探します。それ以外の場所にある場合のみ絶対パスを指定）
 - `CPLEX_LICENSED`（商用ライセンス版を別途購入・登録した場合のみ`1`に変更）
 
 > ⚠️ `.env`はGitにコミットしないでください（`.gitignore`で除外済みです）。`.env.example`／`.env.customer.example`はダミー値のままコミットして構いません。
@@ -216,16 +225,20 @@ npm run dev
 
 ## トラブルシューティング
 
-### `requirements-cplex.txt`を入れていないのに`docplex`関連のエラーが出る
+### 「ソルバーエンジンが利用できません」と表示される／CP系の新規登録が途中で止まる
 
-`yard`・`store_site`の2ドメインは、設計上CPLEX/docplex（CP Optimizer／MIP）を必須とします。この2つを試す場合のみ、手順2で`pip install -r requirements.txt -r requirements-cplex.txt`を実行してください。それ以外のドメインは既定のCP-SATエンジンで動くため`requirements-cplex.txt`は不要です。仮想環境が有効な状態でインストールされているかも念のため確認してください。
+CP Optimizer（`cpoptimizer`）が見つからない状態で、CP Optimizerが必要な処理（CP Optimizer専用ドメインの実行、CP系の新規ドメインの登録・拡張、`SOLVER_BACKEND=cplex`での実行）を行った場合の表示です。業務要件の問題（解なし）ではありません。
+
+- `requirements-cplex.txt`を入れていない場合は、手順2で`pip install -r requirements-cplex.txt`を実行してください。
+- 入れているのに見つからない場合は、`.env`の`CPOPTIMIZER_PATH`に`cpoptimizer`の絶対パスを指定してください（通常は仮想環境の`bin`フォルダにあります）。
+- `SOLVER_BACKEND=cplex`でMIP系ドメインが同じ表示になる場合は、CPLEX本体（`cplex`パッケージ）が入っていません。`requirements-cplex.txt`を入れるか、`SOLVER_BACKEND=oss`に戻してください。
 
 ### 大きめの問題規模で解決に失敗する／一部の割り当てが解決しない
 
-既定の最適化エンジンはOR-Tools CP-SAT（モデルサイズ上限なし）のため、通常はこの問題に当たりません。`config.solver_engine="cpo"`を明示指定してCPLEXエンジンを使う場合のみ、`requirements-cplex.txt`のCPLEXがCommunity Edition（無償版）である制約が効き、モデルサイズ上限（MIP: 1000変数/1000制約、CP Optimizer: 探索空間2^1000）を超えると失敗することがあります。
+既定（`SOLVER_BACKEND=oss`）のCP-SAT・SCIPにはモデルサイズ上限がないため、通常はこの問題に当たりません。CP Optimizer／CPLEXで解く場合（`SOLVER_BACKEND=cplex`、`config.solver_engine="cpo"`の明示指定、CP Optimizer専用ドメイン）のみ、`requirements-cplex.txt`のCPLEXがCommunity Edition（無償版）である制約が効き、モデルサイズ上限（MIP: 1000変数/1000制約、CP Optimizer: 探索空間2^1000）を超えると失敗することがあります。
 
-- **MIP系ドメイン（`store_site`）**: 上限を検知すると自動的にオープンソースのHiGHSへフォールバックします（追加設定不要）。
-- **CP Optimizer系ドメイン**: `truck_dispatcher`はLNS（Ruin-and-Recreate）で自動的に問題を小分けにして再試行します。それ以外のCP Optimizer系ドメインは、`config.solver_engine`を明示指定していなければ既定でCP-SATが使われるため、そもそも上限に当たりません。`yard`のみCP-SATエンジンを持たずCP Optimizer専用のため、上限に当たった場合は商用ライセンス版への切替が必要です。
+- **MIP系ドメイン**: 上限を検知すると自動的にSCIP（OR-Tools同梱）へ切り替えて解きます（追加設定不要）。
+- **CP Optimizer系ドメイン**: CP-SATへの自動切り替えはしません。ドメインにより、問題を分割して解く、またはエラーを返します。CP-SAT版を持つドメインは`SOLVER_BACKEND=oss`（または`config.solver_engine="cpsat"`）にすれば上限に当たりません。`yard`・`rideshare_matching_planner`はCP-SAT版を持たないため、上限に当たった場合は商用ライセンス版への切替が必要です。
 
 商用ライセンス版へ切り替えることでも上限自体を無くせます（`.env`の`CPLEX_LICENSED=1`と合わせて設定）。
 
@@ -277,7 +290,7 @@ optibuddy/
 ├── Backend/
 │   ├── app.py                     # Flask エントリーポイント
 │   ├── requirements.txt
-│   ├── requirements-cplex.txt     # CP Optimizer/CPLEXを使うドメイン向け（任意extra）
+│   ├── requirements-cplex.txt     # CP Optimizer/CPLEX（任意。CP系の新規登録・SOLVER_BACKEND=cplex等）
 │   ├── domain_generator.py        # ドメイン自動生成（AIによる新規業務登録）
 │   ├── dsl_repository/
 │   │   ├── import_domain.py       # 手順5で使うシード投入スクリプト

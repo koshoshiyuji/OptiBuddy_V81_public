@@ -51,6 +51,7 @@ import sys
 import threading
 import time
 import uuid
+from solvers.base.engine_availability import warn_if_cpo_only_under_oss
 from urllib.parse import quote
 
 import jsonpatch
@@ -235,6 +236,7 @@ def _try_dynamic_solver(problem_class: str, dsl: dict, issue_statuses: dict):
                     break
         if solver_class is None:
             return None
+        warn_if_cpo_only_under_oss(module)  # 2026-09-29: _solve_4dsl_generic と同じ
         result = solver_class({**dsl, "issue_statuses": issue_statuses}).solve()
         logger.info(f"[dynamic_solver] 完了: {problem_class}, status={result.get('status')}")
         return jsonify({"status": result.get("status", "ok"), "tasks": [], "makespan": 0,
@@ -286,6 +288,9 @@ def _solve_4dsl_generic(problem_class: str, dsl: dict, issue_statuses: dict):
         # Step 2: Solver 実行
         solver_module = _import_fresh(f"solvers.{snake}_solver")
         solver_class = getattr(solver_module, f"{problem_class}Solver")
+        # 2026-09-29: SOLVER_BACKEND=ossでもCP-SAT版の無いドメインはCPOで解く旨をログに出す
+        # （画面表示はV2、Koshoshi決定）。
+        warn_if_cpo_only_under_oss(solver_module)
         result = solver_class(solver_input).solve()
 
         # 2026-07-24追加: 解チェッカーの非同期分岐（DESIGN_2026-07-21 3-3節）。

@@ -87,11 +87,16 @@ class RideshareMatchingPlannerSolver:
                 }],
             )
 
+        # 2026-09-29修正: 従来は未定義の名前 _CeLimitError を捕捉していたため、_build_and_solve()内で
+        # 例外が起きると except節の評価時に NameError になり、以下のエラー処理を通らずに solve() の
+        # 外へ例外が出ていた（CE上限時・CPO無し時とも上位の「設定エラー」扱い）。共通の
+        # CeLimitExceededError（ce_limit_lns.py）に統一する。
+        from solvers.base.ce_limit_lns import CeLimitExceededError
         try:
             solution_data, issues = self._build_and_solve(
                 passengers, drivers, config, dist_matrix, locations, issue_statuses
             )
-        except _CeLimitError:
+        except CeLimitExceededError:
             return self._make_result(
                 feasible=False,
                 solutions=[],
@@ -495,7 +500,7 @@ class RideshareMatchingPlannerSolver:
         except Exception as e:
             from solvers.base.ce_limit_lns import is_ce_limit_exceeded
             if is_ce_limit_exceeded(e):
-                raise _CeLimitError(str(e)) from e
+                raise BaseCeLimitError(str(e)) from e  # 2026-09-29: 未定義名 _CeLimitError を修正
             raise
 
         if msol is None or not msol:

@@ -18,7 +18,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 
-from solvers.truck_dispatcher_solver import TruckDispatcherSolver, _CPO_AVAILABLE
+from solvers.truck_dispatcher_solver import TruckDispatcherSolver
+from solvers.base.engine_availability import cpo_available
 
 
 def _base_locations_and_dist():
@@ -189,7 +190,11 @@ def test_explicit_cpsat_engine_selected():
     assert result["solutions"][0]["solver_engine"] == "cpsat"
 
 
-@pytest.mark.skipif(_CPO_AVAILABLE, reason="docplex未インストール環境専用のテスト（docplexがある環境ではcpo明示指定が普通に解けてしまい、本テストの前提自体が成立しない）")
+# 2026-09-29: スキップ条件を「docplexがimportできる」から「CP Optimizerで実際に解ける
+# （cpoptimizer実行ファイルがある）」に変更。docplexが基本インストールに入ったため、
+# 旧条件ではCIを含むすべての環境でスキップされていた。docplexがあってもcpoptimizerが
+# 無ければcpo明示指定は解けず、本テストの前提（はっきりエラーを返す）が成立する。
+@pytest.mark.skipif(cpo_available(), reason="CP Optimizer（cpoptimizer）が無い環境専用のテスト（ある環境ではcpo明示指定が普通に解けてしまい、本テストの前提自体が成立しない）")
 def test_explicit_cpo_without_docplex_returns_clear_error():
     """config.solver_engine="cpo"を明示指定したのにdocplexが無い場合は、
     黙ってcpsatにフォールバックしたりせず、はっきりエラーを返すこと
